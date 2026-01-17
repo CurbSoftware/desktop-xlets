@@ -46,7 +46,7 @@ The Cinnamon World Clock Desklet displays time, date, and timezone information o
 - Drag-and-drop rearrangement
 - Grid layout management
 
-### Configuration Options (via metadata.json)
+### Clock Configuration Options
 | Setting | Type | Description | Example |
 |---------|------|-------------|---------|
 | `name` | string | Clock display name | `"Time Los Angeles"` |
@@ -64,7 +64,8 @@ The Cinnamon World Clock Desklet displays time, date, and timezone information o
 ```
 cinnamon-world-clock@curbsoftware/
 ├── desklet.js              # Main desklet implementation
-├── metadata.json           # Desklet metadata AND configuration
+├── metadata.json           # Desklet metadata
+├── settings-schema.json    # Desklet settings (grid + clock list)
 ├── stylesheet.css          # CSS styles for the desklet
 ├── icon.png                # Desklet icon for settings panel
 ├── README.md               # User-facing documentation
@@ -82,17 +83,17 @@ cinnamon-world-clock@curbsoftware/
 #### `desklet.js`
 Main entry point containing the `MyDesklet` class that:
 - Extends `Desklet.Desklet.prototype`
-- Reads configuration from `metadata.json`
-- Creates vertically stacked time/date/timezone labels
+- Reads configuration from `settings-schema.json`
+- Renders a grid of `ClockWidget` actors
 - Updates display every second using `Mainloop.timeout_add_seconds`
-- Handles timezone conversion using JavaScript `Intl.DateTimeFormat`
+- Handles drag-and-drop reordering via `imports.ui.dnd`
+- Converts timezones using JavaScript `Intl.DateTimeFormat`
 
 #### `metadata.json`
-Serves dual purpose:
-1. **Standard Metadata**: UUID, name, description, author
-2. **Configuration Storage**: Time format, date format, timezone, font sizes
+Standard metadata: UUID, name, description, author.
 
-Note: This desklet uses metadata.json for configuration instead of settings-schema.json. This is a simpler approach but requires manual file editing or a custom config dialog.
+#### `settings-schema.json`
+Settings and storage for the grid and clock list (generic JSON), consumed via `Settings.DeskletSettings`.
 
 #### `stylesheet.css`
 CSS styling for the clock containers and labels.
@@ -122,16 +123,10 @@ ln -s $(pwd)/cinnamon-world-clock@curbsoftware ~/.local/share/cinnamon/desklets/
 4. Click "Add to Desktop"
 
 ### Step 3: Configure
-Edit `~/.local/share/cinnamon/desklets/TimeAndDate@desklet.user/metadata.json`:
-```json
-{
-    "uuid": "TimeAndDate@desklet.user",
-    "name": "Time Tokyo",
-    "timezone": "Asia/Tokyo",
-    "timeFormat": "%H:%M:%S",
-    "dateFormat": "%A, %e %B"
-}
-```
+Right-click the desklet and use:
+- **Add Clock** to create a new entry
+- **Clocks** submenu to edit, resize, or remove a clock
+- Cinnamon Settings (Desklets) to adjust grid columns and spacing
 
 ### Step 4: Reload
 ```bash
@@ -152,33 +147,39 @@ tail -f ~/.xsession-errors | grep -i TimeAndDate
 ```
 Desklet.Desklet (imports.ui.desklet)
     └── MyDesklet
-            ├── _init(metadata)
-            ├── on_desklet_removed()
-            └── _updateDate()
+            ├── _init(metadata, deskletId)
+            ├── _renderClocks()
+            ├── _scheduleUpdate()
+            └── on_desklet_removed()
+
+ClockWidget
+    ├── update(baseDate)
+    └── drag/drop handlers
 ```
 
 ### UI Component Tree
 ```
-_clockContainer (St.BoxLayout, vertical)
-    ├── _timeContainer (St.BoxLayout)
-    │       └── _time (St.Label)
-    ├── _dateContainer (St.BoxLayout)
-    │       └── _date (St.Label)
-    └── _timezoneContainer (St.BoxLayout)
-            └── _timezoneLabel (St.Label)
+_mainContainer (St.BoxLayout, vertical)
+    └── _grid (St.Table)
+            ├── ClockWidget.actor (St.BoxLayout)
+            │       ├── _time (St.Label)
+            │       ├── _date (St.Label)
+            │       └── _timezoneLabel (St.Label)
+            └── ...
 ```
 
 ### Update Loop
 ```
-_updateDate()
+_onTick()
     │
-    ├── Get current Date
-    ├── Convert to timezone (if specified)
-    ├── Format time string
-    ├── Format date string
-    ├── Update labels
+    ├── _updateClocks()
+    │       ├── For each ClockWidget
+    │       │       ├── Convert to timezone (if specified)
+    │       │       ├── Format time/date
+    │       │       └── Update labels
+    │       └── ...
     │
-    └── Schedule next update (1 second) ──► _updateDate()
+    └── _scheduleUpdate() ──► _onTick()
 ```
 
 ---
@@ -187,15 +188,19 @@ _updateDate()
 
 ### Imports Required
 ```javascript
-const Gio = imports.gi.Gio;               // File I/O
-const St = imports.gi.St;                  // Shell Toolkit widgets
-const Desklet = imports.ui.desklet;        // Base desklet class
-const Lang = imports.lang;                 // Language utilities
-const Mainloop = imports.mainloop;         // Event loop
-const GLib = imports.gi.GLib;              // GLib utilities
-const PopupMenu = imports.ui.popupMenu;    // Menu widgets
-const Util = imports.misc.util;            // Utility functions
-const Gettext = imports.gettext;           // Localization
+const Clutter = imports.gi.Clutter;         // Clutter for DnD dialogs
+const St = imports.gi.St;                   // Shell Toolkit widgets
+const Desklet = imports.ui.desklet;         // Base desklet class
+const Lang = imports.lang;                  // Language utilities
+const Mainloop = imports.mainloop;          // Event loop
+const GLib = imports.gi.GLib;               // GLib utilities
+const PopupMenu = imports.ui.popupMenu;     // Menu widgets
+const Util = imports.misc.util;             // Utility functions
+const Settings = imports.ui.settings;       // Desklet settings
+const SignalManager = imports.misc.signalManager; // Signal cleanup
+const DND = imports.ui.dnd;                 // Drag and drop
+const ModalDialog = imports.ui.modalDialog; // Configuration dialogs
+const Gettext = imports.gettext;            // Localization
 ```
 
 ### Desklet Base Class Methods
@@ -258,75 +263,35 @@ const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 ## Configuration System
 
-### Current Approach: metadata.json
-The desklet currently uses `metadata.json` for both metadata and configuration:
+### Current Approach: settings-schema.json
+Configuration lives in `settings-schema.json` and is read via `Settings.DeskletSettings`.
+The grid options use standard settings keys, while the clock list is stored as a generic JSON array.
 
+Example value for the `clocks` setting:
 ```json
-{
-    "uuid": "TimeAndDate@desklet.user",
-    "name": "Time Los Angeles",
-    "description": "A desklet that displays time, date, and timezone",
-    "prevent-decorations": false,
+[
+  {
+    "id": "uuid",
+    "name": "Tokyo",
+    "timezone": "Asia/Tokyo",
     "timeFormat": "%H:%M:%S",
-    "timeSize": "40pt",
-    "dateFormat": "%A,%e %B",
-    "dateSize": "15pt",
-    "timezone": "America/Los_Angeles",
-    "timezoneSize": "12pt"
-}
+    "dateFormat": "%A, %e %B",
+    "timeSize": 40,
+    "dateSize": 15,
+    "timezoneSize": 12
+  }
+]
 ```
 
 ### Reading Configuration
-```javascript
-_init: function(metadata) {
-    // Configuration comes from metadata object
-    this.metadata = metadata;
-    this.dateFormat = this.metadata["dateFormat"];
-    this.timeFormat = this.metadata["timeFormat"];
-    this.timezone = this.metadata["timezone"];
-}
-```
-
-### Alternative: Using settings-schema.json
-For a proper settings panel, create `settings-schema.json`:
-
-```json
-{
-  "timezone": {
-    "type": "entry",
-    "default": "local",
-    "description": "Timezone (IANA format, e.g., America/New_York)"
-  },
-  "time-format": {
-    "type": "entry",
-    "default": "%H:%M:%S",
-    "description": "Time format string"
-  },
-  "date-format": {
-    "type": "entry",
-    "default": "%A, %e %B",
-    "description": "Date format string"
-  },
-  "time-size": {
-    "type": "spinbutton",
-    "default": 40,
-    "min": 10,
-    "max": 200,
-    "step": 2,
-    "units": "pt",
-    "description": "Time font size"
-  }
-}
-```
-
-Then in desklet.js:
 ```javascript
 const Settings = imports.ui.settings;
 
 _init: function(metadata, deskletId) {
     this.settings = new Settings.DeskletSettings(this, metadata.uuid, deskletId);
-    this.settings.bind("timezone", "timezone", this._onSettingChanged);
-    this.settings.bind("time-format", "timeFormat", this._onSettingChanged);
+    this.settings.bind("grid-columns", "gridColumns", this._onLayoutChanged);
+    this.settings.bind("clock-spacing", "clockSpacing", this._onLayoutChanged);
+    this.settings.bind("clocks", "clocks", this._onClocksChanged);
 }
 ```
 
@@ -503,10 +468,10 @@ this._time.add_style_class_name('time-label');
 ### Debug Logging
 ```javascript
 // Information logging
-global.log("Config file: " + this.configFile);
+global.log("Clock count: " + this._getClockList().length);
 
 // Error logging with details
-global.logError("Invalid timezone: " + this.timezone + ". Error: " + e);
+global.logError("Invalid timezone: " + timezone + ". Error: " + e);
 ```
 
 ### View Logs
@@ -527,11 +492,11 @@ grep -i "error\|TimeAndDate" ~/.xsession-errors
 #### Issue: Timeout not removed on desklet removal
 **Cause**: Missing cleanup in `on_desklet_removed`
 **Symptoms**: Memory leak, possible crashes
-**Solution**: Always call `Mainloop.source_remove(this.timeout)`
+**Solution**: Always call `Mainloop.source_remove(this._timeout)`
 
 #### Issue: Configuration changes not applied
-**Cause**: Cinnamon caches metadata
-**Solution**: Restart Cinnamon after editing metadata.json
+**Cause**: Settings cache not refreshed or desklet not reloaded
+**Solution**: Reopen desklet settings or reload the desklet; restart Cinnamon if metadata changed
 
 ### Test Commands
 ```bash
@@ -706,8 +671,8 @@ Australia/Sydney     Pacific/Auckland
 # Reload Cinnamon
 cinnamon --replace &
 
-# Edit config
-xdg-open ~/.local/share/cinnamon/desklets/TimeAndDate@desklet.user/metadata.json
+# Open settings
+cinnamon-settings desklets TimeAndDate@desklet.user
 
 # View logs
 tail -f ~/.xsession-errors

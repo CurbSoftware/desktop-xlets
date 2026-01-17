@@ -4,6 +4,7 @@ const St = imports.gi.St;
 const Lang = imports.lang;
 const Settings = imports.ui.settings;
 const Mainloop = imports.mainloop;
+const Main = imports.ui.main;
 
 const uuid = "workspace-grid-desklet@curb.software";
 
@@ -155,32 +156,9 @@ MyDesklet.prototype = {
     },
 
     _getWorkspaceName: function (index) {
-        /* First try to get workspace name from Cinnamon's workspace name overrides */
-        try {
-            let names = global.settings.get_strv("workspace-name-overrides");
-            if (names && names[index] && names[index].trim()) {
-                let name = names[index].trim();
-                return this.showIndex ? (index + 1) + ". " + name : name;
-            }
-        } catch (e) {
-            // Fall through to other methods
-        }
-
-        /* Fallback to workspace object methods */
-        const ws = global.workspace_manager.get_workspace_by_index(index);
-        if (!ws) return null;
-
-        let name = "";
-        if (typeof ws.get_name === "function") {
-            name = ws.get_name();
-        } else if (ws.cached_name) {
-            name = ws.cached_name;
-        }
-
-        if (name && name.length > 0) {
-            return this.showIndex ? (index + 1) + ". " + name : name;
-        }
-        return "Workspace " + (index + 1);
+        /* Use Cinnamon's Main.getWorkspaceName() which handles name overrides properly */
+        let name = Main.getWorkspaceName(index);
+        return this.showIndex ? (index + 1) + ". " + name : name;
     },
 
     _computeGridDims: function () {
@@ -209,7 +187,8 @@ MyDesklet.prototype = {
     _connectWorkspaceSignals: function() {
         this.ws_added_id = global.workspace_manager.connect('workspace-added', Lang.bind(this, this._onWorkspacesChanged));
         this.ws_removed_id = global.workspace_manager.connect('workspace-removed', Lang.bind(this, this._onWorkspacesChanged));
-        // this.ws_name_id = global.workspace_manager.connect('workspace-name-changed', Lang.bind(this, this._onWorkspacesChanged)); // Signal not available on all Cinnamon versions
+        /* Listen for workspace name changes via global settings */
+        this.ws_name_id = global.settings.connect('changed::workspace-name-overrides', Lang.bind(this, this._onWorkspacesChanged));
     },
 
     _disconnectWorkspaceSignals: function() {
@@ -220,7 +199,7 @@ MyDesklet.prototype = {
             global.workspace_manager.disconnect(this.ws_removed_id);
         }
         if (this.ws_name_id) {
-            global.workspace_manager.disconnect(this.ws_name_id);
+            global.settings.disconnect(this.ws_name_id);
         }
     },
 

@@ -1,0 +1,39 @@
+{
+  "layout": {
+    "type": "header",
+    "description": "Layout"
+  },
+  "grid-columns": {
+    "type": "spinbutton",
+    "default": 0,
+    "min": 0,
+    "max": 12,
+    "step": 1,
+    "units": "cols",
+    "description": "Fixed columns (0 = auto)"
+  },
+  "clock-spacing": {
+    "type": "spinbutton",
+    "default": 8,
+    "min": 0,
+    "max": 40,
+    "step": 1,
+    "units": "px",
+    "description": "Spacing between clocks"
+  },
+  "clocks": {
+    "type": "generic",
+    "default": [
+      {
+        "id": "default",
+        "name": "Local",
+        "timezone": "local",
+        "timeFormat": "%H:%M:%S",
+        "dateFormat": "%A, %e %B",
+        "timeSize": 40,
+        "dateSize": 15,
+        "timezoneSize": 12
+      }
+    ]
+  }
+}

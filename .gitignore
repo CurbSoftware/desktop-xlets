@@ -1,9 +1,36 @@
+# Compiled files
 *.mo
 *.pyc
+__pycache__/
 */gschemas.compiled
+
+# Dependencies
 node_modules/
-/.idea/
 package-lock.json
+
+# IDE and editors
+/.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# AI assistant configurations
+.claude/
+.roo/
+
+# Archives
 *.7z
+*.zip
+*.tar.gz
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Project-specific
 internet-indicator@sangorys/files/internet-indicator@sangorys/icons/no-internet2.jpg
 internet-indicator@sangorys/files/internet-indicator@sangorys/icons/wifi-icon-off.png

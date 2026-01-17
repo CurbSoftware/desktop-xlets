@@ -1,0 +1,22 @@
+{
+  "display-mode": {
+    "type": "combobox",
+    "default": "name",
+    "description": "Display mode",
+    "options": {
+      "Name only": "name",
+      "Number only": "number",
+      "Number + Name": "both"
+    }
+  },
+  "show-menu-on-click": {
+    "type": "checkbox",
+    "default": true,
+    "description": "Show workspace menu on click"
+  },
+  "scroll-to-switch": {
+    "type": "checkbox",
+    "default": false,
+    "description": "Use scroll wheel to switch workspaces"
+  }
+}
