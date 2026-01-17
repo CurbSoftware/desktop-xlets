@@ -1,0 +1,6 @@
+Review the docs and take notes for each respective subproject, desklets and applet, in desklets: cinnamon-world-clock@curbsoftware and workspace-grid-desklet@curbsoftware add relevant documentation notes for development, and in applet: workspace-name@curbsoftware add relevant documentation notes for development.  In each cinnamon spice project, in relation to its functionality and development, create a DEVELOPMENT.md file.  Write all features, the related docs files to reference, and notes about coding and development instructions. cinnamon-docs/markdown and there are example applet and desklet code for reference in cinnamon-docs/cinnamon-spices-applets - for this task all project development guide files must be very detailed, technical, step-by-step, and provide references to docs and examples.
+
+
+follow the plans and develop: workspace-grid-desklet@curbsoftware/DEVELOPMENT.md
+
+follow the plans and develop: workspace-name@curbsoftware/DEVELOPMENT.md the current desklet is working, but needs workspace name display functionality. 
