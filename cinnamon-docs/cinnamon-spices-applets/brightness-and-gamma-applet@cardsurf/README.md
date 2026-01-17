@@ -1,0 +1,1 @@
+files/brightness-and-gamma-applet@cardsurf/README.md

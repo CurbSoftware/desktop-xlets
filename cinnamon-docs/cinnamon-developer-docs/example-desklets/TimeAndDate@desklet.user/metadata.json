@@ -1,0 +1,14 @@
+{
+    "description": "A fork desklet that displays the time, date, and timezone",
+    "prevent-decorations": false,
+    "uuid": "TimeAndDate@desklet.user",
+    "name": "Time Los Angeles",
+    "timeFormat": "%H:%M",
+    "timeSize": "40pt",
+    "dateFormat": "%A,%e %B",
+    "dateSize": "15pt",
+    "timezone": "America/Los_Angeles",
+    "timezoneSize": "12pt",
+    "author": "none",
+    "last-edited": 1758254790
+}

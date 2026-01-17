@@ -1,0 +1,5 @@
+{
+    "uuid": "ShutdownApplet@DeathMD", 
+    "name": "Shutdown Applet",
+    "description": "An applet to shutdown, restart and suspend your system."
+}
