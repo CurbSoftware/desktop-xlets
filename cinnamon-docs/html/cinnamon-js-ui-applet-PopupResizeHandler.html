@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Applet.PopupResizeHandler: Cinnamon Javascript Reference Manual</title>
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot">
+<link rel="home" href="index.html" title="Cinnamon Javascript Reference Manual">
+<link rel="up" href="cinnamon-js-ui-applet-section.html" title="imports.ui.applet">
+<link rel="prev" href="cinnamon-js-ui-applet-TextIconApplet.html" title="Applet.TextIconApplet">
+<link rel="next" href="cinnamon-js-ui-appletManager-section.html" title="imports.ui.appletManager">
+<meta name="generator" content="GTK-Doc V1.34.0 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="5"><tr valign="middle">
+<td width="100%" align="left" class="shortcuts">
+<a href="#" class="shortcut">Top</a><span id="nav_description">  <span class="dim">|</span> 
+                  <a href="#cinnamon-js-ui-applet-PopupResizeHandler.description" class="shortcut">Description</a></span><span id="nav_hierarchy">  <span class="dim">|</span> 
+                  <a href="#cinnamon-js-ui-applet-PopupResizeHandler.object-hierarchy" class="shortcut">Object Hierarchy</a></span><span id="nav_properties">  <span class="dim">|</span> 
+                  <a href="#cinnamon-js-ui-applet-PopupResizeHandler.properties" class="shortcut">Properties</a></span>
+</td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="16" height="16" border="0" alt="Home"></a></td>
+<td><a accesskey="u" href="cinnamon-js-ui-applet-section.html"><img src="up.png" width="16" height="16" border="0" alt="Up"></a></td>
+<td><a accesskey="p" href="cinnamon-js-ui-applet-TextIconApplet.html"><img src="left.png" width="16" height="16" border="0" alt="Prev"></a></td>
+<td><a accesskey="n" href="cinnamon-js-ui-appletManager-section.html"><img src="right.png" width="16" height="16" border="0" alt="Next"></a></td>
+</tr></table>
+<div class="refentry">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="cinnamon-js-ui-applet-PopupResizeHandler.top_of_page"></a>Applet.PopupResizeHandler</span></h2>
+<p>Applet.PopupResizeHandler — Class that allows an applet to be resized using the mouse.</p>
+</td>
+<td class="gallery_image" valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler.functions"></a><h2>Functions</h2>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="functions_return">
+<col class="functions_name">
+</colgroup>
+<tbody><tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="void">
+      <span class="returnvalue"></span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-applet-PopupResizeHandler.html#cinnamon-js-ui-applet-PopupResizeHandler-constructor" title="constructor ()">constructor</a> <span class="c_punctuation">()</span>
+  </td>
+</tr></tbody>
+</table></div>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler.properties"></a><h2>Properties</h2>
+<div class="informaltable"><table class="informaltable" border="0">
+<colgroup>
+<col width="150px" class="properties_type">
+<col width="300px" class="properties_name">
+<col>
+</colgroup>
+<tbody>
+<tr>
+<td class="property_type">
+    <span class="type">Boolean</span>
+  </td>
+<td class="property_name">
+    <a class="link" href="cinnamon-js-ui-applet-PopupResizeHandler.html#cinnamon-js-ui-applet-PopupResizeHandler--inhibit_resizing" title="The “inhibit_resizing” property">inhibit_resizing</a>
+  </td>
+<td class="auto-generated"> </td>
+</tr>
+<tr>
+<td class="property_type">
+    <span class="type">Boolean</span>
+  </td>
+<td class="property_name">
+    <a class="link" href="cinnamon-js-ui-applet-PopupResizeHandler.html#cinnamon-js-ui-applet-PopupResizeHandler--resizingInProgress" title="The “resizingInProgress” property">resizingInProgress</a>
+  </td>
+<td class="auto-generated"> </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler.object-hierarchy"></a><h2>Object Hierarchy</h2>
+<pre class="screen">
+    Object
+    <span class="lineart">╰──</span> Applet.PopupResizeHandler
+  </pre>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler.description"></a><h2>Description</h2>
+<p>Example usage:</p>
+<div class="informalexample">
+  <table class="listing_frame" border="0" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr>
+        <td class="listing_lines" align="right"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19</pre></td>
+        <td class="listing_code"><pre class="programlisting"><span class="n">this</span><span class="p">.</span><span class="n">menu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">new</span><span class="w"> </span><span class="n">Applet</span><span class="p">.</span><span class="n">AppletPopupMenu</span><span class="p">(</span><span class="n">this</span><span class="p">,</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">orientation</span><span class="p">);</span>
+<span class="n">this</span><span class="p">.</span><span class="n">settings</span><span class="p">.</span><span class="n">bind</span><span class="p">(</span><span class="s">&quot;popup-width&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;popup_width&quot;</span><span class="p">);</span>
+<span class="n">this</span><span class="p">.</span><span class="n">settings</span><span class="p">.</span><span class="n">bind</span><span class="p">(</span><span class="s">&quot;popup-height&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;popup_height&quot;</span><span class="p">);</span>
+
+<span class="n">this</span><span class="p">.</span><span class="n">_resizer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">new</span><span class="w"> </span><span class="n">Applet</span><span class="p">.</span><span class="n">PopupResizeHandler</span><span class="p">(</span>
+<span class="w">        </span><span class="n">this</span><span class="p">.</span><span class="n">menu</span><span class="p">.</span><span class="n">actor</span><span class="p">,</span>
+<span class="w">        </span><span class="p">()</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">orientation</span><span class="p">,</span>
+<span class="w">        </span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">_onBoxResized</span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="n">h</span><span class="p">),</span>
+<span class="w">        </span><span class="p">()</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">popup_width</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">global</span><span class="p">.</span><span class="n">ui_scale</span><span class="p">,</span>
+<span class="w">        </span><span class="p">()</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">popup_height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">global</span><span class="p">.</span><span class="n">ui_scale</span><span class="p">);</span>
+<span class="w">    </span>
+<span class="p">...</span>
+
+<span class="n">_onBoxResized</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">this</span><span class="p">.</span><span class="n">popup_width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Math</span><span class="p">.</span><span class="n">max</span><span class="p">(</span><span class="n">width</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">global</span><span class="p">.</span><span class="n">ui_scale</span><span class="p">,</span><span class="w"> </span><span class="mi">300</span><span class="p">);</span>
+<span class="w">    </span><span class="n">this</span><span class="p">.</span><span class="n">popup_height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Math</span><span class="p">.</span><span class="n">max</span><span class="p">(</span><span class="n">height</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">global</span><span class="p">.</span><span class="n">ui_scale</span><span class="p">,</span><span class="w"> </span><span class="mi">400</span><span class="p">);</span>
+<span class="w">    </span><span class="n">this</span><span class="p">.</span><span class="n">menu</span><span class="p">.</span><span class="n">actor</span><span class="p">.</span><span class="n">set_width</span><span class="p">(</span><span class="n">this</span><span class="p">.</span><span class="n">popup_width</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">global</span><span class="p">.</span><span class="n">ui_scale</span><span class="p">);</span>
+<span class="w">    </span><span class="n">this</span><span class="p">.</span><span class="n">menu</span><span class="p">.</span><span class="n">actor</span><span class="p">.</span><span class="n">set_height</span><span class="p">(</span><span class="n">this</span><span class="p">.</span><span class="n">popup_height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">global</span><span class="p">.</span><span class="n">ui_scale</span><span class="p">);</span>
+<span class="p">}</span></pre></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler.functions_details"></a><h2>Functions</h2>
+<div class="refsect2">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler-constructor"></a><h3>constructor ()</h3>
+<pre class="programlisting">
+<span class="returnvalue"></span>
+constructor (<em class="parameter"><code><span class="type">ClutterActor</span>   actor</code></em>,
+             <em class="parameter"><code><span class="type">Function</span>       get_orientation</code></em>,
+             <em class="parameter"><code><span class="type">Function</span>       resized_callback</code></em>,
+             <em class="parameter"><code><span class="type">Function</span>       get_user_width</code></em>,
+             <em class="parameter"><code><span class="type">Function</span>       get_user_height</code></em>);</pre>
+<div class="refsect3">
+<a name="id-1.2.1.9.7.2.4"></a><h4>Parameters</h4>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="parameters_name">
+<col class="parameters_description">
+<col width="200px" class="parameters_annotations">
+</colgroup>
+<tbody>
+<tr>
+<td class="parameter_name"><p>actor</p></td>
+<td class="parameter_description"><p>The actor to be resized</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>get_orientation</p></td>
+<td class="parameter_description"><p>Function that returns the current orientation of the applet. (St.Side)</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>resized_callback</p></td>
+<td class="parameter_description"><p>Function that is called while resizing is in progress with the new width and height as parameters. This function should actually change the applet size. This is also called once when resizing has ended (resizingInProgress == false) so that the applet can store the final size instead of doing so continuously whilst resizing is in progress.</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>get_user_width</p></td>
+<td class="parameter_description"><p>Function that returns the current applet width. This function is not called while resizing is in progress so it only has to return the correct width when resizing is not in progress. Note: This value does not necessarily have to be the applet width. It could be the width of a container inside the applet used for sizing the applet.</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>get_user_height</p></td>
+<td class="parameter_description"><p>As get_user_width but for height</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</div>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler.property-details"></a><h2>Property Details</h2>
+<div class="refsect2">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler--inhibit_resizing"></a><h3>The <code class="literal">“inhibit_resizing”</code> property</h3>
+<pre class="programlisting">  “inhibit_resizing”         <span class="type">Boolean</span></pre>
+<p>Set to true to prevent resizing from starting.</p>
+</div>
+<hr>
+<div class="refsect2">
+<a name="cinnamon-js-ui-applet-PopupResizeHandler--resizingInProgress"></a><h3>The <code class="literal">“resizingInProgress”</code> property</h3>
+<pre class="programlisting">  “resizingInProgress”       <span class="type">Boolean</span></pre>
+<p>True when resizing is in progress</p>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>Generated by GTK-Doc V1.34.0</div>
+</body>
+</html>

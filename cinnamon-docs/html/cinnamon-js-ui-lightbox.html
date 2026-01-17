@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Lightbox: Cinnamon Javascript Reference Manual</title>
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot">
+<link rel="home" href="index.html" title="Cinnamon Javascript Reference Manual">
+<link rel="up" href="cinnamon-js-ui-lightbox-section.html" title="imports.ui.lightbox">
+<link rel="prev" href="cinnamon-js-ui-lightbox-section.html" title="imports.ui.lightbox">
+<link rel="next" href="cinnamon-js-ui-magnifierDBus-section.html" title="imports.ui.magnifierDBus">
+<meta name="generator" content="GTK-Doc V1.34.0 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="5"><tr valign="middle">
+<td width="100%" align="left" class="shortcuts"><a href="#" class="shortcut">Top</a></td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="16" height="16" border="0" alt="Home"></a></td>
+<td><a accesskey="u" href="cinnamon-js-ui-lightbox-section.html"><img src="up.png" width="16" height="16" border="0" alt="Up"></a></td>
+<td><a accesskey="p" href="cinnamon-js-ui-lightbox-section.html"><img src="left.png" width="16" height="16" border="0" alt="Prev"></a></td>
+<td><a accesskey="n" href="cinnamon-js-ui-magnifierDBus-section.html"><img src="right.png" width="16" height="16" border="0" alt="Next"></a></td>
+</tr></table>
+<div class="refentry">
+<a name="cinnamon-js-ui-lightbox"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="cinnamon-js-ui-lightbox.top_of_page"></a>Lightbox</span></h2>
+<p>Lightbox</p>
+</td>
+<td class="gallery_image" valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-lightbox.functions"></a><h2>Functions</h2>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="functions_return">
+<col class="functions_name">
+</colgroup>
+<tbody><tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="void">
+      <span class="returnvalue"></span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-lightbox.html#cinnamon-js-ui-lightbox-Lightbox" title="Lightbox ()">Lightbox</a> <span class="c_punctuation">()</span>
+  </td>
+</tr></tbody>
+</table></div>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-lightbox.functions_details"></a><h2>Functions</h2>
+<div class="refsect2">
+<a name="cinnamon-js-ui-lightbox-Lightbox"></a><h3>Lightbox ()</h3>
+<pre class="programlisting">
+<span class="returnvalue"></span>
+Lightbox (<em class="parameter"><code><span class="type"></span>container</code></em>,
+          <em class="parameter"><code><span class="type"></span>params</code></em>);</pre>
+<p>Lightbox creates a dark translucent "shade" actor to hide the contents of <code class="code">container</code>, and allows you to specify particular actors in <code class="code">container</code> to highlight by bringing them above the shade. It tracks added and removed actors in <code class="code">container</code> while the lightboxing is active, and ensures that all actors are returned to their original stacking order when the lightboxing is removed. (However, if actors are restacked by outside code while the lightboxing is active, the lightbox may later revert them back to their original order.)</p>
+<p>By default, the shade window will have the height and width of <code class="code">container</code> and will track any changes in its size. You can override this by passing an explicit width and height in <code class="code">params</code>.</p>
+<div class="refsect3">
+<a name="id-1.2.10.2.4.2.6"></a><h4>Parameters</h4>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="parameters_name">
+<col class="parameters_description">
+<col width="200px" class="parameters_annotations">
+</colgroup>
+<tbody>
+<tr>
+<td class="parameter_name"><p>container</p></td>
+<td class="parameter_description"><p>parent Clutter.Container</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>params</p></td>
+<td class="parameter_description">
+<p>(optional) additional parameters:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem"><p>inhibitEvents: whether to inhibit events for <code class="code">container</code></p></li>
+<li class="listitem"><p>width: shade actor width</p></li>
+<li class="listitem"><p>height: shade actor height</p></li>
+<li class="listitem"><p>fadeTime: seconds used to fade in/out</p></li>
+</ul></div>
+</td>
+<td class="parameter_annotations"> </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>Generated by GTK-Doc V1.34.0</div>
+</body>
+</html>

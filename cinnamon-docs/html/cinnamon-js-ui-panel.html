@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Panel: Cinnamon Javascript Reference Manual</title>
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot">
+<link rel="home" href="index.html" title="Cinnamon Javascript Reference Manual">
+<link rel="up" href="cinnamon-js-ui-panel-section.html" title="imports.ui.panel">
+<link rel="prev" href="cinnamon-js-ui-panel-section.html" title="imports.ui.panel">
+<link rel="next" href="cinnamon-js-ui-panel-PanelManager.html" title="Panel.PanelManager">
+<meta name="generator" content="GTK-Doc V1.34.0 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="5"><tr valign="middle">
+<td width="100%" align="left" class="shortcuts">
+<a href="#" class="shortcut">Top</a><span id="nav_description">  <span class="dim">|</span> 
+                  <a href="#cinnamon-js-ui-panel.description" class="shortcut">Description</a></span>
+</td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="16" height="16" border="0" alt="Home"></a></td>
+<td><a accesskey="u" href="cinnamon-js-ui-panel-section.html"><img src="up.png" width="16" height="16" border="0" alt="Up"></a></td>
+<td><a accesskey="p" href="cinnamon-js-ui-panel-section.html"><img src="left.png" width="16" height="16" border="0" alt="Prev"></a></td>
+<td><a accesskey="n" href="cinnamon-js-ui-panel-PanelManager.html"><img src="right.png" width="16" height="16" border="0" alt="Next"></a></td>
+</tr></table>
+<div class="refentry">
+<a name="cinnamon-js-ui-panel"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="cinnamon-js-ui-panel.top_of_page"></a>Panel</span></h2>
+<p>Panel — The file responsible for managing panels</p>
+</td>
+<td class="gallery_image" valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-panel.functions"></a><h2>Functions</h2>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="functions_return">
+<col class="functions_name">
+</colgroup>
+<tbody>
+<tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="void">
+      <span class="returnvalue"></span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-checkPanelUpgrade" title="checkPanelUpgrade ()">checkPanelUpgrade</a> <span class="c_punctuation">()</span>
+  </td>
+</tr>
+<tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="void">
+      <span class="returnvalue"></span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-heightsUsedMonitor" title="heightsUsedMonitor ()">heightsUsedMonitor</a> <span class="c_punctuation">()</span>
+  </td>
+</tr>
+<tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="void">
+      <span class="returnvalue"></span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-getPanelLocFromName" title="getPanelLocFromName ()">getPanelLocFromName</a> <span class="c_punctuation">()</span>
+  </td>
+</tr>
+<tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="void">
+      <span class="returnvalue"></span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-toStandardIconSize" title="toStandardIconSize ()">toStandardIconSize</a> <span class="c_punctuation">()</span>
+  </td>
+</tr>
+<tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="void">
+      <span class="returnvalue"></span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-PanelCorner" title="PanelCorner ()">PanelCorner</a> <span class="c_punctuation">()</span>
+  </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-panel.description"></a><h2>Description</h2>
+<p>This file is where everything about panels happens. <a class="link" href="cinnamon-js-ui-main.html" title="Main"><code class="code">Main</code></a> will create a <a class="link" href="cinnamon-js-ui-panel-PanelManager.html" title="Panel.PanelManager"><code class="code">PanelManager</code></a> object, which is responsible for creating and moving panels. There is also a <a class="link" href="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-checkPanelUpgrade" title="checkPanelUpgrade ()"><code class="code">checkPanelUpgrade</code></a> function used as a transition between the old panel settings and the new panel settings.</p>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-panel.functions_details"></a><h2>Functions</h2>
+<div class="refsect2">
+<a name="cinnamon-js-ui-panel-checkPanelUpgrade"></a><h3>checkPanelUpgrade ()</h3>
+<pre class="programlisting">
+<span class="returnvalue"></span>
+checkPanelUpgrade ();</pre>
+<p>Run from main, prior to PanelManager being initialized this handles the one-time transition between panel implementations to make this transition invisible to the user.  We will evaluate the desktop-layout key, and pre-set applets-enabled and panels-enabled appropriately.</p>
+</div>
+<hr>
+<div class="refsect2">
+<a name="cinnamon-js-ui-panel-heightsUsedMonitor"></a><h3>heightsUsedMonitor ()</h3>
+<pre class="programlisting">
+<span class="returnvalue"></span>
+heightsUsedMonitor (<em class="parameter"><code><span class="type">integer</span>   monitorIndex</code></em>,
+                    <em class="parameter"><code><span class="type">array</span>     listofpanels</code></em>);</pre>
+<p>Retrieves the heights used in horizontal panels on the monitor to that vertical panels can be sized and positioned not to overlap them</p>
+<div class="refsect3">
+<a name="id-1.2.15.2.5.3.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="parameters_name">
+<col class="parameters_description">
+<col width="200px" class="parameters_annotations">
+</colgroup>
+<tbody>
+<tr>
+<td class="parameter_name"><p>monitorIndex</p></td>
+<td class="parameter_description"><p>index of monitor</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>listofpanels</p></td>
+<td class="parameter_description"><p>array of panels</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="refsect3">
+<a name="id-1.2.15.2.5.3.6"></a><h4>Returns</h4>
+<p>a two element array</p>
+</div>
+</div>
+<hr>
+<div class="refsect2">
+<a name="cinnamon-js-ui-panel-getPanelLocFromName"></a><h3>getPanelLocFromName ()</h3>
+<pre class="programlisting">
+<span class="returnvalue"></span>
+getPanelLocFromName (<em class="parameter"><code><span class="type">char</span>   pname</code></em>);</pre>
+<p>get the panel numeric type from its name in settings</p>
+<p>returns - panel type (integer)</p>
+<div class="refsect3">
+<a name="id-1.2.15.2.5.4.6"></a><h4>Parameters</h4>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="parameters_name">
+<col class="parameters_description">
+<col width="200px" class="parameters_annotations">
+</colgroup>
+<tbody><tr>
+<td class="parameter_name"><p>pname</p></td>
+<td class="parameter_description"><p>panel type</p></td>
+<td class="parameter_annotations"> </td>
+</tr></tbody>
+</table></div>
+</div>
+</div>
+<hr>
+<div class="refsect2">
+<a name="cinnamon-js-ui-panel-toStandardIconSize"></a><h3>toStandardIconSize ()</h3>
+<pre class="programlisting">
+<span class="returnvalue"></span>
+toStandardIconSize (<em class="parameter"><code><span class="type">integer</span>   maxSize</code></em>);</pre>
+<p>Calculates the nearest standard icon size up to a maximum.</p>
+<div class="refsect3">
+<a name="id-1.2.15.2.5.5.5"></a><h4>Parameters</h4>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="parameters_name">
+<col class="parameters_description">
+<col width="200px" class="parameters_annotations">
+</colgroup>
+<tbody><tr>
+<td class="parameter_name"><p>maxSize</p></td>
+<td class="parameter_description"><p>the maximum size of the icon</p></td>
+<td class="parameter_annotations"> </td>
+</tr></tbody>
+</table></div>
+</div>
+<div class="refsect3">
+<a name="id-1.2.15.2.5.5.6"></a><h4>Returns</h4>
+<p>an integer, the icon size</p>
+</div>
+</div>
+<hr>
+<div class="refsect2">
+<a name="cinnamon-js-ui-panel-PanelCorner"></a><h3>PanelCorner ()</h3>
+<pre class="programlisting">
+<span class="returnvalue"></span>
+PanelCorner (<em class="parameter"><code><span class="type"></span>box</code></em>,
+             <em class="parameter"><code><span class="type"></span>side</code></em>,
+             <em class="parameter"><code><span class="type"></span>cornertype</code></em>);</pre>
+<p>Sets up a panel corner</p>
+<p>The panel corners are there for a non-obvious reason.  They are used as the positioning points for small drawing areas that use some optional css to draw small filled arcs (in the repaint function).  This allows windows with rounded corners to be blended into the panels in some distros, gnome shell in particular. In mint tiling and full screen removes any rounded window corners anyway, so this optional css is not there in the main mint themes, and the corner/cairo functionality is unused in this case. Where the corners are used they will be positioned so as to fill in the tiny gap at the corners of full screen windows, and if themed right they will be invisible to the user, other than the window will appear to go right up to the corner when full screen</p>
+<div class="refsect3">
+<a name="id-1.2.15.2.5.6.6"></a><h4>Parameters</h4>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="parameters_name">
+<col class="parameters_description">
+<col width="200px" class="parameters_annotations">
+</colgroup>
+<tbody>
+<tr>
+<td class="parameter_name"><p>box</p></td>
+<td class="parameter_description"><p>the box in a panel the corner is associated with</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>side</p></td>
+<td class="parameter_description"><p>the side of the box a text or icon/text applet starts from (RTL or LTR driven)</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+<tr>
+<td class="parameter_name"><p>cornertype</p></td>
+<td class="parameter_description"><p>top left, bottom right etc.</p></td>
+<td class="parameter_annotations"> </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>Generated by GTK-Doc V1.34.0</div>
+</body>
+</html>

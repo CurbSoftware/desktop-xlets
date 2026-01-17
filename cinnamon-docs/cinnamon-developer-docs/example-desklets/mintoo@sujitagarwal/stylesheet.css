@@ -1,0 +1,54 @@
+/* General Container Styles */
+.mintoo-main-container,
+.mintoo-row-container {
+    min-width: 92px;
+}
+
+/* Button Base Styles */
+.mintoo-button {
+    background-color: #333333;
+    text-decoration: none;
+    text-indent: 0;
+    line-height: 30px;
+    display: inline-block;
+    font-size: 20px;
+    color: #ffffff;
+    width: 30px;
+    height: 30px;
+    padding: 20px;
+    border: 0 solid #aba367;
+    background-position: 20px 20px;
+    background-size: 32px 32px;
+    cursor: pointer;
+    background-position: center center;
+}
+
+.mintoo-button:hover {
+    background-color: #5cbf2a;
+}
+
+/* Button-Specific Styles */
+
+.mintoo-button-one {
+    border-radius: 30px 30px 0 30px;
+    background-image: url('image/lock.png');
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.mintoo-button-two {
+    border-radius: 30px 30px 30px 0;
+    background-image: url('image/logout.png');
+    margin-bottom: 10px;
+}
+
+.mintoo-button-three {
+    border-radius: 30px 0 30px 30px;
+    background-image: url('image/shutdown.png');
+    margin-right: 10px;
+}
+
+.mintoo-button-four {
+    border-radius: 0 30px 30px 30px;
+    background-image: url('image/reboot.png');
+}

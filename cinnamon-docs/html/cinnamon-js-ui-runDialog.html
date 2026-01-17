@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>RunDialog: Cinnamon Javascript Reference Manual</title>
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot">
+<link rel="home" href="index.html" title="Cinnamon Javascript Reference Manual">
+<link rel="up" href="cinnamon-js-ui-runDialog-section.html" title="imports.ui.runDialog">
+<link rel="prev" href="cinnamon-js-ui-runDialog-section.html" title="imports.ui.runDialog">
+<link rel="next" href="cinnamon-js-ui-search-section.html" title="imports.ui.search">
+<meta name="generator" content="GTK-Doc V1.34.0 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="5"><tr valign="middle">
+<td width="100%" align="left" class="shortcuts"><a href="#" class="shortcut">Top</a></td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="16" height="16" border="0" alt="Home"></a></td>
+<td><a accesskey="u" href="cinnamon-js-ui-runDialog-section.html"><img src="up.png" width="16" height="16" border="0" alt="Up"></a></td>
+<td><a accesskey="p" href="cinnamon-js-ui-runDialog-section.html"><img src="left.png" width="16" height="16" border="0" alt="Prev"></a></td>
+<td><a accesskey="n" href="cinnamon-js-ui-search-section.html"><img src="right.png" width="16" height="16" border="0" alt="Next"></a></td>
+</tr></table>
+<div class="refentry">
+<a name="cinnamon-js-ui-runDialog"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="cinnamon-js-ui-runDialog.top_of_page"></a>RunDialog</span></h2>
+<p>RunDialog</p>
+</td>
+<td class="gallery_image" valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-runDialog.functions"></a><h2>Functions</h2>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="functions_return">
+<col class="functions_name">
+</colgroup>
+<tbody><tr>
+<td class="function_type">
+    <GTKDOCLINK HREF="array">
+      <span class="returnvalue">array</span>
+    </GTKDOCLINK>
+  </td>
+<td class="function_name">
+    <a class="link" href="cinnamon-js-ui-runDialog.html#cinnamon-js-ui-runDialog-completeCommand" title="completeCommand ()">completeCommand</a> <span class="c_punctuation">()</span>
+  </td>
+</tr></tbody>
+</table></div>
+</div>
+<div class="refsect1">
+<a name="cinnamon-js-ui-runDialog.functions_details"></a><h2>Functions</h2>
+<div class="refsect2">
+<a name="cinnamon-js-ui-runDialog-completeCommand"></a><h3>completeCommand ()</h3>
+<pre class="programlisting">
+<span class="returnvalue">array</span>
+completeCommand (<em class="parameter"><code><span class="type">string</span>   text</code></em>);</pre>
+<p>This function finds possible command completions for <code class="code">text</code>. <code class="code">text</code> is first split at whitespaces, and completion is performed on the last segment. Note that this currently does not recognize escaped whitespaces.</p>
+<p>If the last segment starts with a <code class="code">/</code>, then it is considered to be an absolute path. Otherwise, if it is the first segment (ie. there is only one segment), it will be treated as a path relative to the home directory or a path relative to an element of <code class="code">PATH</code>.  Finally, if it is not an absolute path and not a first segment, it will be treated as a path relative to the home directory.</p>
+<p>To perform the completion, first the directory of the last segment is calculated. For example, if the last segment is <code class="code">/foo/bar/hel</code>, then the directory is <code class="code">/foo/bar/</code>. Then everything in the directory is listed, and it checks which items starts with <code class="code">hel</code>. All the items will then be listed in the <code class="code">completions</code> array. The common part of all possible completions is put in the <code class="code">postfix</code> variable, and the tuple <code class="code">[postfix, completions]</code> is returned.</p>
+<p>It is important to note that the returned variables are just the part added by completion. So if <code class="code">/foo/bar/hel</code> completes to <code class="code">/foo/bar/hello</code>, then <code class="code">lo</code> is returned, instead of <code class="code">/foo/bar/hello</code>. This is the case for both the <code class="code">postfix</code> and <code class="code">completions</code> part.</p>
+<p>A special case is when the last segment is empty. In this case, an empty tuple is returned.</p>
+<div class="refsect3">
+<a name="id-1.2.17.2.4.2.9"></a><h4>Parameters</h4>
+<div class="informaltable"><table class="informaltable" width="100%" border="0">
+<colgroup>
+<col width="150px" class="parameters_name">
+<col class="parameters_description">
+<col width="200px" class="parameters_annotations">
+</colgroup>
+<tbody><tr>
+<td class="parameter_name"><p>text</p></td>
+<td class="parameter_description"><p>initial string to complete.</p></td>
+<td class="parameter_annotations"> </td>
+</tr></tbody>
+</table></div>
+</div>
+<div class="refsect3">
+<a name="id-1.2.17.2.4.2.10"></a><h4>Returns</h4>
+<p>The tuple <code class="code">[postfix, completions]</code>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>Generated by GTK-Doc V1.34.0</div>
+</body>
+</html>
