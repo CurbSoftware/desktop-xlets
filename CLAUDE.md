@@ -43,11 +43,14 @@ Scripts and documentation for extension development.
 2. Go to "Extensions" tab
 3. Right-click extension → "Reload Code"
 
-### Crash Isolation Options
-Cinnamon doesn't work in Xephyr (monitor detection issues). For crash isolation:
-- **VM Testing**: Use GNOME Boxes, VirtualBox, or QEMU/KVM with Linux Mint
-- **Developer's Tools Desklet**: JS/CSS sandbox (install via System Settings → Desklets)
-- Run `./dev-tools/start-sandbox.sh --help` for more options
+### VM Testing (Crash Isolation)
+VM: `cinnamon-cinnanom` with credentials `cinnamon/cinnamon`
+```bash
+./dev-tools/vm-config.sh bridge   # One-time: switch to bridged network
+./dev-tools/vm-config.sh start    # Start VM (shows IP)
+./dev-tools/deploy-to-vm.sh <ip>  # Deploy extensions
+./dev-tools/deploy-to-vm.sh -w <ip>  # Watch mode: auto-deploy on changes
+```
 
 ### Debug Logging
 ```javascript

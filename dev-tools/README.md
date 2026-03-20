@@ -21,22 +21,58 @@ For most development, you don't need isolation. Just reload your code:
 
 This is fast and works for 90% of changes.
 
-### 2. Virtual Machine (Best Crash Isolation)
+### 2. VM Testing with Auto-Deploy (Best Crash Isolation)
 
-**Cinnamon doesn't work in Xephyr** due to monitor detection issues ([GitHub #11142](https://github.com/linuxmint/cinnamon/issues/11142)). For true crash isolation, use a VM:
+**Cinnamon doesn't work in Xephyr** due to monitor detection issues ([GitHub #11142](https://github.com/linuxmint/cinnamon/issues/11142)). Use the pre-configured VM instead.
+
+#### VM: cinnamon-cinnanom
+- **Credentials**: `cinnamon` / `cinnamon`
+- **Network**: Bridged (br0) for direct SSH access
+
+#### Quick Start with VM
 
 ```bash
-# GNOME Boxes (simplest)
-sudo apt install gnome-boxes
+# 1. Switch VM to bridged networking (one-time setup)
+./vm-config.sh bridge
 
-# VirtualBox
-sudo apt install virtualbox
+# 2. Start the VM
+./vm-config.sh start
+# Note the IP address shown
 
-# QEMU/KVM (best performance)
-sudo apt install qemu-kvm virt-manager
+# 3. Deploy extensions to VM
+./deploy-to-vm.sh <vm-ip>
+
+# 4. Watch mode: auto-deploy on file changes
+./deploy-to-vm.sh -w <vm-ip>
 ```
 
-Create a Linux Mint VM and test extensions there. Crashes won't affect your host.
+#### VM Commands
+
+```bash
+./vm-config.sh status   # Show VM status and IP
+./vm-config.sh start    # Start VM and show IP
+./vm-config.sh stop     # Gracefully stop VM
+./vm-config.sh ssh      # SSH into VM
+./vm-config.sh bridge   # Switch to bridged network (br0)
+./vm-config.sh nat      # Switch to NAT network (virbr0)
+./vm-config.sh console  # Open graphical console
+```
+
+#### Deploy Commands
+
+```bash
+./deploy-to-vm.sh <ip>           # One-time deploy
+./deploy-to-vm.sh -w <ip>        # Watch mode (auto-deploy)
+./deploy-to-vm.sh -r <ip>        # Deploy and restart Cinnamon
+./deploy-to-vm.sh -d <ip>        # Deploy desklets only
+./deploy-to-vm.sh -a <ip>        # Deploy applets only
+```
+
+#### Prerequisites for Watch Mode
+
+```bash
+sudo apt install inotify-tools
+```
 
 ### 3. Developer's Tools Desklet
 
@@ -65,9 +101,11 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 
 | Script | Purpose |
 |--------|---------|
-| `install-dev-extensions.sh` | Create symlinks for development |
-| `uninstall-dev-extensions.sh` | Remove development symlinks |
-| `start-sandbox.sh` | Development options (run with --help) |
+| `vm-config.sh` | Manage VM (start, stop, SSH, network config) |
+| `deploy-to-vm.sh` | Rsync extensions to VM with watch mode |
+| `install-dev-extensions.sh` | Create symlinks for local development |
+| `uninstall-dev-extensions.sh` | Remove local development symlinks |
+| `start-sandbox.sh` | Xephyr options (limited, run with --help) |
 
 ## Quick Start
 
