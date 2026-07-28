@@ -32,11 +32,18 @@ Scripts and documentation for extension development.
 
 ## Development Commands
 
-### Install Extensions for Development
+### Install Extensions
 ```bash
-./dev-tools/install-dev-extensions.sh    # Creates symlinks to extension dirs
-./dev-tools/uninstall-dev-extensions.sh  # Removes symlinks
+./dev-tools/install-extensions.sh                 # install all (copy; replaces prior)
+./dev-tools/install-extensions.sh -m symlink      # dev symlinks (edits reflect live)
+./dev-tools/install-extensions.sh --type desklets # desklets only
+./dev-tools/install-extensions.sh -n '*clock*'    # match by UUID/dir glob
+./dev-tools/install-extensions.sh --dry-run       # preview
+./dev-tools/install-extensions.sh --uninstall     # remove installed extensions
+./dev-tools/install-extensions.sh --help          # full reference
 ```
+The script auto-discovers extensions and installs them to
+`~/.local/share/cinnamon/{desklets,applets}/<uuid>/` (UUID-named dirs).
 
 ### Reload Extensions (No Restart) - Recommended
 1. Press `Win+L` to open Looking Glass
@@ -48,8 +55,7 @@ VM: `cinnamon-cinnanom` with credentials `cinnamon/cinnamon`
 ```bash
 ./dev-tools/vm-config.sh bridge   # One-time: switch to bridged network
 ./dev-tools/vm-config.sh start    # Start VM (shows IP)
-./dev-tools/deploy-to-vm.sh <ip>  # Deploy extensions
-./dev-tools/deploy-to-vm.sh -w <ip>  # Watch mode: auto-deploy on changes
+./dev-tools/vm-config.sh ssh      # SSH into VM, then run install-extensions.sh there
 ```
 
 ### Debug Logging

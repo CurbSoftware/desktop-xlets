@@ -39,11 +39,9 @@ This is fast and works for 90% of changes.
 ./vm-config.sh start
 # Note the IP address shown
 
-# 3. Deploy extensions to VM
-./deploy-to-vm.sh <vm-ip>
-
-# 4. Watch mode: auto-deploy on file changes
-./deploy-to-vm.sh -w <vm-ip>
+# 3. Deploy extensions: SSH in and run the installer on the VM
+ssh cinnamon@<vm-ip>
+#   then on the VM: cd <repo> && ./dev-tools/install-extensions.sh -y
 ```
 
 #### VM Commands
@@ -60,18 +58,25 @@ This is fast and works for 90% of changes.
 
 #### Deploy Commands
 
+`deploy-to-vm.sh` has been removed. To deploy to the VM, SSH in and run the
+installer, or use rsync directly. See `install-extensions.sh --help`.
+
 ```bash
-./deploy-to-vm.sh <ip>           # One-time deploy
-./deploy-to-vm.sh -w <ip>        # Watch mode (auto-deploy)
-./deploy-to-vm.sh -r <ip>        # Deploy and restart Cinnamon
-./deploy-to-vm.sh -d <ip>        # Deploy desklets only
-./deploy-to-vm.sh -a <ip>        # Deploy applets only
+# Run the installer inside the VM (recommended)
+ssh cinnamon@<vm-ip> 'cd <repo> && ./dev-tools/install-extensions.sh -y --reload'
+
+# Or one-off rsync of a single extension
+rsync -avz --delete --exclude='.git' \
+    ../<ext-dir>/ cinnamon@<vm-ip>:~/.local/share/cinnamon/desklets/<uuid>/
 ```
 
-#### Prerequisites for Watch Mode
+To replicate the old watch mode, use a file watcher that re-runs rsync:
 
 ```bash
 sudo apt install inotify-tools
+while inotifywait -rq -e modify,create,delete,move <ext-dir>; do
+    rsync -avz --delete --exclude='.git' <ext-dir>/ <vm>:<dest>/
+done
 ```
 
 ### 3. Developer's Tools Desklet
@@ -101,19 +106,58 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 
 | Script | Purpose |
 |--------|---------|
+| `install-extensions.sh` | Install/uninstall desklets & applets to `~/.local/share/cinnamon/...` (copy or symlink; auto-discovers extensions) |
 | `vm-config.sh` | Manage VM (start, stop, SSH, network config) |
-| `deploy-to-vm.sh` | Rsync extensions to VM with watch mode |
-| `install-dev-extensions.sh` | Create symlinks for local development |
-| `uninstall-dev-extensions.sh` | Remove local development symlinks |
 | `start-sandbox.sh` | Xephyr options (limited, run with --help) |
+
+## Installing Extensions
+
+`install-extensions.sh` auto-discovers every `*@*` directory in the repo that
+has a `metadata.json` and installs it into the user-specific Cinnamon
+directories, named after the extension's UUID:
+
+```
+~/.local/share/cinnamon/desklets/<uuid>/
+~/.local/share/cinnamon/applets/<uuid>/
+```
+
+### Usage
+
+```bash
+./install-extensions.sh                       # install everything (copy)
+./install-extensions.sh --type desklets       # desklets only
+./install-extensions.sh -n '*clock*'          # only extensions matching a glob
+./install-extensions.sh -m symlink -y         # dev symlinks, no prompt
+./install-extensions.sh --backup --reload     # backup prior install, restart Cinnamon
+./install-extensions.sh --dry-run             # preview only (changes nothing)
+./install-extensions.sh --uninstall           # remove installed extensions
+./install-extensions.sh --help                # full reference
+```
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `-t, --type {desklets\|applets\|all}` | Filter by type (default: `all`) |
+| `-n, --name <glob>` | Restrict by UUID or source-dir glob (quote it) |
+| `-m, --mode {copy\|symlink}` | `copy` (default, true install) or `symlink` (dev) |
+| `-b, --backup` | Back up existing install dir to `<uuid>.bak.<ts>` |
+| `--dry-run` | Print actions without performing them |
+| `-y, --yes` | Skip confirmation (required when stdin is not a tty) |
+| `-r, --reload` | Run `cinnamon --replace &` after install |
+| `--uninstall` | Remove matched extensions instead of installing |
+
+By default the script **copies** files (a real install that replaces any prior
+copy). Pass `-m symlink` for development so edits reflect immediately without
+reinstalling.
 
 ## Quick Start
 
 ```bash
-# Install extensions as symlinks
-./install-dev-extensions.sh
+# Install all extensions (copies into place)
+./install-extensions.sh
 
-# Add extensions via System Settings → Desklets/Applets
+# Add them via System Settings → Desklets/Applets
 
 # Edit files, then reload:
 # Win+L → Extensions → Right-click → Reload Code

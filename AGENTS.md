@@ -4,8 +4,12 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Critical Commands
 
-- Install desklet: `cp -r extension-uuid ~/.local/share/cinnamon/desklets/`
-- Install applet: `cp -r extension-uuid ~/.local/share/cinnamon/applets/`
+- Install extensions (desklets + applets): `./dev-tools/install-extensions.sh`
+  - Dev symlinks: `./dev-tools/install-extensions.sh -m symlink`
+  - Filter: `--type {desklets|applets|all}`, `-n '<glob>'` (UUID/dir)
+  - Backup prior install: `--backup`; preview: `--dry-run`; restart: `--reload`
+  - Remove: `./dev-tools/install-extensions.sh --uninstall`
+  - Targets: `~/.local/share/cinnamon/{desklets,applets}/<uuid>/` (UUID-named)
 - Reload Cinnamon: `cinnamon --replace &`
 - View logs: `tail -f ~/.xsession-errors`
 - Open settings: `cinnamon-settings desklets extension-uuid`
