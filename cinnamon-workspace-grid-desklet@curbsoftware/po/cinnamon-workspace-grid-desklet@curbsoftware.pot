@@ -1,0 +1,140 @@
+# Workspace Grid Desklet.
+# Copyright (C) 2026 curbsoftware
+# This file is distributed under the same license as the Workspace Grid desklet.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: cinnamon-workspace-grid-desklet@curbsoftware\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-14 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. metadata.json
+msgid "Workspace Grid"
+msgstr ""
+
+#. metadata.json
+msgid "A desklet that displays a clickable grid of workspaces with names and highlights the active workspace."
+msgstr ""
+
+#. settings-schema.json
+msgid "Layout"
+msgstr ""
+
+#. settings-schema.json
+msgid "Grid layout mode"
+msgstr ""
+
+#. settings-schema.json
+msgid "Rows (fixed layout)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Columns (fixed layout)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Labels"
+msgstr ""
+
+#. settings-schema.json
+msgid "Prefix names with index (1-based)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Workspace management"
+msgstr ""
+
+#. settings-schema.json
+msgid "Allow adding, removing and renaming workspaces"
+msgstr ""
+
+#. settings-schema.json
+msgid "Show a \"+\" tile to add a workspace"
+msgstr ""
+
+#. settings-schema.json
+msgid "Confirm before removing a named workspace"
+msgstr ""
+
+#. settings-schema.json
+msgid "Behavior"
+msgstr ""
+
+#. settings-schema.json
+msgid "Scroll wheel switches workspaces"
+msgstr ""
+
+#. settings-schema.json
+msgid "Style"
+msgstr ""
+
+#. settings-schema.json
+msgid "Tile spacing"
+msgstr ""
+
+#. settings-schema.json
+msgid "Desklet width"
+msgstr ""
+
+#. settings-schema.json
+msgid "Desklet height"
+msgstr ""
+
+#. settings-schema.json
+msgid "Auto (near-square)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Fixed (rows x cols)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Off"
+msgstr ""
+
+#. settings-schema.json
+msgid "By column"
+msgstr ""
+
+#. settings-schema.json
+msgid "By row"
+msgstr ""
+
+#. desklet.js
+msgid "Rename…"
+msgstr ""
+
+#. desklet.js
+msgid "Remove"
+msgstr ""
+
+#. desklet.js
+msgid "Add workspace"
+msgstr ""
+
+#. renameDialog.js
+msgid "Rename workspace"
+msgstr ""
+
+#. renameDialog.js
+msgid "Leave the name empty to restore the default name."
+msgstr ""
+
+#. renameDialog.js
+msgid "Cancel"
+msgstr ""
+
+#. renameDialog.js
+msgid "Rename"
+msgstr ""
+
+#. workspaceActions.js
+msgid "Are you sure you want to remove workspace \"%s\"?"
+msgstr ""

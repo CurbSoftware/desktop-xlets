@@ -1,12 +1,28 @@
 #!/bin/bash
 # VM Configuration for Cinnamon Development
-# VM: cinnamon-cinnanom
 # Credentials: cinnamon/cinnamon
+#
+# The target libvirt domain defaults to $VM_NAME below. Override it per-host:
+#   CINNAMON_VM=linuxmint-user ./vm-config.sh start
+# Run `virsh list --all` to see which domains actually exist on this machine.
 
 set -e
 
-VM_NAME="cinnamon-cinnanom"
+VM_NAME="${CINNAMON_VM:-cinnamon-cinnanom}"
 BRIDGE="br0"
+
+case "${1:-}" in
+    ""|help|-h|--help) NEEDS_VM=false ;;
+    *)                 NEEDS_VM=true ;;
+esac
+
+if [ "$NEEDS_VM" = true ] && ! virsh dominfo "$VM_NAME" >/dev/null 2>&1; then
+    echo "ERROR: libvirt domain '$VM_NAME' does not exist on this host." >&2
+    echo "Available domains:" >&2
+    virsh list --all 2>/dev/null | sed '1,2d' | awk 'NF {print "  " $2}' >&2
+    echo "Set CINNAMON_VM=<name> to target a different domain." >&2
+    exit 1
+fi
 
 show_help() {
     cat << 'EOF'

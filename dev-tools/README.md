@@ -25,7 +25,10 @@ This is fast and works for 90% of changes.
 
 **Cinnamon doesn't work in Xephyr** due to monitor detection issues ([GitHub #11142](https://github.com/linuxmint/cinnamon/issues/11142)). Use the pre-configured VM instead.
 
-#### VM: cinnamon-cinnanom
+#### VM
+- **Domain name**: host-specific. `vm-config.sh` defaults to `cinnamon-cinnanom`
+  and exits with the list of available domains if it does not exist. Override with
+  `export CINNAMON_VM=<name>` — run `virsh list --all` to see what you have.
 - **Credentials**: `cinnamon` / `cinnamon`
 - **Network**: Bridged (br0) for direct SSH access
 
@@ -107,8 +110,43 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | Script | Purpose |
 |--------|---------|
 | `install-extensions.sh` | Install/uninstall desklets & applets to `~/.local/share/cinnamon/...` (copy or symlink; auto-discovers extensions) |
-| `vm-config.sh` | Manage VM (start, stop, SSH, network config) |
+| `vm-config.sh` | Manage VM (start, stop, SSH, network config). Override the domain with `CINNAMON_VM=` |
 | `start-sandbox.sh` | Xephyr options (limited, run with --help) |
+| `cinnamon_eval.py` | Run JavaScript inside the live Cinnamon process over DBus |
+| `test-workspace-actions.js` | Headless unit tests for the shared workspace logic (`gjs`) |
+| `live-test-desklet.py` | Live edge-case matrix for the workspace grid desklet |
+| `live-test-applet.py` | Live test for the workspace name applet |
+
+## Testing
+
+```bash
+# Headless: pure logic only, no Cinnamon process required
+gjs dev-tools/test-workspace-actions.js
+
+# Live: drives the running desktop through org.Cinnamon.Eval
+python3 dev-tools/live-test-desklet.py
+python3 dev-tools/live-test-applet.py
+```
+
+`St` widgets cannot be instantiated outside the Cinnamon process — `libst.so`
+is not on the loader path — so anything touching actors has to be tested live.
+That is what `cinnamon_eval.py` is for:
+
+```bash
+./dev-tools/cinnamon_eval.py 'global.workspace_manager.n_workspaces'
+```
+
+Both live drivers are non-destructive by construction: they only remove
+workspaces they appended themselves, restore workspace names, count, active
+index and `enabled-applets` on exit (including on failure, via `atexit`), and
+fail if `~/.xsession-errors` gained a single new `JS ERROR` line during the run.
+
+Reload an xlet without the Looking Glass GUI:
+
+```bash
+gdbus call --session --dest org.Cinnamon --object-path /org/Cinnamon \
+  --method org.Cinnamon.ReloadXlet 'cinnamon-workspace-grid-desklet@curbsoftware' DESKLET
+```
 
 ## Installing Extensions
 

@@ -25,14 +25,19 @@ This file provides guidance to agents when working with code in this repository.
 - Prototype inheritance: `__proto__: Desklet.Desklet.prototype` then `_init()` calls parent
 - Settings binding: `this.settings.bind("key", "property", callback)` - key is hyphenated in schema
 - Debounced updates: Check `if (this._timeout) Mainloop.source_remove(this._timeout)` before `Mainloop.timeout_add()`
-- Workspace names: Try `global.settings.get_strv("workspace-name-overrides")` first, fallback to `ws.get_name()` or `ws.cached_name`
+- Workspace names: read/write via `Main.getWorkspaceName(i)` / `Main.setWorkspaceName(i, name)`. The backing store is `org.cinnamon.desktop.wm.preferences` key `workspace-names`
+- Workspace add/remove: `Main._addWorkspace()` / `Main._removeWorkspace(ws)` — they maintain the names array and refuse to remove the last workspace
 - Active workspace highlight: Use `add_style_pseudo_class('outlined')` not custom CSS classes
 - Main file must be `desklet.js` or `applet.js` (not `index.js` or other names)
 
 ## Gotchas
 
-- `workspace-name-changed` signal is NOT available on all Cinnamon versions (commented out in existing code)
+- There is no `workspace-name-changed` signal. Watch `Gio.Settings({schema_id:'org.cinnamon.desktop.wm.preferences'})` for `changed::workspace-names`
+- `org.cinnamon workspace-name-overrides` is `['DEPRECATED']` and never changes. GSettings `connect('changed::<nonexistent-key>')` does NOT throw — the handler just never fires, so a wrong key looks like working code
+- Never `Mainloop.idle_add` for user-visible actions: idle sits below Clutter's redraw priority and starves while menus/dialogs animate. Use `Mainloop.timeout_add(0, ...)`
+- `Desklet.destroy()` emits `destroy` immediately but defers `on_desklet_removed()` by a 500 ms fade — hook both, with idempotent cleanup
+- Popup menus parented to `Main.uiGroup` survive `destroy_all_children()` on your own container; track and destroy them explicitly
 - Settings schema keys use hyphens (`layout-mode`) but bound properties use camelCase (`layoutMode`)
-- Extension directory format: `UUID@domain` (e.g., `workspace-grid-desklet@curb.software`)
+- Extension directory format: `UUID@domain` (e.g., `cinnamon-workspace-grid-desklet@curbsoftware`). `metadata.json` `uuid` MUST equal the directory name or Cinnamon refuses to load it
 - Mainloop timeout callback MUST return `false` to prevent repeat execution
 - `global.workspace_manager.get_active_workspace_index()` returns 0-based index

@@ -43,6 +43,28 @@
     "description": "Prefix names with index (1-based)"
   },
 
+  "management": {
+    "type": "header",
+    "description": "Workspace management"
+  },
+  "enable-workspace-editing": {
+    "type": "checkbox",
+    "default": true,
+    "description": "Allow adding, removing and renaming workspaces"
+  },
+  "show-add-tile": {
+    "type": "checkbox",
+    "default": true,
+    "description": "Show a \"+\" tile to add a workspace",
+    "dependency": "enable-workspace-editing"
+  },
+  "confirm-remove": {
+    "type": "checkbox",
+    "default": true,
+    "description": "Confirm before removing a named workspace",
+    "dependency": "enable-workspace-editing"
+  },
+
   "behavior": {
     "type": "header",
     "description": "Behavior"

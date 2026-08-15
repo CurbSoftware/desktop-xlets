@@ -1,4 +1,8 @@
 {
+  "display": {
+    "type": "header",
+    "description": "Display"
+  },
   "display-mode": {
     "type": "combobox",
     "default": "name",
@@ -18,5 +22,21 @@
     "type": "checkbox",
     "default": false,
     "description": "Use scroll wheel to switch workspaces"
+  },
+
+  "management": {
+    "type": "header",
+    "description": "Workspace management"
+  },
+  "enable-workspace-editing": {
+    "type": "checkbox",
+    "default": true,
+    "description": "Allow adding, removing and renaming workspaces from the menu"
+  },
+  "confirm-remove": {
+    "type": "checkbox",
+    "default": true,
+    "description": "Confirm before removing a named workspace",
+    "dependency": "enable-workspace-editing"
   }
 }

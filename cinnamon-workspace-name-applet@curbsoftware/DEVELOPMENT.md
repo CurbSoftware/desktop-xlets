@@ -21,7 +21,12 @@
 
 The Workspace Switch Manager is a Cinnamon panel applet that displays the current workspace name in the panel. Users can click the applet to see a dropdown menu of all workspaces and switch between them.
 
-**UUID**: `cinnamon-workspace-name-applet@willurd`
+**UUID**: `cinnamon-workspace-name-applet@curbsoftware`
+
+> The uuid in `metadata.json` **must** equal the directory name or Cinnamon
+> refuses to install the applet. This shipped as `@willurd` against a
+> `@curbsoftware` directory for a while, which is why the panel was running
+> upstream's `workspace-name@willurd` instead of this copy.
 
 **Type**: Cinnamon Applet (Panel)
 
@@ -33,16 +38,27 @@ The Workspace Switch Manager is a Cinnamon panel applet that displays the curren
 
 ### Current Features
 - **Workspace Name Display**: Shows current workspace name in the panel
+- **Display Modes**: name only, number only, or `number: name` (`display-mode`)
 - **Click Menu**: Dropdown menu listing all workspaces
 - **Quick Switch**: Click any workspace in menu to switch
 - **Active Indicator**: Current workspace styled differently in menu
-- **Auto-Update**: Label updates when workspace changes
+- **Auto-Update**: Label updates when the workspace changes *or is renamed anywhere*
+- **Scroll to Switch**: Optional scroll-wheel workspace switching (`scroll-to-switch`)
+- **Add Workspace**: Menu item, capped at 36
+- **Rename Current Workspace**: Menu item, opens a modal entry dialog
+- **Remove Current Workspace**: Menu item, with a confirmation prompt for named workspaces
+
+### Configuration Options
+| Setting | Type | Description | Default |
+|---------|------|-------------|---------|
+| `display-mode` | combobox | `name`, `number`, or `both` | `name` |
+| `show-menu-on-click` | checkbox | Open the workspace menu on click | `true` |
+| `scroll-to-switch` | checkbox | Scroll wheel switches workspaces | `false` |
+| `enable-workspace-editing` | checkbox | Show the add/rename/remove block in the menu | `true` |
+| `confirm-remove` | checkbox | Confirm before removing a **named** workspace | `true` |
 
 ### Planned Features
-- Display as numbers only
-- Display as names only
 - Visual workspace representation (mini-grid)
-- Configurable display modes via settings panel
 
 ---
 
@@ -51,12 +67,15 @@ The Workspace Switch Manager is a Cinnamon panel applet that displays the curren
 ```
 cinnamon-workspace-name-applet@curbsoftware/
 ├── applet.js               # Main applet implementation
+├── workspaceActions.js     # Add/remove/rename logic (shared with the grid desklet)
+├── renameDialog.js         # Modal rename dialog (shared with the grid desklet)
+├── settings-schema.json    # Configuration schema for the settings panel
 ├── metadata.json           # Applet metadata (UUID, name, description)
 ├── icon.png                # Applet icon for settings panel
 ├── README.md               # User-facing documentation
 ├── DEVELOPMENT.md          # This file
 └── po/                     # Localization files
-    ├── cinnamon-workspace-name-applet@willurd.pot  # Translation template
+    ├── workspace-name@willurd.pot  # Translation template (upstream name)
     ├── de.po               # German translations
     ├── es.po               # Spanish translations
     └── ...                 # Other language files
@@ -67,18 +86,35 @@ cinnamon-workspace-name-applet@curbsoftware/
 #### `applet.js`
 Main entry point containing the `WorkspaceNameApplet` class that:
 - Extends `Applet.TextApplet.prototype`
-- Listens for workspace switch events
+- Listens for workspace switch events and workspace-name changes
 - Updates panel label with current workspace name
-- Provides popup menu for workspace selection
+- Provides popup menu for workspace selection and management
+
+#### `workspaceActions.js` and `renameDialog.js`
+**Duplicated verbatim from `cinnamon-workspace-grid-desklet@curbsoftware/`.**
+Cinnamon gives xlets no way to import across xlet boundaries, so the applet
+carries its own copy. `dev-tools/test-workspace-actions.js` asserts the two
+copies are byte-identical — if you edit one, copy it to the other.
+
+Loaded through the applet's own directory importer:
+
+```javascript
+const dir = imports.ui.appletManager.applets["cinnamon-workspace-name-applet@curbsoftware"];
+const WorkspaceActions = dir.workspaceActions;
+const RenameDialog = dir.renameDialog;
+```
+
+See the grid desklet's DEVELOPMENT.md "Workspace Management" section for the
+full API and the crash-safety rules; they apply here unchanged.
 
 #### `metadata.json`
 Required metadata file:
 ```json
 {
-    "uuid": "cinnamon-workspace-name-applet@willurd",
+    "uuid": "cinnamon-workspace-name-applet@curbsoftware",
     "name": "Workspace Name",
-    "version": "v0.0.2",
-    "description": "Show the current workspace name in the panel"
+    "version": "v0.1.0",
+    "description": "Show the current workspace name in the panel, and add, rename or remove workspaces from its menu"
 }
 ```
 
@@ -93,10 +129,10 @@ Applet icon displayed in the Cinnamon Settings > Applets panel.
 Applets are installed to `~/.local/share/cinnamon/applets/`:
 ```bash
 # User installation
-cp -r cinnamon-workspace-name-applet@curbsoftware ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@willurd
+cp -r cinnamon-workspace-name-applet@curbsoftware ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
 
 # Or create symlink for development
-ln -s $(pwd)/cinnamon-workspace-name-applet@curbsoftware ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@willurd
+ln -s $(pwd)/cinnamon-workspace-name-applet@curbsoftware ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
 ```
 
 **Important**: Directory name MUST match the UUID in metadata.json.
@@ -374,7 +410,7 @@ _init: function(metadata, orientation, panel_height, instanceId) {
 
 ### Opening Settings Panel
 ```bash
-cinnamon-settings applets cinnamon-workspace-name-applet@willurd
+cinnamon-settings applets cinnamon-workspace-name-applet@curbsoftware
 ```
 
 ---
@@ -522,6 +558,30 @@ on_applet_removed_from_panel: function() {
 ---
 
 ## Testing & Debugging
+
+### Automated tests
+
+```bash
+# Headless unit tests for the shared workspace logic (no Cinnamon needed)
+gjs dev-tools/test-workspace-actions.js
+
+# Live test: adds this applet to panel2, exercises it, restores enabled-applets
+python3 dev-tools/live-test-applet.py
+```
+
+The live driver adds the applet to a panel, checks the label and every menu
+item, adds/renames/removes a workspace it created itself, drives the modal
+dialogs, verifies teardown released the `workspace-names` watcher, then
+restores `org.cinnamon enabled-applets` to its exact original value and
+confirms `~/.xsession-errors` gained no new `JS ERROR` lines.
+
+Two gotchas the driver had to work around, worth knowing when writing your own:
+
+- `appletManager.definitions[].applet_id` is a **string**, and
+  `get_object_for_uuid()` compares with `===`. Pass the uuid as the second
+  argument instead of a numeric instance id.
+- `St` cannot be instantiated outside the Cinnamon process, so widget-level
+  behaviour can only be tested live, not headlessly.
 
 ### Debug Logging
 ```javascript
@@ -801,7 +861,7 @@ workspace.activate(global.get_current_time())
 cinnamon --replace &
 
 # Open applet settings
-cinnamon-settings applets cinnamon-workspace-name-applet@willurd
+cinnamon-settings applets cinnamon-workspace-name-applet@curbsoftware
 
 # View logs
 tail -f ~/.xsession-errors

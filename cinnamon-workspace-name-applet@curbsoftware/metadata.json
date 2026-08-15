@@ -1,8 +1,8 @@
 {
-    "uuid": "cinnamon-workspace-name-applet@willurd",
+    "uuid": "cinnamon-workspace-name-applet@curbsoftware",
     "name": "Workspace Name",
-    "version": "v0.0.2",
-    "description": "Show the current workspace name in the panel",
-    "author": "willurd",
+    "version": "v0.1.0",
+    "description": "Show the current workspace name in the panel, and add, rename or remove workspaces from its menu",
+    "author": "willurd, curbsoftware",
     "last-edited": 1757438742
 }

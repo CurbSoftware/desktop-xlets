@@ -9,9 +9,10 @@
 6. [API Reference](#api-reference)
 7. [Settings System](#settings-system)
 8. [Coding Patterns](#coding-patterns)
-9. [Testing & Debugging](#testing--debugging)
-10. [Documentation References](#documentation-references)
-11. [Example Code References](#example-code-references)
+9. [Workspace Management](#workspace-management)
+10. [Testing & Debugging](#testing--debugging)
+11. [Documentation References](#documentation-references)
+12. [Example Code References](#example-code-references)
 
 ---
 
@@ -19,7 +20,7 @@
 
 The Workspace Grid Desklet is a Cinnamon desktop desklet that displays a clickable grid of workspaces with their names and highlights the active workspace. It allows users to quickly navigate between workspaces by clicking on tiles in the grid.
 
-**UUID**: `cinnamon-workspace-grid-desklet@curb.software`
+**UUID**: `cinnamon-workspace-grid-desklet@curbsoftware`
 
 **Type**: Cinnamon Desklet
 
@@ -29,10 +30,13 @@ The Workspace Grid Desklet is a Cinnamon desktop desklet that displays a clickab
 
 ### Core Features
 - **Workspace Grid Display**: Shows all workspaces in a configurable grid layout
-- **Click-to-Switch**: Click any workspace tile to switch to that workspace
+- **Click-to-Switch**: Left-click any workspace tile to switch to that workspace
 - **Active Workspace Highlighting**: Visually highlights the currently active workspace using CSS pseudo-class `outlined`
 - **Workspace Names**: Displays workspace names with optional index prefixes
-- **Dynamic Updates**: Automatically updates when workspaces are added, removed, or switched
+- **Dynamic Updates**: Automatically updates when workspaces are added, removed, or renamed
+- **Add Workspace**: A trailing `+` tile appends a workspace (capped at 36)
+- **Remove Workspace**: Right-click a tile → *Remove*, with a confirmation prompt for named workspaces
+- **Rename Workspace**: Right-click a tile → *Rename…*, opens a modal entry dialog
 
 ### Configuration Options
 | Setting | Type | Description | Default |
@@ -41,6 +45,9 @@ The Workspace Grid Desklet is a Cinnamon desktop desklet that displays a clickab
 | `fixed-rows` | spinbutton | Number of rows in fixed layout mode | `2` |
 | `fixed-cols` | spinbutton | Number of columns in fixed layout mode | `2` |
 | `show-index` | checkbox | Prefix workspace names with index number | `false` |
+| `enable-workspace-editing` | checkbox | Allow adding, removing and renaming workspaces | `true` |
+| `show-add-tile` | checkbox | Show the trailing `+` tile | `true` |
+| `confirm-remove` | checkbox | Confirm before removing a **named** workspace | `true` |
 | `scroll-wheel-behavior` | combobox | Scroll wheel action: `off`, `col`, `row` | `off` |
 | `tile-spacing` | spinbutton | Spacing between tiles in pixels | `4` |
 | `width` | spinbutton | Desklet width in pixels | `600` |
@@ -53,7 +60,8 @@ The Workspace Grid Desklet is a Cinnamon desktop desklet that displays a clickab
 ```
 cinnamon-workspace-grid-desklet@curbsoftware/
 ├── desklet.js              # Main desklet implementation
-├── WorkspaceController.js  # Workspace geometry management (optional utility)
+├── workspaceActions.js     # Add/remove/rename logic + pure layout maths
+├── renameDialog.js         # Modal rename dialog
 ├── metadata.json           # Desklet metadata (UUID, name, description)
 ├── settings-schema.json    # Configuration schema for settings panel
 ├── stylesheet.css          # CSS styles for the desklet
@@ -67,21 +75,39 @@ cinnamon-workspace-grid-desklet@curbsoftware/
 The main entry point containing the `MyDesklet` class that:
 - Extends `Desklet.Desklet.prototype`
 - Initializes settings bindings
-- Creates the UI grid layout
+- Creates the UI grid layout, including per-tile context menus and the `+` tile
 - Handles workspace switching events
 - Manages signal connections for workspace changes
 
-#### `WorkspaceController.js`
-Optional utility module for advanced workspace geometry control:
-- `set_workspace_grid(cols, rows)`: Override workspace layout geometry
-- `__equalize_num_workspaces()`: Adjust workspace count to match grid
-- `release_control()`: Revert control to Cinnamon
+#### `workspaceActions.js`
+All workspace mutation logic, with no St/Clutter dependency so the pure parts
+can be unit tested headlessly. Wraps Cinnamon's own API defensively — every
+export returns `false` on failure rather than letting an exception escape into
+a signal handler.
+
+- `addWorkspace()`, `removeWorkspaceByIndex(index, {confirm, onRemoved})`, `renameWorkspace(index, name)`
+- `canAdd()`, `canRemove()`, `isValidIndex(index)`, `getWorkspaceCount()`, `getActiveWorkspaceIndex()`
+- `computeGridDims(cellCount, mode, rows, cols)` and `planCells(wsCount, showAddTile, rows, cols)` — pure
+- `connectNameChanges(cb)` / `disconnectNameChanges(id)` — watches `org.cinnamon.desktop.wm.preferences` `workspace-names`
+- `setDependencies(deps)` / `resetDependencies()` — test seam only
+
+#### `renameDialog.js`
+`RenameWorkspaceDialog`, a `ModalDialog.ModalDialog` subclass holding an
+`St.Entry`. A modal is used rather than an inline entry because desklets live
+on the desktop layer, where grabbing and restoring key focus by hand is
+unreliable; `pushModal()` takes a stage-wide grab and focuses the entry.
+`promptRename(currentName, callback)` is the safe entry point.
+
+> **Both helper modules are duplicated verbatim in the Workspace Name applet.**
+> Cinnamon gives xlets no way to import across xlet boundaries, so the copies
+> must be kept in sync — `dev-tools/test-workspace-actions.js` asserts they are
+> byte-identical.
 
 #### `metadata.json`
 Required metadata file containing:
 ```json
 {
-  "uuid": "cinnamon-workspace-grid-desklet@curb.software",
+  "uuid": "cinnamon-workspace-grid-desklet@curbsoftware",
   "name": "Workspace Grid",
   "description": "...",
   "icon": "view-grid-symbolic",
@@ -142,10 +168,19 @@ journalctl -f | grep -i cinnamon
 Desklet.Desklet (imports.ui.desklet)
     └── MyDesklet
             ├── _init(metadata, deskletId)
-            ├── on_desklet_removed()
+            ├── on_desklet_removed()          -> _cleanup()
+            ├── _cleanup()                    idempotent teardown
             ├── on_setting_changed()
             ├── _rebuildGrid()
-            ├── _onWorkspaceButtonClicked(actor)
+            ├── _createWorkspaceTile(index)
+            ├── _createAddTile()
+            ├── _onWorkspaceButtonClicked(actor, clickedButton)
+            ├── _openTileMenu(button)
+            ├── _destroyTileMenu()
+            ├── _deferAction(fn)
+            ├── _onAddWorkspace()
+            ├── _onRemoveWorkspace(index)
+            ├── _onRenameWorkspace(index)
             ├── _getWorkspaceCount()
             ├── _getWorkspaceName(index)
             ├── _computeGridDims()
@@ -162,13 +197,25 @@ The desklet connects to these signals:
 | `switch-workspace` | `global.window_manager` | Update active highlight |
 | `workspace-added` | `global.workspace_manager` | Rebuild grid on workspace add |
 | `workspace-removed` | `global.workspace_manager` | Rebuild grid on workspace remove |
+| `changed::workspace-names` | `Gio.Settings(org.cinnamon.desktop.wm.preferences)` | Rebuild grid when any workspace is renamed |
 | `scroll-event` | `mainContainer` | Handle scroll wheel navigation |
+| `destroy` | the desklet itself | Run cleanup immediately instead of 500 ms later |
 
 ### UI Components
 ```
 mainContainer (St.BoxLayout, vertical)
     └── table (St.Table, homogeneous)
-            └── buttons[] (St.Button)
+            ├── buttons[] (St.Button, style_class workspace-button)
+            │       └── St.Label (workspace-label)
+            └── add tile (St.Button, style_class workspace-add-tile)   <- optional, always last
+                    └── St.Label (workspace-add-label)
+
+Main.uiGroup
+    └── _tileMenu (PopupMenu.PopupMenu)      <- at most one alive at a time
+            ├── Rename...
+            ├── Remove
+            ├── ---
+            └── Add workspace
                     └── label (St.Label)
 ```
 
@@ -403,7 +450,92 @@ _update: function() {
 
 ---
 
+## Workspace Management
+
+### Use Cinnamon's API, never raw Meta calls
+
+Cinnamon already handles the fiddly parts. `workspaceActions.js` is a thin
+defensive wrapper — do not reimplement any of this:
+
+| Cinnamon API (`/usr/share/cinnamon/js/ui/main.js`) | What it already handles |
+|---|---|
+| `Main.getWorkspaceName(i)` | Falls back to `"Workspace N"` when unnamed |
+| `Main.setWorkspaceName(i, name)` | Pads/trims the names array, stores `""` when the name equals the default, writes the gsetting |
+| `Main.hasDefaultWorkspaceName(i)` | Whether a remove needs a confirmation prompt |
+| `Main._addWorkspace()` | `append_new_workspace(false, time)` |
+| `Main._removeWorkspace(ws)` | **Refuses at `n_workspaces == 1`**, splices the name out, then removes |
+
+Prior art worth reading: `expoThumbnail.js` `onTitleKeyPressEvent()` (Enter
+commits, Escape cancels) and `remove()` (confirm only when the name is
+non-default).
+
+### Where workspace names actually live
+
+`org.cinnamon.desktop.wm.preferences` key `workspace-names`.
+
+**Not** `org.cinnamon` `workspace-name-overrides` — that key's value on Mint 22
+is literally `['DEPRECATED']` and never changes. Earlier versions of this
+desklet watched it, which is why renames made elsewhere never refreshed the
+grid. Connecting to `changed::<nonexistent-key>` does not throw either; the
+handler simply never fires, so this class of bug is silent.
+
+```bash
+gsettings get org.cinnamon.desktop.wm.preferences workspace-names
+gsettings range org.cinnamon.desktop.wm.preferences num-workspaces   # -> i 1 36
+```
+
+The 1..36 range is where `MAX_WORKSPACES` comes from.
+
+### Crash-safety rules for this desklet
+
+These are the rules that keep a workspace edit from taking down the session:
+
+1. **Never hold a `Meta.Workspace` across a timeout or dialog.** Resolve it
+   from its index at the moment of use, and re-check `canRemove()` inside the
+   confirm callback — the world may have changed while the dialog was open.
+2. **Tile menus are parented to `Main.uiGroup`.** `destroy_all_children()` on
+   the desklet container will not reach them. `_destroyTileMenu()` must run at
+   the top of `_rebuildGrid()` and during cleanup, and it closes the menu
+   before destroying it so no grab is orphaned.
+3. **Menu actions must not run synchronously.** `PopupMenuBase` closes the menu
+   in its *own* `activate` handler, which runs after ours. Destroying the menu
+   or pushing a modal before that happens fights the menu's grab. Use
+   `_deferAction()`.
+4. **`_deferAction()` uses `Mainloop.timeout_add(0, …)`, not `idle_add`.** Idle
+   callbacks sit below Clutter's redraw priority, so an action fired while a
+   menu or dialog was still animating could be starved for hundreds of
+   milliseconds. This was a real, observed failure.
+5. **`Desklet.destroy()` defers `on_desklet_removed()` by 500 ms** (an opacity
+   ease) but emits `destroy` immediately. Hook `destroy` as well, or handlers
+   keep firing against a tearing-down desklet for half a second. `_cleanup()`
+   is idempotent and serves both paths.
+6. **Every source is tracked.** `_rebuildTimeout`, `_idleSources[]`, all four
+   signal ids. Cleanup removes each and nulls it.
+
+---
+
 ## Testing & Debugging
+
+### Automated tests
+
+```bash
+# Headless unit tests - pure logic, no Cinnamon process needed
+gjs dev-tools/test-workspace-actions.js
+
+# Live tests against the running desktop (drives Cinnamon over DBus Eval)
+python3 dev-tools/live-test-desklet.py
+```
+
+The live driver exercises the full edge-case matrix — add, remove, rename,
+confirmation dialogs, the tile menu lifecycle, the 36-workspace ceiling,
+overflowing fixed grids, rapid add/remove bursts, and teardown — then asserts
+that workspace count, names and the active index are all restored and that
+`~/.xsession-errors` gained no new `JS ERROR` lines. It only ever removes
+workspaces it appended itself, so no windows are relocated.
+
+`St` cannot be instantiated outside the Cinnamon process (`libst.so` is not on
+the loader path), which is why widget behaviour is covered by the live driver
+rather than the headless one.
 
 ### Debug Logging
 ```javascript
@@ -442,7 +574,7 @@ journalctl -f --user-unit cinnamon
 
 ### Launch Settings Panel
 ```bash
-cinnamon-settings desklets cinnamon-workspace-grid-desklet@curb.software
+cinnamon-settings desklets cinnamon-workspace-grid-desklet@curbsoftware
 ```
 
 ---
