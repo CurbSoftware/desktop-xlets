@@ -1,9 +1,37 @@
-cinnamon-world-clock-desklet@curbsoftware
+# World Clock
 
-Cinnamon World Clock is a desklet for the Cinnamon desktop environment that shows a grid of world clocks. You can add and remove clocks, adjust their sizes, and rearrange them via drag-and-drop.
+A Cinnamon desklet that shows a grid of clocks, each with its own name and timezone.
 
-Usage
-- Right-click the desklet and choose \"Add Clock\" to create a new entry.
-- Use the \"Clocks\" submenu to edit, resize, or remove specific clocks.
-- Drag a clock onto another to reorder the grid.
-- Configure fixed columns or spacing in the Cinnamon desklet settings.
+Left-click does nothing. Click the trailing **+** tile to add a clock. Right-click a tile to edit or remove it. Clocks set to the system timezone (`local`) are outlined.
+
+![World Clock desklet](screenshot.png)
+
+## Features
+
+- Auto (near-square) or fixed rows × columns
+- Searchable timezone list (IANA zones plus Local)
+- Shared time/date formats and font sizes for every tile
+- Last clock cannot be removed
+- Optional confirmation before removing a named clock
+- Layout, spacing, and size are configured from Cinnamon Desklet settings
+
+## Configuration
+
+Right-click the desklet → **Configure…**
+
+- **Grid layout mode** — auto or fixed rows/columns
+- **Allow adding, removing and editing clocks** — turn off for a read-only grid
+- **Show a "+" tile** — hide the add tile while keeping the right-click menu
+- **Time / date format** — `strftime` patterns (for example `%H:%M` or `%I:%M %p`)
+- **Font sizes** and **tile spacing**
+- **Desklet width / height**
+
+## Notes
+
+This is a desktop **desklet**, not the panel [World Clock Calendar](https://cinnamon-spices.linuxmint.com/applets/view/108) applet. It can run next to that applet; they do not share settings.
+
+UUID: `cinnamon-world-clock-desklet@curbsoftware`
+
+## License
+
+GNU General Public License v3.0 or later. See [LICENSE](LICENSE).

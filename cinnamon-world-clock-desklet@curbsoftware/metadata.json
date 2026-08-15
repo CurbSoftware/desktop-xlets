@@ -1,14 +1,8 @@
 {
-    "description": "A fork desklet that displays the time, date, and timezone",
-    "prevent-decorations": false,
     "uuid": "cinnamon-world-clock-desklet@curbsoftware",
-    "name": "Time Los Angeles",
-    "timeFormat": "%H:%M:%S",
-    "timeSize": "40pt",
-    "dateFormat": "%A,%e %B",
-    "dateSize": "15pt",
-    "timezone": "America/Los_Angeles",
-    "timezoneSize": "12pt",
-    "author": "none",
-    "last-edited": 1758254790
+    "name": "World Clock",
+    "description": "A grid of world clocks with configurable timezones",
+    "version": "1.0.0",
+    "prevent-decorations": false,
+    "max-instances": 1
 }

@@ -1,167 +1,96 @@
-const Clutter = imports.gi.Clutter;
-const St = imports.gi.St;
-
+/* global imports, global */
 const Desklet = imports.ui.desklet;
+const St = imports.gi.St;
 const Lang = imports.lang;
-const Mainloop = imports.mainloop;
-const GLib = imports.gi.GLib;
-const PopupMenu = imports.ui.popupMenu;
-const Util = imports.misc.util;
 const Settings = imports.ui.settings;
-const SignalManager = imports.misc.signalManager;
-const DND = imports.ui.dnd;
+const Mainloop = imports.mainloop;
+const Main = imports.ui.main;
+const PopupMenu = imports.ui.popupMenu;
 const ModalDialog = imports.ui.modalDialog;
-
 const Gettext = imports.gettext;
-const UUID = "cinnamon-world-clock-desklet@curbsoftware";
+const GLib = imports.gi.GLib;
 
-Gettext.bindtextdomain(UUID, GLib.get_home_dir() + "/.local/share/locale");
+const uuid = "cinnamon-world-clock-desklet@curbsoftware";
+
+Gettext.bindtextdomain(uuid, GLib.get_home_dir() + "/.local/share/locale");
 
 function _(str) {
-    return Gettext.dgettext(UUID, str);
+    return Gettext.dgettext(uuid, str);
 }
 
-const DEFAULT_CLOCK = {
-    name: "Local",
-    timezone: "local",
-    timeFormat: "%H:%M:%S",
-    dateFormat: "%A, %e %B",
-    timeSize: 40,
-    dateSize: 15,
-    timezoneSize: 12
-};
+/* Xlet-local modules. Cinnamon exposes a desklet's own directory through
+ * imports.ui.deskletManager.desklets[uuid]; resolved lazily in _init() so a
+ * load-order problem surfaces as a logged error instead of a load failure. */
+let ClockActions = null;
+let ClockDialog = null;
 
-const MIN_FONT_SIZE = 6;
-const SIZE_STEP = 2;
-
-function ClockConfigDialog(title, initial, onSave) {
-    this._init(title, initial, onSave);
-}
-
-ClockConfigDialog.prototype = {
-    __proto__: ModalDialog.ModalDialog.prototype,
-
-    _init: function(title, initial, onSave) {
-        ModalDialog.ModalDialog.prototype._init.call(this);
-
-        this._onSave = onSave;
-        this._entries = {};
-        this.contentLayout.set_style("spacing: 10px; padding: 12px;");
-
-        const header = new St.Label({ text: title, style_class: "world-clock-dialog-title" });
-        this.contentLayout.add_actor(header);
-
-        this._addEntry(_("Name"), "name", initial.name || "");
-        this._addEntry(_("Timezone"), "timezone", initial.timezone || "local");
-        this._addEntry(_("Time format"), "timeFormat", initial.timeFormat || DEFAULT_CLOCK.timeFormat);
-        this._addEntry(_("Date format"), "dateFormat", initial.dateFormat || DEFAULT_CLOCK.dateFormat);
-        this._addEntry(_("Time size (pt)"), "timeSize", String(initial.timeSize || DEFAULT_CLOCK.timeSize));
-        this._addEntry(_("Date size (pt)"), "dateSize", String(initial.dateSize || DEFAULT_CLOCK.dateSize));
-        this._addEntry(_("Timezone size (pt)"), "timezoneSize", String(initial.timezoneSize || DEFAULT_CLOCK.timezoneSize));
-
-        this.setButtons([
-            {
-                label: _("Cancel"),
-                action: Lang.bind(this, this._onCancel),
-                key: Clutter.Escape
-            },
-            {
-                label: _("Save"),
-                action: Lang.bind(this, this._onAccept),
-                key: Clutter.Return
-            }
-        ]);
-
-        this.open();
-        global.stage.set_key_focus(this._entries.name);
-    },
-
-    _addEntry: function(label, key, value) {
-        const row = new St.BoxLayout({ vertical: false, style_class: "world-clock-dialog-row" });
-        const labelActor = new St.Label({ text: label, style_class: "world-clock-dialog-label" });
-        const entry = new St.Entry({ text: value, can_focus: true, style_class: "world-clock-dialog-entry" });
-
-        row.add(labelActor, { x_fill: false, x_align: St.Align.START });
-        row.add(entry, { expand: true, x_fill: true, x_align: St.Align.START });
-
-        this.contentLayout.add_actor(row);
-        this._entries[key] = entry;
-    },
-
-    _onAccept: function() {
-        const result = {};
-        Object.keys(this._entries).forEach((key) => {
-            result[key] = this._entries[key].get_text();
-        });
-
-        this.close();
-        if (this._onSave) {
-            this._onSave(result);
-        }
-    },
-
-    _onCancel: function() {
-        this.close();
+function _loadModules() {
+    if (ClockActions && ClockDialog)
+        return true;
+    try {
+        const dir = imports.ui.deskletManager.desklets[uuid];
+        ClockActions = dir.clockActions;
+        ClockDialog = dir.clockDialog;
+        return !!(ClockActions && ClockDialog);
+    } catch (e) {
+        global.logError(uuid + " could not load helper modules: " + e);
+        return false;
     }
-};
+}
+
+const DEFAULT_TIME_FORMAT = "%H:%M:%S";
+const DEFAULT_DATE_FORMAT = "%A, %e %B";
 
 function ClockWidget(clockData, desklet) {
     this._init(clockData, desklet);
 }
 
 ClockWidget.prototype = {
-    _init: function(clockData, desklet) {
+    _init: function (clockData, desklet) {
         this.desklet = desklet;
         this.data = clockData;
         this.id = clockData.id;
-        this.isWorldClock = true;
 
-        this._signalManager = new SignalManager.SignalManager(null);
-
-        this.actor = new St.BoxLayout({
-            vertical: true,
+        this.actor = new St.Button({
+            style_class: "world-clock-tile",
             reactive: true,
             can_focus: true,
-            style_class: "world-clock"
+            x_expand: true,
+            y_expand: true
         });
+        /* Accept right-click too, so a tile can raise its own context menu.
+         * St.Button consumes the release, so the Desklet base class right-click
+         * handler does not also open the desklet menu. */
+        this.actor.set_button_mask(St.ButtonMask.ONE | St.ButtonMask.THREE);
 
-        this.actor._delegate = this;
+        const box = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+            y_expand: true
+        });
 
         this._time = new St.Label({ style_class: "world-clock-time" });
         this._date = new St.Label({ style_class: "world-clock-date" });
         this._timezoneLabel = new St.Label({ style_class: "world-clock-timezone" });
 
-        this.actor.add(this._time, { x_fill: false, x_align: St.Align.MIDDLE });
-        this.actor.add(this._date, { x_fill: false, x_align: St.Align.MIDDLE });
-        this.actor.add(this._timezoneLabel, { x_fill: false, x_align: St.Align.MIDDLE });
+        box.add(this._time, { x_fill: false, x_align: St.Align.MIDDLE });
+        box.add(this._date, { x_fill: false, x_align: St.Align.MIDDLE });
+        box.add(this._timezoneLabel, { x_fill: false, x_align: St.Align.MIDDLE });
 
+        this.actor.set_child(box);
         this._applySizes();
-        this._enableDrag();
     },
 
-    _applySizes: function() {
-        this._time.style = "font-size: " + this.data.timeSize + "pt;";
-        this._date.style = "font-size: " + this.data.dateSize + "pt;";
-        this._timezoneLabel.style = "font-size: " + this.data.timezoneSize + "pt;";
+    _applySizes: function () {
+        const timeSize = Number(this.desklet.timeSize) || 40;
+        const dateSize = Number(this.desklet.dateSize) || 15;
+        const timezoneSize = Number(this.desklet.timezoneSize) || 12;
+        this._time.set_style("font-size: " + timeSize + "pt;");
+        this._date.set_style("font-size: " + dateSize + "pt;");
+        this._timezoneLabel.set_style("font-size: " + timezoneSize + "pt;");
     },
 
-    _enableDrag: function() {
-        this.draggable = DND.makeDraggable(this.actor, { restoreOnSuccess: true, dragActorMaxSize: 240 });
-        this._signalManager.connect(this.draggable, "drag-begin", Lang.bind(this, this._onDragBegin));
-        this._signalManager.connect(this.draggable, "drag-end", Lang.bind(this, this._onDragEnd));
-        this._signalManager.connect(this.draggable, "drag-cancelled", Lang.bind(this, this._onDragEnd));
-    },
-
-    _onDragBegin: function() {
-        this.actor.add_style_pseudo_class("outlined");
-    },
-
-    _onDragEnd: function() {
-        this.actor.remove_style_pseudo_class("outlined");
-        this.desklet._clearDropTargets();
-    },
-
-    update: function(baseDate) {
+    update: function (baseDate) {
         let displayDate = baseDate;
         let timezoneName = this.data.timezone || "local";
 
@@ -169,57 +98,29 @@ ClockWidget.prototype = {
             try {
                 const timeString = baseDate.toLocaleString("en-US", { timeZone: timezoneName });
                 displayDate = new Date(timeString);
-                timezoneName = this.data.name || timezoneName;
             } catch (e) {
-                global.logError("Invalid timezone: " + timezoneName + ". Using local time. Error: " + e);
+                global.logError(uuid + " invalid timezone: " + timezoneName + ": " + e);
                 timezoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
                 displayDate = baseDate;
             }
-        } else {
-            timezoneName = this.data.name || Intl.DateTimeFormat().resolvedOptions().timeZone;
         }
 
-        this._time.set_text(displayDate.toLocaleFormat(this.data.timeFormat));
-        this._date.set_text(displayDate.toLocaleFormat(this.data.dateFormat));
-        this._timezoneLabel.set_text(timezoneName);
-    },
+        const label = ClockActions
+            ? ClockActions.getClockLabel(this.data)
+            : (this.data.name || timezoneName);
 
-    setSpacing: function(px) {
-        this.actor.set_style("margin: " + px + "px;");
-    },
-
-    handleDragOver: function(source) {
-        if (!source || !source.isWorldClock || source.id === this.id) {
-            return DND.DragMotionResult.NO_DROP;
+        try {
+            const timeFormat = this.desklet.timeFormat || DEFAULT_TIME_FORMAT;
+            const dateFormat = this.desklet.dateFormat || DEFAULT_DATE_FORMAT;
+            this._time.set_text(displayDate.toLocaleFormat(timeFormat));
+            this._date.set_text(displayDate.toLocaleFormat(dateFormat));
+        } catch (e) {
+            global.logError(uuid + " could not format clock: " + e);
+            this._time.set_text("");
+            this._date.set_text("");
         }
 
-        this.desklet._setDropTarget(this.id);
-        return DND.DragMotionResult.MOVE_DROP;
-    },
-
-    acceptDrop: function(source) {
-        if (!source || !source.isWorldClock || source.id === this.id) {
-            return false;
-        }
-
-        this.desklet._moveClock(source.id, this.id);
-        return true;
-    },
-
-    getDragActorSource: function() {
-        return this.actor;
-    },
-
-    getDragActor: function() {
-        return new Clutter.Clone({ source: this.actor });
-    },
-
-    destroy: function() {
-        this._signalManager.disconnectAllSignals();
-        if (this.actor) {
-            this.actor.destroy();
-        }
-        this.actor = null;
+        this._timezoneLabel.set_text(label);
     }
 };
 
@@ -230,466 +131,453 @@ function MyDesklet(metadata, deskletId) {
 MyDesklet.prototype = {
     __proto__: Desklet.Desklet.prototype,
 
-    _init: function(metadata, deskletId) {
+    _init: function (metadata, deskletId) {
         Desklet.Desklet.prototype._init.call(this, metadata, deskletId);
 
-        this._signalManager = new SignalManager.SignalManager(null);
-        this.settings = new Settings.DeskletSettings(this, UUID, deskletId);
+        _loadModules();
 
-        this.settings.bind("grid-columns", "gridColumns", Lang.bind(this, this._onLayoutChanged));
-        this.settings.bind("clock-spacing", "clockSpacing", Lang.bind(this, this._onLayoutChanged));
-        this.settings.bind("clocks", "clocks", Lang.bind(this, this._onClocksChanged));
+        if (ClockActions)
+            ClockActions.setTranslate(_);
+        if (ClockDialog)
+            ClockDialog.setTranslate(_);
+
+        this.settings = new Settings.DeskletSettings(this, this.metadata["uuid"], deskletId);
+        this.settings.bind("layout-mode", "layoutMode", this.on_setting_changed);
+        this.settings.bind("fixed-rows", "fixedRows", this.on_setting_changed);
+        this.settings.bind("fixed-cols", "fixedCols", this.on_setting_changed);
+        this.settings.bind("tile-spacing", "tileSpacing", this.on_setting_changed);
+        this.settings.bind("width", "width", this.on_setting_changed);
+        this.settings.bind("height", "height", this.on_setting_changed);
+        this.settings.bind("enable-clock-editing", "enableEditing", this.on_setting_changed);
+        this.settings.bind("show-add-tile", "showAddTile", this.on_setting_changed);
+        this.settings.bind("confirm-remove", "confirmRemove");
+        this.settings.bind("time-format", "timeFormat", this.on_setting_changed);
+        this.settings.bind("date-format", "dateFormat", this.on_setting_changed);
+        this.settings.bind("time-size", "timeSize", this.on_setting_changed);
+        this.settings.bind("date-size", "dateSize", this.on_setting_changed);
+        this.settings.bind("timezone-size", "timezoneSize", this.on_setting_changed);
+        this.settings.bind("clocks", "clocks", this._onClocksChanged);
 
         this._clockWidgets = [];
-        this._dropTargetId = null;
+        this.buttons = [];
+        this._normalizedClocks = [];
         this._timeout = null;
 
-        this._mainContainer = new St.BoxLayout({ vertical: true, style_class: "world-clock-container" });
-        this._grid = new St.Table({ homogeneous: true, reactive: true, style_class: "world-clock-grid" });
+        /* At most one transient tile menu is alive at a time. Tile menus are
+         * parented to Main.uiGroup, so destroy_all_children() on our own
+         * container will never reach them - they must be released by hand. */
+        this._tileMenu = null;
+        this._idleSources = [];
 
-        this._mainContainer.add(this._grid, { expand: true, x_expand: true, y_expand: true });
-        this.setContent(this._mainContainer);
+        this.mainContainer = new St.BoxLayout({
+            vertical: true,
+            style_class: "world-clock-container"
+        });
+        this.mainContainer.set_width(this.width || 600);
+        this.mainContainer.set_height(this.height || 400);
+
+        this.setContent(this.mainContainer);
         this.setHeader(_("World Clocks"));
 
-        this._initMenu();
         this._ensureClockDefaults();
-        this._renderClocks();
+        this._rebuildGrid();
         this._scheduleUpdate();
+
+        /* Desklet.destroy() emits 'destroy' immediately but defers
+         * on_desklet_removed() until a 500ms fade-out completes. Without this
+         * hook our timeout keeps firing against a tearing-down desklet for
+         * half a second. _cleanup() is idempotent. */
+        this._destroyId = this.connect("destroy", Lang.bind(this, this._cleanup));
     },
 
-    on_desklet_removed: function() {
+    on_desklet_removed: function () {
+        this._cleanup();
+    },
+
+    _cleanup: function () {
+        if (this._cleanedUp)
+            return;
+        this._cleanedUp = true;
+
+        this._destroyTileMenu();
+
+        if (this._idleSources) {
+            for (let i = 0; i < this._idleSources.length; i++)
+                Mainloop.source_remove(this._idleSources[i]);
+            this._idleSources = [];
+        }
         if (this._timeout) {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;
         }
 
-        this._signalManager.disconnectAllSignals();
-        this._destroyClocks();
+        this._clockWidgets = [];
+        this.buttons = [];
+
+        if (this._destroyId) {
+            this.disconnect(this._destroyId);
+            this._destroyId = 0;
+        }
     },
 
-    _initMenu: function() {
-        this._menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this._menu.addAction(_("Add Clock"), Lang.bind(this, this._openAddDialog));
-
-        this._clockMenuSection = new PopupMenu.PopupMenuSection();
-        this._menu.addMenuItem(this._clockMenuSection);
-
-        this._menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this._menu.addAction(_("Help"), Lang.bind(this, this._openHelp));
+    on_setting_changed: function () {
+        try {
+            this.mainContainer.set_width(this.width);
+            this.mainContainer.set_height(this.height);
+            this._rebuildGrid();
+        } catch (e) {
+            global.logError(uuid + " setting change failed: " + e);
+        }
     },
 
-    _openHelp: function() {
-        const helpFile = this.metadata.path + "/README.md";
-        Util.spawnCommandLine("xdg-open " + GLib.shell_quote(helpFile));
-    },
-
-    _openAddDialog: function() {
-        new ClockConfigDialog(_("Add Clock"), DEFAULT_CLOCK, Lang.bind(this, function(result) {
-            const newClock = this._buildClockFromDialog(result, null);
-            if (!newClock) {
+    _onClocksChanged: function () {
+        try {
+            if (!ClockActions || !this.mainContainer)
                 return;
-            }
-            const clocks = this._getClockList().slice();
-            clocks.push(newClock);
-            this._setClockList(clocks);
-        }));
+            const result = ClockActions.normalizeClockList(this.clocks);
+            this._normalizedClocks = result.clocks;
+            if (result.changed)
+                this.settings.setValue("clocks", result.clocks);
+            this._rebuildGrid();
+        } catch (e) {
+            global.logError(uuid + " clocks change failed: " + e);
+        }
     },
 
-    _openEditDialog: function(clockId) {
-        const clocks = this._getClockList();
-        const index = clocks.findIndex((clock) => clock.id === clockId);
-        if (index === -1) {
-            return;
-        }
+    /* setValue does not fire the bind callback in-process, so the grid must
+     * be rebuilt here. _normalizedClocks is the live list _getClockList uses. */
+    _setClockList: function (list) {
+        this._normalizedClocks = Array.isArray(list) ? list : [];
+        this.settings.setValue("clocks", this._normalizedClocks);
+        this._rebuildGrid();
+    },
 
-        const current = clocks[index];
-        new ClockConfigDialog(_("Edit Clock"), current, Lang.bind(this, function(result) {
-            const updated = this._buildClockFromDialog(result, current.id);
-            if (!updated) {
+    /* ------------------------------------------------------------------ *
+     * Grid construction
+     * ------------------------------------------------------------------ */
+
+    _rebuildGrid: function () {
+        try {
+            if (!_loadModules())
                 return;
-            }
-            const next = clocks.slice();
-            next[index] = updated;
-            this._setClockList(next);
-        }));
-    },
 
-    _buildClockFromDialog: function(values, existingId) {
-        const name = (values.name || "").trim();
-        const timezone = (values.timezone || "").trim() || "local";
-        const timeFormat = (values.timeFormat || "").trim() || DEFAULT_CLOCK.timeFormat;
-        const dateFormat = (values.dateFormat || "").trim() || DEFAULT_CLOCK.dateFormat;
+            this._destroyTileMenu();
+            this.mainContainer.destroy_all_children();
 
-        const timeSize = this._coerceSize(values.timeSize, DEFAULT_CLOCK.timeSize);
-        const dateSize = this._coerceSize(values.dateSize, DEFAULT_CLOCK.dateSize);
-        const timezoneSize = this._coerceSize(values.timezoneSize, DEFAULT_CLOCK.timezoneSize);
+            this._clockWidgets = [];
+            this.buttons = [];
 
-        return {
-            id: existingId || GLib.uuid_string_random(),
-            name: name,
-            timezone: timezone,
-            timeFormat: timeFormat,
-            dateFormat: dateFormat,
-            timeSize: timeSize,
-            dateSize: dateSize,
-            timezoneSize: timezoneSize
-        };
-    },
+            const clocks = this._getClockList();
+            const showAdd = !!(this.enableEditing && this.showAddTile && ClockActions.canAdd(clocks));
+            const dims = this._computeGridDims();
+            const cells = ClockActions.planCells(clocks.length, showAdd, dims.rows, dims.cols);
 
-    _onClocksChanged: function() {
-        const normalized = this._normalizeClockList(this.clocks);
-        if (!normalized) {
-            return;
-        }
-
-        this._normalizedClocks = normalized;
-        this._renderClocks();
-    },
-
-    _onLayoutChanged: function() {
-        this._renderClocks();
-    },
-
-    _ensureClockDefaults: function() {
-        if (!Array.isArray(this.clocks) || this.clocks.length === 0) {
-            const legacy = this._getLegacyClock();
-            this._setClockList([legacy || this._buildDefaultClock()]);
-            return;
-        }
-
-        if (this.clocks.length === 1 && this.clocks[0].id === "default") {
-            const legacy = this._getLegacyClock();
-            if (legacy) {
-                this._setClockList([legacy]);
-            }
-        }
-    },
-
-    _getLegacyClock: function() {
-        const legacy = this.metadata || {};
-        const hasLegacy = legacy.timeFormat || legacy.dateFormat || legacy.timeSize || legacy.timezone || legacy.name;
-        if (!hasLegacy) {
-            return null;
-        }
-        const normalized = this._normalizeClockEntry({
-            id: "legacy",
-            name: legacy.name || DEFAULT_CLOCK.name,
-            timezone: legacy.timezone || DEFAULT_CLOCK.timezone,
-            timeFormat: legacy.timeFormat || DEFAULT_CLOCK.timeFormat,
-            dateFormat: legacy.dateFormat || DEFAULT_CLOCK.dateFormat,
-            timeSize: legacy.timeSize || DEFAULT_CLOCK.timeSize,
-            dateSize: legacy.dateSize || DEFAULT_CLOCK.dateSize,
-            timezoneSize: legacy.timezoneSize || DEFAULT_CLOCK.timezoneSize
-        });
-
-        return normalized.clock;
-    },
-
-    _buildDefaultClock: function() {
-        return {
-            id: GLib.uuid_string_random(),
-            name: DEFAULT_CLOCK.name,
-            timezone: DEFAULT_CLOCK.timezone,
-            timeFormat: DEFAULT_CLOCK.timeFormat,
-            dateFormat: DEFAULT_CLOCK.dateFormat,
-            timeSize: DEFAULT_CLOCK.timeSize,
-            dateSize: DEFAULT_CLOCK.dateSize,
-            timezoneSize: DEFAULT_CLOCK.timezoneSize
-        };
-    },
-
-    _normalizeClockList: function(clockList) {
-        const list = Array.isArray(clockList) ? clockList : [];
-        const normalized = [];
-        let changed = false;
-
-        list.forEach((clock) => {
-            const result = this._normalizeClockEntry(clock);
-            normalized.push(result.clock);
-            if (result.changed) {
-                changed = true;
-            }
-        });
-
-        if (normalized.length === 0) {
-            normalized.push(this._buildDefaultClock());
-            changed = true;
-        }
-
-        if (changed) {
-            this._setClockList(normalized);
-            return null;
-        }
-
-        return normalized;
-    },
-
-    _normalizeClockEntry: function(clock) {
-        const input = clock && typeof clock === "object" ? clock : {};
-        let changed = false;
-
-        let id = typeof input.id === "string" ? input.id.trim() : "";
-        if (!id || id === "default") {
-            id = GLib.uuid_string_random();
-            changed = true;
-        }
-
-        const name = typeof input.name === "string" ? input.name.trim() : "";
-        if (name !== input.name) {
-            changed = true;
-        }
-
-        let timezone = typeof input.timezone === "string" ? input.timezone.trim() : "";
-        if (!timezone) {
-            timezone = DEFAULT_CLOCK.timezone;
-            changed = true;
-        }
-
-        const timeFormat = typeof input.timeFormat === "string" && input.timeFormat.trim()
-            ? input.timeFormat.trim()
-            : DEFAULT_CLOCK.timeFormat;
-        if (timeFormat !== input.timeFormat) {
-            changed = true;
-        }
-
-        const dateFormat = typeof input.dateFormat === "string" && input.dateFormat.trim()
-            ? input.dateFormat.trim()
-            : DEFAULT_CLOCK.dateFormat;
-        if (dateFormat !== input.dateFormat) {
-            changed = true;
-        }
-
-        const timeSize = this._coerceSize(input.timeSize, DEFAULT_CLOCK.timeSize);
-        const dateSize = this._coerceSize(input.dateSize, DEFAULT_CLOCK.dateSize);
-        const timezoneSize = this._coerceSize(input.timezoneSize, DEFAULT_CLOCK.timezoneSize);
-
-        if (timeSize !== input.timeSize || dateSize !== input.dateSize || timezoneSize !== input.timezoneSize) {
-            changed = true;
-        }
-
-        return {
-            changed: changed,
-            clock: {
-                id: id,
-                name: name,
-                timezone: timezone,
-                timeFormat: timeFormat,
-                dateFormat: dateFormat,
-                timeSize: timeSize,
-                dateSize: dateSize,
-                timezoneSize: timezoneSize
-            }
-        };
-    },
-
-    _coerceSize: function(value, fallback) {
-        let size = fallback;
-
-        if (typeof value === "number" && Number.isFinite(value)) {
-            size = value;
-        } else if (typeof value === "string") {
-            const parsed = parseFloat(value);
-            if (Number.isFinite(parsed)) {
-                size = parsed;
-            }
-        }
-
-        size = Math.round(size);
-        return Math.max(MIN_FONT_SIZE, size);
-    },
-
-    _renderClocks: function() {
-        if (!this._normalizedClocks) {
-            this._normalizedClocks = this._normalizeClockList(this.clocks) || [];
-        }
-
-        this._destroyClocks();
-        this._grid.destroy_all_children();
-
-        const clocks = this._normalizedClocks;
-        const columns = this._getColumnCount(clocks.length);
-        const spacing = this._getSpacing();
-
-        clocks.forEach((clock, index) => {
-            const widget = new ClockWidget(clock, this);
-            widget.setSpacing(spacing);
-
-            const row = Math.floor(index / columns);
-            const col = index % columns;
-
-            this._grid.add(widget.actor, {
-                row: row,
-                col: col,
+            const table = new St.Table({
+                homogeneous: true,
+                reactive: true,
+                style_class: "world-clock-grid"
+            });
+            this.mainContainer.add(table, {
+                expand: true,
                 x_expand: true,
                 y_expand: true,
                 x_fill: true,
                 y_fill: true
             });
 
-            this._clockWidgets.push(widget);
+            for (let i = 0; i < cells.length; i++) {
+                const cell = cells[i];
+                const row = Math.floor(i / dims.cols);
+                const col = i % dims.cols;
+                const actor = (cell.kind === "add")
+                    ? this._createAddTile()
+                    : this._createClockTile(clocks[cell.index], cell.index);
+
+                table.add(actor, {
+                    row: row,
+                    col: col,
+                    x_expand: true,
+                    y_expand: true,
+                    x_fill: true,
+                    y_fill: true
+                });
+            }
+
+            this._updateClocks();
+            this._updateHighlight();
+        } catch (e) {
+            global.logError(uuid + " grid rebuild failed: " + e);
+        }
+    },
+
+    _createClockTile: function (clock, index) {
+        const widget = new ClockWidget(clock, this);
+        widget.actor.index = index;
+        widget.actor.clockId = clock.id;
+        widget.actor.connect("clicked", Lang.bind(this, this._onClockTileClicked));
+        widget.actor.set_style("margin:" + Math.max(0, this.tileSpacing || 0) + "px;");
+        this._clockWidgets.push(widget);
+        this.buttons.push(widget.actor);
+        return widget.actor;
+    },
+
+    _createAddTile: function () {
+        const button = new St.Button({
+            style_class: "world-clock-add-tile",
+            reactive: true,
+            can_focus: true
         });
-
-        this._rebuildClockMenu();
-        this._updateClocks();
+        const label = new St.Label({
+            text: "+",
+            style_class: "world-clock-add-label"
+        });
+        button.set_child(label);
+        button.connect("clicked", Lang.bind(this, this._onAddClock));
+        button.set_style("margin:" + Math.max(0, this.tileSpacing || 0) + "px;");
+        return button;
     },
 
-    _destroyClocks: function() {
-        this._clockWidgets.forEach((widget) => widget.destroy());
-        this._clockWidgets = [];
+    _onClockTileClicked: function (actor, clickedButton) {
+        try {
+            if (clickedButton === 3) {
+                if (this.enableEditing)
+                    this._openTileMenu(actor);
+            }
+        } catch (e) {
+            global.logError(uuid + " tile click failed: " + e);
+        }
     },
 
-    _updateClocks: function() {
+    /* ------------------------------------------------------------------ *
+     * Per-tile context menu
+     * ------------------------------------------------------------------ */
+
+    _openTileMenu: function (button) {
+        try {
+            this._destroyTileMenu();
+
+            const index = button.index;
+            const clocks = this._getClockList();
+            const menu = new PopupMenu.PopupMenu(button, St.Side.TOP);
+            Main.uiGroup.add_actor(menu.actor);
+            menu.actor.hide();
+
+            const editItem = new PopupMenu.PopupMenuItem(_("Edit…"));
+            editItem.connect("activate", Lang.bind(this, function () {
+                this._onEditClock(index);
+            }));
+            menu.addMenuItem(editItem);
+
+            const removeItem = new PopupMenu.PopupMenuItem(_("Remove"));
+            removeItem.setSensitive(ClockActions.canRemove(clocks));
+            removeItem.connect("activate", Lang.bind(this, function () {
+                this._onRemoveClock(index);
+            }));
+            menu.addMenuItem(removeItem);
+
+            menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+            const addItem = new PopupMenu.PopupMenuItem(_("Add clock"));
+            addItem.setSensitive(ClockActions.canAdd(clocks));
+            addItem.connect("activate", Lang.bind(this, this._onAddClock));
+            menu.addMenuItem(addItem);
+
+            if (this._menuManager)
+                this._menuManager.addMenu(menu);
+
+            this._tileMenu = menu;
+            menu.open(true);
+        } catch (e) {
+            global.logError(uuid + " could not open tile menu: " + e);
+            this._destroyTileMenu();
+        }
+    },
+
+    _destroyTileMenu: function () {
+        if (!this._tileMenu)
+            return;
+        const menu = this._tileMenu;
+        this._tileMenu = null;
+        try {
+            if (menu.isOpen)
+                menu.close(false);
+            if (this._menuManager)
+                this._menuManager.removeMenu(menu);
+            menu.destroy();
+        } catch (e) {
+            global.logError(uuid + " could not destroy tile menu: " + e);
+        }
+    },
+
+    /* Menu items must not act synchronously: PopupMenuBase closes the menu in
+     * its own 'activate' handler, which runs after ours. Destroying the menu
+     * or pushing a modal dialog before that has happened fights the menu's
+     * grab. Defer to the next main loop turn and track the source so teardown
+     * can cancel it.
+     *
+     * timeout_add(0), not idle_add: idle callbacks sit below Clutter's redraw
+     * priority, so an action fired while a menu or dialog was still animating
+     * could be starved for hundreds of milliseconds. */
+    _deferAction: function (fn) {
+        const self = this;
+        let id = Mainloop.timeout_add(0, function () {
+            self._idleSources = self._idleSources.filter(function (s) { return s !== id; });
+            try {
+                fn.call(self);
+            } catch (e) {
+                global.logError(uuid + " deferred action failed: " + e);
+            }
+            return false;
+        });
+        this._idleSources.push(id);
+    },
+
+    _onAddClock: function () {
+        this._deferAction(function () {
+            this._destroyTileMenu();
+            if (!ClockActions.canAdd(this._getClockList()))
+                return;
+            const zones = ClockActions.listTimezones
+                ? ClockActions.listTimezones()
+                : null;
+            ClockDialog.promptClock(_("Add Clock"), ClockActions.DEFAULT_CLOCK, Lang.bind(this, function (values) {
+                this._setClockList(ClockActions.addClock(this._getClockList(), values));
+            }), zones);
+        });
+    },
+
+    _onEditClock: function (index) {
+        this._deferAction(function () {
+            this._destroyTileMenu();
+            const clocks = this._getClockList();
+            if (!ClockActions.isValidIndex(clocks, index))
+                return;
+            const current = clocks[index];
+            const zones = ClockActions.listTimezones
+                ? ClockActions.listTimezones()
+                : null;
+            ClockDialog.promptClock(_("Edit Clock"), current, Lang.bind(this, function (values) {
+                this._setClockList(ClockActions.updateClock(this._getClockList(), current.id, values));
+            }), zones);
+        });
+    },
+
+    _onRemoveClock: function (index) {
+        this._deferAction(function () {
+            this._destroyTileMenu();
+            const clocks = this._getClockList();
+            if (!ClockActions.isValidIndex(clocks, index))
+                return;
+            if (!ClockActions.canRemove(clocks))
+                return;
+
+            const clock = clocks[index];
+            const doRemove = Lang.bind(this, function () {
+                this._setClockList(ClockActions.removeClock(this._getClockList(), clock.id));
+            });
+
+            if (this.confirmRemove && clock.name) {
+                const prompt = _("Are you sure you want to remove clock \"%s\"?").format(clock.name);
+                const dialog = new ModalDialog.ConfirmDialog(prompt, doRemove);
+                dialog.open();
+                return;
+            }
+
+            doRemove();
+        });
+    },
+
+    /* ------------------------------------------------------------------ *
+     * Helpers
+     * ------------------------------------------------------------------ */
+
+    _getClockList: function () {
+        if (this._normalizedClocks && this._normalizedClocks.length)
+            return this._normalizedClocks;
+        if (!ClockActions)
+            return [];
+        const result = ClockActions.normalizeClockList(this.clocks);
+        this._normalizedClocks = result.clocks;
+        return this._normalizedClocks;
+    },
+
+    _computeGridDims: function () {
+        if (!ClockActions)
+            return { rows: 1, cols: 1 };
+        const clocks = this._getClockList();
+        const showAdd = !!(this.enableEditing && this.showAddTile && ClockActions.canAdd(clocks));
+        const cellCount = clocks.length + (showAdd ? 1 : 0);
+        return ClockActions.computeGridDims(cellCount, this.layoutMode, this.fixedRows, this.fixedCols);
+    },
+
+    _ensureClockDefaults: function () {
+        if (!ClockActions)
+            return;
+
+        let raw = this.clocks;
+        if (!Array.isArray(raw) || raw.length === 0 ||
+                (raw.length === 1 && raw[0] && raw[0].id === "default")) {
+            const legacy = this._legacyClockFromMetadata();
+            if (legacy)
+                raw = [legacy];
+        }
+
+        const replacedPlaceholder = raw !== this.clocks;
+        const result = ClockActions.normalizeClockList(raw);
+        this._normalizedClocks = result.clocks;
+        if (result.changed || replacedPlaceholder)
+            this.settings.setValue("clocks", result.clocks);
+    },
+
+    _legacyClockFromMetadata: function () {
+        const legacy = this.metadata || {};
+        const hasLegacy = legacy.timeFormat || legacy.dateFormat || legacy.timeSize ||
+            legacy.timezone || legacy.name;
+        if (!hasLegacy)
+            return null;
+        return ClockActions.buildClock({
+            name: legacy.name || ClockActions.DEFAULT_CLOCK.name,
+            timezone: legacy.timezone || ClockActions.DEFAULT_CLOCK.timezone
+        }, "legacy");
+    },
+
+    _updateHighlight: function () {
+        try {
+            for (let i = 0; i < this._clockWidgets.length; i++) {
+                const widget = this._clockWidgets[i];
+                if (widget.data && widget.data.timezone === "local")
+                    widget.actor.add_style_pseudo_class("outlined");
+                else
+                    widget.actor.remove_style_pseudo_class("outlined");
+            }
+        } catch (e) {
+            global.logError(uuid + " highlight update failed: " + e);
+        }
+    },
+
+    _updateClocks: function () {
         const now = new Date();
-        this._clockWidgets.forEach((widget) => widget.update(now));
+        this._clockWidgets.forEach(function (widget) {
+            widget.update(now);
+        });
     },
 
-    _scheduleUpdate: function() {
+    _scheduleUpdate: function () {
         if (this._timeout) {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;
         }
-
         this._timeout = Mainloop.timeout_add_seconds(1, Lang.bind(this, this._onTick));
     },
 
-    _onTick: function() {
+    _onTick: function () {
+        if (this._cleanedUp)
+            return false;
         this._updateClocks();
-
-        if (this._timeout) {
-            Mainloop.source_remove(this._timeout);
-            this._timeout = null;
-        }
-
-        this._scheduleUpdate();
-        return false;
-    },
-
-    _getColumnCount: function(count) {
-        const requested = Number(this.gridColumns) || 0;
-        if (requested > 0) {
-            return Math.min(requested, Math.max(1, count));
-        }
-
-        const safeCount = Math.max(1, count);
-        return Math.ceil(Math.sqrt(safeCount));
-    },
-
-    _getSpacing: function() {
-        const spacing = Number(this.clockSpacing);
-        if (Number.isFinite(spacing)) {
-            return Math.max(0, spacing);
-        }
-        return 8;
-    },
-
-    _rebuildClockMenu: function() {
-        this._clockMenuSection.removeAll();
-
-        const clocksSubmenu = new PopupMenu.PopupSubMenuMenuItem(_("Clocks"));
-        this._clockMenuSection.addMenuItem(clocksSubmenu);
-
-        const clocks = this._getClockList();
-        if (clocks.length === 0) {
-            clocksSubmenu.menu.addMenuItem(new PopupMenu.PopupMenuItem(_("No clocks configured"), { reactive: false }));
-            return;
-        }
-
-        clocks.forEach((clock) => {
-            const label = clock.name || clock.timezone || _("Clock");
-            const clockItem = new PopupMenu.PopupSubMenuMenuItem(label);
-
-            clockItem.menu.addAction(_("Edit"), Lang.bind(this, function() {
-                this._openEditDialog(clock.id);
-            }));
-            clockItem.menu.addAction(_("Increase Size"), Lang.bind(this, function() {
-                this._adjustClockSize(clock.id, SIZE_STEP);
-            }));
-            clockItem.menu.addAction(_("Decrease Size"), Lang.bind(this, function() {
-                this._adjustClockSize(clock.id, -SIZE_STEP);
-            }));
-            clockItem.menu.addAction(_("Remove"), Lang.bind(this, function() {
-                this._removeClock(clock.id);
-            }));
-
-            clocksSubmenu.menu.addMenuItem(clockItem);
-        });
-    },
-
-    _adjustClockSize: function(clockId, delta) {
-        const clocks = this._getClockList();
-        const index = clocks.findIndex((clock) => clock.id === clockId);
-        if (index === -1) {
-            return;
-        }
-
-        const clock = clocks[index];
-        const timeSize = this._coerceSize(clock.timeSize, DEFAULT_CLOCK.timeSize) + delta;
-        const dateSize = this._coerceSize(clock.dateSize, DEFAULT_CLOCK.dateSize) + delta;
-        const timezoneSize = this._coerceSize(clock.timezoneSize, DEFAULT_CLOCK.timezoneSize) + delta;
-        const updated = Object.assign({}, clock, {
-            timeSize: this._coerceSize(timeSize, clock.timeSize),
-            dateSize: this._coerceSize(dateSize, clock.dateSize),
-            timezoneSize: this._coerceSize(timezoneSize, clock.timezoneSize)
-        });
-
-        const next = clocks.slice();
-        next[index] = updated;
-        this._setClockList(next);
-    },
-
-    _removeClock: function(clockId) {
-        const clocks = this._getClockList().filter((clock) => clock.id !== clockId);
-        if (clocks.length === 0) {
-            clocks.push(this._buildDefaultClock());
-        }
-        this._setClockList(clocks);
-    },
-
-    _moveClock: function(sourceId, targetId) {
-        const clocks = this._getClockList().slice();
-        const sourceIndex = clocks.findIndex((clock) => clock.id === sourceId);
-        const targetIndex = clocks.findIndex((clock) => clock.id === targetId);
-
-        if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
-            return;
-        }
-
-        const [moved] = clocks.splice(sourceIndex, 1);
-        clocks.splice(targetIndex, 0, moved);
-        this._setClockList(clocks);
-    },
-
-    _setClockList: function(list) {
-        this.settings.setValue("clocks", list);
-    },
-
-    _getClockList: function() {
-        return this._normalizedClocks || this._normalizeClockList(this.clocks) || [];
-    },
-
-    _setDropTarget: function(clockId) {
-        if (this._dropTargetId === clockId) {
-            return;
-        }
-
-        this._dropTargetId = clockId;
-        this._clockWidgets.forEach((widget) => {
-            if (widget.id === clockId) {
-                widget.actor.add_style_class_name("world-clock-drop-target");
-            } else {
-                widget.actor.remove_style_class_name("world-clock-drop-target");
-            }
-        });
-    },
-
-    _clearDropTargets: function() {
-        this._dropTargetId = null;
-        this._clockWidgets.forEach((widget) => {
-            widget.actor.remove_style_class_name("world-clock-drop-target");
-        });
+        return true;
     }
 };
 
-function main(metadata, desklet_id) {
-    return new MyDesklet(metadata, desklet_id);
+function main(metadata, deskletId) {
+    return new MyDesklet(metadata, deskletId);
 }

@@ -1,0 +1,176 @@
+# World Clock Desklet.
+# Copyright (C) 2026 CurbSoftware
+# This file is distributed under the same license as the World Clock desklet.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: cinnamon-world-clock-desklet@curbsoftware\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-15 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. metadata.json
+msgid "World Clock"
+msgstr ""
+
+#. metadata.json
+msgid "A grid of world clocks with configurable timezones"
+msgstr ""
+
+#. settings-schema.json
+msgid "Layout"
+msgstr ""
+
+#. settings-schema.json
+msgid "Grid layout mode"
+msgstr ""
+
+#. settings-schema.json
+msgid "Rows (fixed layout)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Columns (fixed layout)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Clock management"
+msgstr ""
+
+#. settings-schema.json
+msgid "Allow adding, removing and editing clocks"
+msgstr ""
+
+#. settings-schema.json
+msgid "Show a \"+\" tile to add a clock"
+msgstr ""
+
+#. settings-schema.json
+msgid "Confirm before removing a named clock"
+msgstr ""
+
+#. settings-schema.json
+msgid "Display"
+msgstr ""
+
+#. settings-schema.json
+msgid "Time format (strftime)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Date format (strftime)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Time font size"
+msgstr ""
+
+#. settings-schema.json
+msgid "Date font size"
+msgstr ""
+
+#. settings-schema.json
+msgid "Label font size"
+msgstr ""
+
+#. settings-schema.json
+msgid "Style"
+msgstr ""
+
+#. settings-schema.json
+msgid "Tile spacing"
+msgstr ""
+
+#. settings-schema.json
+msgid "Desklet width"
+msgstr ""
+
+#. settings-schema.json
+msgid "Desklet height"
+msgstr ""
+
+#. settings-schema.json
+msgid "Auto (near-square)"
+msgstr ""
+
+#. settings-schema.json
+msgid "Fixed (rows x cols)"
+msgstr ""
+
+#. desklet.js
+msgid "World Clocks"
+msgstr ""
+
+#. desklet.js
+msgid "Edit…"
+msgstr ""
+
+#. desklet.js
+msgid "Remove"
+msgstr ""
+
+#. desklet.js
+msgid "Add clock"
+msgstr ""
+
+#. desklet.js
+msgid "Add Clock"
+msgstr ""
+
+#. desklet.js
+msgid "Edit Clock"
+msgstr ""
+
+#. desklet.js
+msgid "Are you sure you want to remove clock \"%s\"?"
+msgstr ""
+
+#. clockActions.js / clockDialog.js
+msgid "Clock"
+msgstr ""
+
+#. clockActions.js / clockDialog.js
+msgid "Local"
+msgstr ""
+
+#. clockActions.js / clockDialog.js
+msgid "Local (system timezone)"
+msgstr ""
+
+#. clockDialog.js
+msgid "Type a name, then pick a timezone from the list."
+msgstr ""
+
+#. clockDialog.js
+msgid "Name"
+msgstr ""
+
+#. clockDialog.js
+msgid "Clock name"
+msgstr ""
+
+#. clockDialog.js
+msgid "Timezone"
+msgstr ""
+
+#. clockDialog.js
+msgid "Search city or region"
+msgstr ""
+
+#. clockDialog.js
+msgid "Cancel"
+msgstr ""
+
+#. clockDialog.js
+msgid "Save"
+msgstr ""
+
+#. clockDialog.js
+msgid "Selected: %s"
+msgstr ""
