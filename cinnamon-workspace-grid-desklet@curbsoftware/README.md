@@ -34,4 +34,4 @@ UUID: `cinnamon-workspace-grid-desklet@curbsoftware`
 
 ## License
 
-GNU General Public License v3.0 or later. See [LICENSE](LICENSE).
+GNU General Public License v2.0 or later. See [LICENSE](LICENSE).

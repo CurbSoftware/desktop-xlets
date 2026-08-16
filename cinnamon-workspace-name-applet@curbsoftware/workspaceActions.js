@@ -4,8 +4,8 @@
  *
  * All workspace mutation logic for the Workspace Grid desklet and the
  * Workspace Name applet. Deliberately contains no St/Clutter widgets so the
- * pure parts can be exercised headlessly by dev-tools/test-workspace-actions.js
- * (libst.so cannot be loaded outside the Cinnamon process).
+ * pure parts can be exercised by a headless test harness (libst.so cannot
+ * be loaded outside the Cinnamon process).
  *
  * Cinnamon already implements the hard parts; this module is a defensive
  * wrapper around them:

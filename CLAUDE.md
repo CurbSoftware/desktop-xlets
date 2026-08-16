@@ -27,7 +27,7 @@ Cinnamon has no cross-xlet import path:
 
 `dev-tools/test-workspace-actions.js` fails if the two copies drift apart.
 
-#### World Clock Desklet (`cinnamon-world-clock@curbsoftware/`)
+#### World Clock Desklet (`cinnamon-world-clock-desklet@curbsoftware/`)
 - Desktop clock desklet with timezone support
 
 ### Reference Materials (`cinnamon-docs/`)

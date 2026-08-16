@@ -4,8 +4,8 @@
  *
  * Pure clock-list and grid-layout helpers for the World Clock desklet.
  * Deliberately contains no St/Clutter widgets so the module can be exercised
- * headlessly by dev-tools/test-clock-actions.js (libst.so cannot be loaded
- * outside the Cinnamon process).
+ * by a headless test harness (libst.so cannot be loaded outside the Cinnamon
+ * process).
  *
  * computeGridDims / planCells are adapted from the Workspace Grid desklet's
  * workspaceActions.js. Cinnamon gives xlets no way to import across xlet

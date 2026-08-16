@@ -32,6 +32,8 @@ This is a desktop **desklet**, not the panel [World Clock Calendar](https://cinn
 
 UUID: `cinnamon-world-clock-desklet@curbsoftware`
 
+Derived from [TimeAndDate@nightflame](https://cinnamon-spices.linuxmint.com/desklets/view/9).
+
 ## License
 
-GNU General Public License v3.0 or later. See [LICENSE](LICENSE).
+GNU General Public License v2.0 or later. See [LICENSE](LICENSE).

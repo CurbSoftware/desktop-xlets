@@ -1,5 +1,5 @@
 # Workspace Grid Desklet.
-# Copyright (C) 2026 curbsoftware
+# Copyright (C) 2026 CurbSoftware
 # This file is distributed under the same license as the Workspace Grid desklet.
 #
 msgid ""
