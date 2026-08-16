@@ -4,15 +4,17 @@
 .workspace-grid-container {
   padding: 6px;
   border-radius: 10px;
-  background-color: rgba(0,0,0,0.2);
+  background-color: rgba(0,0,0,0.35);
 }
 
 .workspace-grid-table {
   /* St.Table doesn't support CSS spacing directly; spacing handled via button margins */
 }
 
+/* Tile chrome is deliberately dark-backed so the white text stays readable
+ * on light wallpapers and light Cinnamon themes. */
 .workspace-button {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255,255,255,0.25);
   border-radius: 8px;
   transition-duration: 150ms;
@@ -23,12 +25,12 @@
 }
 
 .workspace-button:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(0, 0, 0, 0.32);
   border-color: rgba(255, 255, 255, 0.28);
 }
 
 .workspace-button:focus {
-  background-color: rgba(255, 255, 255, 0.10);
+  background-color: rgba(0, 0, 0, 0.38);
   border-color: rgba(255, 255, 255, 0.34);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
@@ -43,7 +45,7 @@
 
 /* "+" tile used to append a workspace */
 .workspace-add-tile {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(0, 0, 0, 0.20);
   border: 1px dashed rgba(255, 255, 255, 0.30);
   border-radius: 8px;
   transition-duration: 150ms;
@@ -52,12 +54,12 @@
 }
 
 .workspace-add-tile:hover {
-  background-color: rgba(255, 255, 255, 0.10);
+  background-color: rgba(0, 0, 0, 0.30);
   border-color: rgba(255, 255, 255, 0.45);
 }
 
 .workspace-add-tile:focus {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(0, 0, 0, 0.35);
   border-color: rgba(255, 255, 255, 0.50);
 }
 
@@ -85,8 +87,6 @@
 }
 
 /* Compact mode for very small desklet sizes (optional heuristic) */
-@define-color wsgrid-border rgba(255,255,255,0.25);
-
 @media (max-width: 240px), (max-height: 160px) {
   .workspace-button {
     border-radius: 6px;

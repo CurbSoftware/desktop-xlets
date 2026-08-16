@@ -1,15 +1,17 @@
 .world-clock-container {
     padding: 6px;
     border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.35);
 }
 
 .world-clock-grid {
     /* St.Table doesn't support CSS spacing directly; spacing handled via button margins */
 }
 
+/* Tile chrome is deliberately dark-backed so the white text stays readable
+ * on light wallpapers and light Cinnamon themes. */
 .world-clock-tile {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 8px;
     padding: 4px 6px;
@@ -19,12 +21,12 @@
 }
 
 .world-clock-tile:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(0, 0, 0, 0.32);
     border-color: rgba(255, 255, 255, 0.28);
 }
 
 .world-clock-tile:focus {
-    background-color: rgba(255, 255, 255, 0.10);
+    background-color: rgba(0, 0, 0, 0.38);
     border-color: rgba(255, 255, 255, 0.34);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
@@ -37,7 +39,7 @@
 }
 
 .world-clock-add-tile {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: rgba(0, 0, 0, 0.20);
     border: 1px dashed rgba(255, 255, 255, 0.30);
     border-radius: 8px;
     padding: 4px 6px;
@@ -47,12 +49,12 @@
 }
 
 .world-clock-add-tile:hover {
-    background-color: rgba(255, 255, 255, 0.10);
+    background-color: rgba(0, 0, 0, 0.30);
     border-color: rgba(255, 255, 255, 0.45);
 }
 
 .world-clock-add-tile:focus {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(0, 0, 0, 0.35);
     border-color: rgba(255, 255, 255, 0.50);
 }
 
@@ -108,15 +110,16 @@
     spacing: 2px;
 }
 
+/* Dialog items inherit the theme's dialog text colour so they stay readable
+ * on both light and dark ModalDialog chrome. */
 .world-clock-tz-item {
     padding: 5px 8px;
     border-radius: 4px;
-    color: white;
     text-align: left;
 }
 
 .world-clock-tz-item:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(128, 128, 128, 0.18);
 }
 
 .world-clock-tz-item:outlined {
@@ -126,7 +129,6 @@
 
 .world-clock-tz-selected {
     padding: 4px 2px 0 2px;
-    color: #ccc;
     font-size: 9pt;
 }
 
