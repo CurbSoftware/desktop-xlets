@@ -140,6 +140,11 @@ MyDesklet.prototype = {
         }
         this._disconnectWorkspaceSignals();
 
+        if (this.settings) {
+            this.settings.finalize();
+            this.settings = null;
+        }
+
         if (this._destroyId) {
             this.disconnect(this._destroyId);
             this._destroyId = 0;
@@ -147,7 +152,13 @@ MyDesklet.prototype = {
     },
 
     _onScrollSettingChanged: function () {
-        this._connectScrollHandler(); // reconnect with new mode
+        if (this._cleanedUp || !this.mainContainer)
+            return;
+        try {
+            this._connectScrollHandler(); // reconnect with new mode
+        } catch (e) {
+            global.logError(uuid + " scroll setting change failed: " + e);
+        }
     },
 
     _connectScrollHandler: function () {

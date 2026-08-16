@@ -272,6 +272,89 @@ eq("filters by region", CA.filterTimezones(["local", "America/Los_Angeles"], "am
 eq("local matches system", CA.filterTimezones(["local", "UTC"], "system"), ["local"]);
 
 /* ------------------------------------------------------------------ *
+ * Tile inner size / fitted fonts
+ * ------------------------------------------------------------------ */
+
+suite("computeTileInnerSize");
+const chrome = CA.TILE_LAYOUT;
+check("chrome constants exist", !!(chrome && chrome.containerPad === 6 && chrome.padX === 6 && chrome.padY === 4));
+
+eq("600x400 1x1 spacing 4", CA.computeTileInnerSize(600, 400, 1, 1, 4), {
+    width: 600 - 2 * 6 - 2 * 4 - 2 * 2 - 2 * 6,
+    height: 400 - 2 * 6 - 2 * 4 - 2 * 2 - 2 * 4
+});
+eq("600x400 2x2 spacing 4", CA.computeTileInnerSize(600, 400, 2, 2, 4), {
+    width: (600 - 12) / 2 - 8 - 4 - 12,
+    height: (400 - 12) / 2 - 8 - 4 - 8
+});
+check("zero spacing is allowed", CA.computeTileInnerSize(200, 200, 1, 1, 0).width >
+    CA.computeTileInnerSize(200, 200, 1, 1, 8).width);
+check("more columns shrink width", CA.computeTileInnerSize(400, 400, 1, 4, 4).width <
+    CA.computeTileInnerSize(400, 400, 1, 2, 4).width);
+check("bad dims still return a box", CA.computeTileInnerSize(200, 200, 0, 0, 4).width > 0);
+
+function fittedH(sizes) {
+    const L = CA.TILE_LAYOUT;
+    return (sizes.time + sizes.date + sizes.timezone) * L.ptToPx * L.lineHeight + 2 * L.lineGap;
+}
+function fittedW(text, pt, em) {
+    const L = CA.TILE_LAYOUT;
+    return String(text).length * pt * L.ptToPx * em;
+}
+
+suite("computeFittedFontSizes");
+let inner = { width: 560, height: 364 };
+let fit = CA.computeFittedFontSizes(inner.width, inner.height, {
+    time: "23:59:59",
+    date: "Wednesday, 27 December",
+    label: "Local"
+}, { time: 40, date: 15, timezone: 12 });
+check("large tile keeps time cap", fit.time === 40);
+check("large tile keeps date cap", fit.date === 15);
+check("large tile keeps label cap", fit.timezone === 12);
+check("large tile add stays at cap", fit.add === 16);
+check("short label does not ellipsize", fit.ellipsizeLabel === false);
+
+inner = CA.computeTileInnerSize(200, 200, 1, 1, 4);
+fit = CA.computeFittedFontSizes(inner.width, inner.height, {
+    time: "23:59:59",
+    date: "Wednesday, 27 December",
+    label: "Local"
+}, { time: 72, date: 40, timezone: 30 });
+check("small tile shrinks time below cap", fit.time < 72);
+check("hierarchy time >= date", fit.time + 1e-9 >= fit.date);
+check("hierarchy date >= timezone", fit.date + 1e-9 >= fit.timezone);
+check("small tile three lines fit height", fittedH(fit) <= inner.height + 0.75);
+check("small tile time fits width", fittedW("23:59:59", fit.time, CA.TILE_LAYOUT.timeEm) <= inner.width + 0.75);
+check("small tile date fits width",
+    fittedW("Wednesday, 27 December", fit.date, CA.TILE_LAYOUT.dateEm) <= inner.width + 0.75);
+check("small 1x1 add keeps cap", fit.add === 16);
+
+fit = CA.computeFittedFontSizes(200, 200, {
+    time: "12:00:00",
+    date: "Fri, 1 Jan",
+    label: "A Very Long Clock Name That Should Ellipsize Because It Will Not Fit"
+}, { time: 40, date: 15, timezone: 12 });
+check("long label ellipsizes", fit.ellipsizeLabel === true);
+check("long label does not crush time", fit.time >= 20);
+check("time still at least date", fit.time + 1e-9 >= fit.date);
+
+let tiny = CA.computeTileInnerSize(200, 200, 6, 6, 4);
+fit = CA.computeFittedFontSizes(tiny.width, tiny.height, {
+    time: "23:59:59",
+    date: "Wed, 31 Dec",
+    label: "Los Angeles"
+}, { time: 40, date: 15, timezone: 12 });
+check("dense grid still returns sizes", fit.time >= 1 && fit.date >= 1 && fit.timezone >= 1);
+check("dense grid estimated height fits", tiny.height <= 0 || fittedH(fit) <= tiny.height + 1);
+check("dense add is tiny", fit.add <= 8);
+
+let scaled = CA.computeFittedFontSizes(400, 300, {
+    time: "23:59:59", date: "Wednesday, 27 December", label: "UTC"
+}, { time: 20, date: 10, timezone: 8 });
+check("does not scale above caps", scaled.time <= 20 && scaled.date <= 10 && scaled.timezone <= 8);
+
+/* ------------------------------------------------------------------ *
  * Summary
  * ------------------------------------------------------------------ */
 

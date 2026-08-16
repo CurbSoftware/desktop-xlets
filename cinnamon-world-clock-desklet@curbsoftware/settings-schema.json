@@ -76,7 +76,8 @@
     "max": 72,
     "step": 1,
     "units": "pt",
-    "description": "Time font size"
+    "description": "Maximum time font size",
+    "tooltip": "Tiles scale down from this size so the time stays inside the cell"
   },
   "date-size": {
     "type": "spinbutton",
@@ -85,7 +86,8 @@
     "max": 72,
     "step": 1,
     "units": "pt",
-    "description": "Date font size"
+    "description": "Maximum date font size",
+    "tooltip": "Tiles scale down from this size so the date stays inside the cell"
   },
   "timezone-size": {
     "type": "spinbutton",
@@ -94,7 +96,8 @@
     "max": 72,
     "step": 1,
     "units": "pt",
-    "description": "Label font size"
+    "description": "Maximum label font size",
+    "tooltip": "Tiles scale down from this size. Long names ellipsize rather than overflowing"
   },
 
   "style": {

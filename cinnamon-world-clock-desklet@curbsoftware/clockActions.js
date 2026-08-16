@@ -114,6 +114,189 @@ function planCells(clockCount, showAddTile, rows, cols) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Tile text fitting
+ * ------------------------------------------------------------------ */
+
+/**
+ * Chrome subtracted when turning desklet width/height into a tile's inner
+ * text box. Keep in sync with stylesheet.css
+ * (.world-clock-container padding, tile padding/border).
+ */
+var TILE_LAYOUT = {
+    containerPad: 6,
+    tileBorder: 2,
+    padX: 6,
+    padY: 4,
+    lineGap: 2,
+    minPt: 4,
+    ptToPx: 4 / 3,
+    lineHeight: 1.25,
+    timeEm: 0.72,
+    dateEm: 0.58,
+    labelEm: 0.56,
+    addMaxPt: 16
+};
+
+function _finite(value, fallback) {
+    let n = Number(value);
+    if (!Number.isFinite(n))
+        return fallback;
+    return n;
+}
+
+function _roundPt(n) {
+    if (!Number.isFinite(n) || n < 1)
+        return 1;
+    return Math.round(n * 10) / 10;
+}
+
+/**
+ * computeTileInnerSize:
+ * @deskletWidth (number): main container width in px
+ * @deskletHeight (number): main container height in px
+ * @rows (int): grid rows
+ * @cols (int): grid columns
+ * @tileSpacing (number): per-side tile margin in px
+ * @opts (object): optional overrides for TILE_LAYOUT chrome
+ *
+ * Returns (object): { width, height } of the text box inside one tile.
+ */
+function computeTileInnerSize(deskletWidth, deskletHeight, rows, cols, tileSpacing, opts) {
+    opts = opts || {};
+    let pad = TILE_LAYOUT.containerPad;
+    if (opts.containerPad != null)
+        pad = Math.max(0, _finite(opts.containerPad, pad));
+    let border = TILE_LAYOUT.tileBorder;
+    if (opts.tileBorder != null)
+        border = Math.max(0, _finite(opts.tileBorder, border));
+    let padX = TILE_LAYOUT.padX;
+    if (opts.padX != null)
+        padX = Math.max(0, _finite(opts.padX, padX));
+    let padY = TILE_LAYOUT.padY;
+    if (opts.padY != null)
+        padY = Math.max(0, _finite(opts.padY, padY));
+
+    let r = _toPositiveInt(rows, 1);
+    let c = _toPositiveInt(cols, 1);
+    let spacing = Math.max(0, _finite(tileSpacing, 0));
+    let tableW = Math.max(0, _finite(deskletWidth, 200) - 2 * pad);
+    let tableH = Math.max(0, _finite(deskletHeight, 200) - 2 * pad);
+    let cellW = tableW / c;
+    let cellH = tableH / r;
+
+    return {
+        width: Math.max(0, cellW - 2 * spacing - 2 * border - 2 * padX),
+        height: Math.max(0, cellH - 2 * spacing - 2 * border - 2 * padY)
+    };
+}
+
+function _textWidthPx(text, sizePt, ptToPx, em) {
+    let n = String(text || "").length;
+    if (n === 0)
+        return 0;
+    return n * sizePt * ptToPx * em;
+}
+
+function _maxPtForWidth(text, innerW, ptToPx, em, cap) {
+    let n = String(text || "").length;
+    if (n === 0)
+        return cap;
+    if (!(innerW > 0) || !(ptToPx > 0) || !(em > 0))
+        return 1;
+    let pt = innerW / (n * ptToPx * em);
+    if (!Number.isFinite(pt) || pt <= 0)
+        return 1;
+    return Math.min(cap, pt);
+}
+
+/**
+ * computeFittedFontSizes:
+ * @innerWidth (number): tile text box width in px
+ * @innerHeight (number): tile text box height in px
+ * @texts (object): { time, date, label } sample strings
+ * @maxSizes (object): { time, date, timezone } caps in pt
+ * @opts (object): optional TILE_LAYOUT overrides
+ *
+ * Settings sizes are caps. Time and date shrink to fit; a long name/timezone
+ * label ellipsizes instead of shrinking the clock. Hierarchy is
+ * time >= date >= timezone. "+" tiles use the returned `add` size.
+ *
+ * Returns (object): { time, date, timezone, add, ellipsizeLabel }
+ */
+function computeFittedFontSizes(innerWidth, innerHeight, texts, maxSizes, opts) {
+    opts = opts || {};
+    texts = texts || {};
+    maxSizes = maxSizes || {};
+
+    let ptToPx = _finite(opts.ptToPx, TILE_LAYOUT.ptToPx);
+    if (!(ptToPx > 0))
+        ptToPx = TILE_LAYOUT.ptToPx;
+    let lineHeight = _finite(opts.lineHeight, TILE_LAYOUT.lineHeight);
+    if (!(lineHeight > 0))
+        lineHeight = TILE_LAYOUT.lineHeight;
+    let lineGap = Math.max(0, _finite(opts.lineGap, TILE_LAYOUT.lineGap));
+    let timeEm = _finite(opts.timeEm, TILE_LAYOUT.timeEm);
+    let dateEm = _finite(opts.dateEm, TILE_LAYOUT.dateEm);
+    let labelEm = _finite(opts.labelEm, TILE_LAYOUT.labelEm);
+    let addMax = _finite(opts.addMaxPt, TILE_LAYOUT.addMaxPt);
+
+    let maxTime = _finite(maxSizes.time, 40);
+    let maxDate = _finite(maxSizes.date, 15);
+    let maxTz = _finite(maxSizes.timezone, 12);
+    if (maxTime < 1)
+        maxTime = 1;
+    if (maxDate < 1)
+        maxDate = 1;
+    if (maxTz < 1)
+        maxTz = 1;
+
+    let innerW = Math.max(0, _finite(innerWidth, 0));
+    let innerH = Math.max(0, _finite(innerHeight, 0));
+    let timeText = texts.time || "";
+    let dateText = texts.date || "";
+    let labelText = texts.label || "";
+
+    let add = addMax;
+    if (innerH > 0)
+        add = Math.min(add, (innerH * 0.55) / ptToPx);
+    if (innerW > 0)
+        add = Math.min(add, (innerW * 0.7) / ptToPx);
+
+    let time = _maxPtForWidth(timeText, innerW, ptToPx, timeEm, maxTime);
+    let date = _maxPtForWidth(dateText, innerW, ptToPx, dateEm, maxDate);
+    let timezone = Math.min(maxTz, time, date);
+
+    let neededH = (time + date + timezone) * ptToPx * lineHeight + 2 * lineGap;
+    if (innerH > 0 && neededH > innerH) {
+        let avail = Math.max(0, innerH - 2 * lineGap);
+        let base = (time + date + timezone) * ptToPx * lineHeight;
+        if (base > 0) {
+            let scale = avail / base;
+            time *= scale;
+            date *= scale;
+            timezone *= scale;
+        }
+    }
+
+    time = Math.min(time, _maxPtForWidth(timeText, innerW, ptToPx, timeEm, maxTime));
+    date = Math.min(date, _maxPtForWidth(dateText, innerW, ptToPx, dateEm, maxDate));
+    if (date > time)
+        date = time;
+    if (timezone > date)
+        timezone = date;
+
+    let ellipsizeLabel = _textWidthPx(labelText, timezone, ptToPx, labelEm) > innerW && innerW > 0;
+
+    return {
+        time: _roundPt(time),
+        date: _roundPt(date),
+        timezone: _roundPt(timezone),
+        add: _roundPt(add),
+        ellipsizeLabel: !!ellipsizeLabel
+    };
+}
+
+/* ------------------------------------------------------------------ *
  * Clock list helpers
  * ------------------------------------------------------------------ */
 

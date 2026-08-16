@@ -15,6 +15,16 @@
 
 const System = imports.system;
 
+/* Cinnamon installs String.prototype.format on every string; standalone gjs
+ * (1.68+) dropped the extension. Shim it so the module under test behaves
+ * identically headless and live. */
+if (typeof String.prototype.format !== "function") {
+    const Format = imports.format;
+    String.prototype.format = function (...args) {
+        return Format.vprintf(this, args);
+    };
+}
+
 /* Load the module under test from the desklet directory. Both xlets ship an
  * identical copy; a sync check at the end guards against drift. */
 const GLib = imports.gi.GLib;

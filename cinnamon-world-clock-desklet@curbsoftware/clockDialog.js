@@ -362,9 +362,9 @@ function promptClock(title, initial, callback, timezones) {
             timezones = _loadTimezones();
         let dialog = new ClockConfigDialog(title, initial, callback, timezones);
         dialog.open(global.get_current_time());
-        return true;
+        return dialog;
     } catch (e) {
         global.logError("[clockDialog] could not open clock dialog: " + e);
-        return false;
+        return null;
     }
 }

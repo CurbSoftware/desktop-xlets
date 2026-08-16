@@ -10,7 +10,7 @@ Left-click does nothing. Click the trailing **+** tile to add a clock. Right-cli
 
 - Auto (near-square) or fixed rows × columns
 - Searchable timezone list (IANA zones plus Local)
-- Shared time/date formats and font sizes for every tile
+- Shared time/date formats; font sizes are maximums and each tile scales down to fit
 - Last clock cannot be removed
 - Optional confirmation before removing a named clock
 - Layout, spacing, and size are configured from Cinnamon Desklet settings
@@ -23,8 +23,8 @@ Right-click the desklet → **Configure…**
 - **Allow adding, removing and editing clocks** — turn off for a read-only grid
 - **Show a "+" tile** — hide the add tile while keeping the right-click menu
 - **Time / date format** — `strftime` patterns (for example `%H:%M` or `%I:%M %p`)
-- **Font sizes** and **tile spacing**
-- **Desklet width / height**
+- **Maximum font sizes** — time, date, and label; tiles shrink so nothing overflows
+- **Tile spacing** and **desklet width / height**
 
 ## Notes
 

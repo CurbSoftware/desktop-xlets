@@ -9,6 +9,7 @@ const PopupMenu = imports.ui.popupMenu;
 const ModalDialog = imports.ui.modalDialog;
 const Gettext = imports.gettext;
 const GLib = imports.gi.GLib;
+const Pango = imports.gi.Pango;
 
 const uuid = "cinnamon-world-clock-desklet@curbsoftware";
 
@@ -64,30 +65,105 @@ ClockWidget.prototype = {
         this.actor.set_button_mask(St.ButtonMask.ONE | St.ButtonMask.THREE);
 
         const box = new St.BoxLayout({
-            vertical: true,
-            x_expand: true,
-            y_expand: true
+            vertical: true
         });
 
         this._time = new St.Label({ style_class: "world-clock-time" });
         this._date = new St.Label({ style_class: "world-clock-date" });
         this._timezoneLabel = new St.Label({ style_class: "world-clock-timezone" });
 
+        try {
+            this._time.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+            this._time.clutter_text.line_wrap = false;
+            this._date.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+            this._date.clutter_text.line_wrap = false;
+            this._timezoneLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+            this._timezoneLabel.clutter_text.line_wrap = false;
+        } catch (e) {}
+
         box.add(this._time, { x_fill: false, x_align: St.Align.MIDDLE });
         box.add(this._date, { x_fill: false, x_align: St.Align.MIDDLE });
         box.add(this._timezoneLabel, { x_fill: false, x_align: St.Align.MIDDLE });
 
         this.actor.set_child(box);
-        this._applySizes();
+
+        const label = ClockActions
+            ? ClockActions.getClockLabel(this.data)
+            : (this.data.name || this.data.timezone || "");
+        this._timezoneLabel.set_text(label);
     },
 
-    _applySizes: function () {
-        const timeSize = Number(this.desklet.timeSize) || 40;
-        const dateSize = Number(this.desklet.dateSize) || 15;
-        const timezoneSize = Number(this.desklet.timezoneSize) || 12;
-        this._time.set_style("font-size: " + timeSize + "pt;");
-        this._date.set_style("font-size: " + dateSize + "pt;");
-        this._timezoneLabel.set_style("font-size: " + timezoneSize + "pt;");
+    /* Font sizes are recomputed on grid rebuild / setting changes, not on the
+     * 1s tick. Settings values are caps; the tile shrinks text to fit. */
+    applyFittedSizes: function (inner, samples) {
+        if (!ClockActions || !ClockActions.computeFittedFontSizes)
+            return;
+
+        inner = inner || {};
+        samples = samples || {};
+        const box = {
+            width: Math.max(0, Number(inner.width) || 0),
+            height: Math.max(0, Number(inner.height) || 0)
+        };
+        if (box.width < 1 || box.height < 1)
+            return;
+
+        const texts = {
+            time: samples.time || this._time.get_text() || "23:59:59",
+            date: samples.date || this._date.get_text() || "Wednesday, 31 December",
+            label: this._timezoneLabel.get_text() || ""
+        };
+        const maxSizes = {
+            time: Number(this.desklet.timeSize) || 40,
+            date: Number(this.desklet.dateSize) || 15,
+            timezone: Number(this.desklet.timezoneSize) || 12
+        };
+
+        const sizes = ClockActions.computeFittedFontSizes(box.width, box.height, texts, maxSizes);
+        this._setFontSizes(sizes);
+        this._constrainLabelWidth(box.width);
+        this._refineWithMetrics(box, sizes);
+    },
+
+    _setFontSizes: function (sizes) {
+        this._time.set_style("font-size: " + sizes.time + "pt;");
+        this._date.set_style("font-size: " + sizes.date + "pt;");
+        this._timezoneLabel.set_style("font-size: " + sizes.timezone + "pt;");
+    },
+
+    _constrainLabelWidth: function (width) {
+        try {
+            this._timezoneLabel.set_width(Math.max(1, Math.floor(width)));
+        } catch (e) {}
+    },
+
+    _refineWithMetrics: function (inner, sizes) {
+        /* Skip until the tile is on the stage: querying preferred size on an
+         * unmapped actor returns -1 and floods St-CRITICAL warnings. */
+        if (!this.actor || !this.actor.get_stage())
+            return;
+        try {
+            const gap = (ClockActions && ClockActions.TILE_LAYOUT)
+                ? ClockActions.TILE_LAYOUT.lineGap : 2;
+            for (let i = 0; i < 8; i++) {
+                const timeW = this._time.get_preferred_width(-1)[1];
+                const dateW = this._date.get_preferred_width(-1)[1];
+                const timeH = this._time.get_preferred_height(-1)[1];
+                const dateH = this._date.get_preferred_height(-1)[1];
+                const tzH = this._timezoneLabel.get_preferred_height(-1)[1];
+                const totalH = timeH + dateH + tzH + 2 * gap;
+                const wide = timeW > inner.width + 1 || dateW > inner.width + 1;
+                const tall = totalH > inner.height + 1;
+                if (!wide && !tall)
+                    return;
+                sizes.time = Math.max(1, sizes.time * 0.88);
+                sizes.date = Math.max(1, Math.min(sizes.date * 0.88, sizes.time));
+                sizes.timezone = Math.max(1, Math.min(sizes.timezone * 0.88, sizes.date));
+                this._setFontSizes(sizes);
+            }
+        } catch (e) {
+            global.logError(uuid + " font metric refine failed: " + e);
+        }
     },
 
     update: function (baseDate) {
@@ -160,14 +236,21 @@ MyDesklet.prototype = {
 
         this._clockWidgets = [];
         this.buttons = [];
+        this._addTiles = [];
         this._normalizedClocks = [];
         this._timeout = null;
+        this._tileInner = null;
+        this._widthSamples = null;
 
         /* At most one transient tile menu is alive at a time. Tile menus are
          * parented to Main.uiGroup, so destroy_all_children() on our own
          * container will never reach them - they must be released by hand. */
         this._tileMenu = null;
         this._idleSources = [];
+        this._rebuildTimeout = null;
+        this._fitId = null;
+        this._clockDialog = null;
+        this._confirmDialog = null;
 
         this.mainContainer = new St.BoxLayout({
             vertical: true,
@@ -200,6 +283,7 @@ MyDesklet.prototype = {
         this._cleanedUp = true;
 
         this._destroyTileMenu();
+        this._dismissDialogs();
 
         if (this._idleSources) {
             for (let i = 0; i < this._idleSources.length; i++)
@@ -210,9 +294,23 @@ MyDesklet.prototype = {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;
         }
+        if (this._rebuildTimeout) {
+            Mainloop.source_remove(this._rebuildTimeout);
+            this._rebuildTimeout = null;
+        }
+        if (this._fitId) {
+            Mainloop.source_remove(this._fitId);
+            this._fitId = null;
+        }
 
         this._clockWidgets = [];
         this.buttons = [];
+        this._addTiles = [];
+
+        if (this.settings) {
+            this.settings.finalize();
+            this.settings = null;
+        }
 
         if (this._destroyId) {
             this.disconnect(this._destroyId);
@@ -220,14 +318,35 @@ MyDesklet.prototype = {
         }
     },
 
+    _dismissDialogs: function () {
+        if (this._clockDialog) {
+            try { this._clockDialog.destroy(); } catch (e) {}
+            this._clockDialog = null;
+        }
+        if (this._confirmDialog) {
+            try { this._confirmDialog.destroy(); } catch (e) {}
+            this._confirmDialog = null;
+        }
+    },
+
     on_setting_changed: function () {
         try {
             this.mainContainer.set_width(this.width);
             this.mainContainer.set_height(this.height);
-            this._rebuildGrid();
         } catch (e) {
             global.logError(uuid + " setting change failed: " + e);
         }
+        if (this._cleanedUp)
+            return;
+        if (this._rebuildTimeout) {
+            Mainloop.source_remove(this._rebuildTimeout);
+            this._rebuildTimeout = null;
+        }
+        this._rebuildTimeout = Mainloop.timeout_add(100, Lang.bind(this, function () {
+            this._rebuildTimeout = null;
+            this._rebuildGrid();
+            return false;
+        }));
     },
 
     _onClocksChanged: function () {
@@ -266,6 +385,7 @@ MyDesklet.prototype = {
 
             this._clockWidgets = [];
             this.buttons = [];
+            this._addTiles = [];
 
             const clocks = this._getClockList();
             const showAdd = !!(this.enableEditing && this.showAddTile && ClockActions.canAdd(clocks));
@@ -304,6 +424,9 @@ MyDesklet.prototype = {
             }
 
             this._updateClocks();
+            this._widthSamples = this._formatWidthSamples();
+            this._tileInner = this._computeTileInnerSize();
+            this._scheduleFit();
             this._updateHighlight();
         } catch (e) {
             global.logError(uuid + " grid rebuild failed: " + e);
@@ -325,15 +448,22 @@ MyDesklet.prototype = {
         const button = new St.Button({
             style_class: "world-clock-add-tile",
             reactive: true,
-            can_focus: true
+            can_focus: true,
+            x_expand: true,
+            y_expand: true
         });
         const label = new St.Label({
             text: "+",
             style_class: "world-clock-add-label"
         });
+        try {
+            label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+            label.clutter_text.line_wrap = false;
+        } catch (e) {}
         button.set_child(label);
         button.connect("clicked", Lang.bind(this, this._onAddClock));
         button.set_style("margin:" + Math.max(0, this.tileSpacing || 0) + "px;");
+        this._addTiles.push({ button: button, label: label });
         return button;
     },
 
@@ -422,6 +552,8 @@ MyDesklet.prototype = {
         const self = this;
         let id = Mainloop.timeout_add(0, function () {
             self._idleSources = self._idleSources.filter(function (s) { return s !== id; });
+            if (self._cleanedUp)
+                return false;
             try {
                 fn.call(self);
             } catch (e) {
@@ -440,7 +572,9 @@ MyDesklet.prototype = {
             const zones = ClockActions.listTimezones
                 ? ClockActions.listTimezones()
                 : null;
-            ClockDialog.promptClock(_("Add Clock"), ClockActions.DEFAULT_CLOCK, Lang.bind(this, function (values) {
+            this._clockDialog = ClockDialog.promptClock(_("Add Clock"), ClockActions.DEFAULT_CLOCK, Lang.bind(this, function (values) {
+                if (this._cleanedUp)
+                    return;
                 this._setClockList(ClockActions.addClock(this._getClockList(), values));
             }), zones);
         });
@@ -456,7 +590,9 @@ MyDesklet.prototype = {
             const zones = ClockActions.listTimezones
                 ? ClockActions.listTimezones()
                 : null;
-            ClockDialog.promptClock(_("Edit Clock"), current, Lang.bind(this, function (values) {
+            this._clockDialog = ClockDialog.promptClock(_("Edit Clock"), current, Lang.bind(this, function (values) {
+                if (this._cleanedUp)
+                    return;
                 this._setClockList(ClockActions.updateClock(this._getClockList(), current.id, values));
             }), zones);
         });
@@ -473,12 +609,15 @@ MyDesklet.prototype = {
 
             const clock = clocks[index];
             const doRemove = Lang.bind(this, function () {
+                if (this._cleanedUp)
+                    return;
                 this._setClockList(ClockActions.removeClock(this._getClockList(), clock.id));
             });
 
             if (this.confirmRemove && clock.name) {
                 const prompt = _("Are you sure you want to remove clock \"%s\"?").format(clock.name);
                 const dialog = new ModalDialog.ConfirmDialog(prompt, doRemove);
+                this._confirmDialog = dialog;
                 dialog.open();
                 return;
             }
@@ -508,6 +647,87 @@ MyDesklet.prototype = {
         const showAdd = !!(this.enableEditing && this.showAddTile && ClockActions.canAdd(clocks));
         const cellCount = clocks.length + (showAdd ? 1 : 0);
         return ClockActions.computeGridDims(cellCount, this.layoutMode, this.fixedRows, this.fixedCols);
+    },
+
+    _computeTileInnerSize: function () {
+        const dims = this._computeGridDims();
+        if (!ClockActions || !ClockActions.computeTileInnerSize)
+            return { width: 80, height: 80 };
+        return ClockActions.computeTileInnerSize(
+            this.width || 600, this.height || 400, dims.rows, dims.cols, this.tileSpacing);
+    },
+
+    _formatWidthSamples: function () {
+        const timeFormat = this.timeFormat || DEFAULT_TIME_FORMAT;
+        const dateFormat = this.dateFormat || DEFAULT_DATE_FORMAT;
+        const dates = [
+            new Date(2023, 11, 27, 23, 59, 59),
+            new Date(2023, 8, 20, 12, 0, 0),
+            new Date()
+        ];
+        let time = "";
+        let date = "";
+        for (let i = 0; i < dates.length; i++) {
+            try {
+                const t = dates[i].toLocaleFormat(timeFormat);
+                const d = dates[i].toLocaleFormat(dateFormat);
+                if (String(t).length > time.length)
+                    time = t;
+                if (String(d).length > date.length)
+                    date = d;
+            } catch (e) {}
+        }
+        for (let i = 0; i < this._clockWidgets.length; i++) {
+            const widget = this._clockWidgets[i];
+            const t = widget._time.get_text();
+            const d = widget._date.get_text();
+            if (t && t.length > time.length)
+                time = t;
+            if (d && d.length > date.length)
+                date = d;
+        }
+        if (!time)
+            time = "23:59:59";
+        if (!date)
+            date = "Wednesday, 31 December";
+        return { time: time, date: date };
+    },
+
+    _scheduleFit: function () {
+        if (this._fitId) {
+            Mainloop.source_remove(this._fitId);
+            this._fitId = null;
+        }
+        this._fitId = Mainloop.timeout_add(0, Lang.bind(this, function () {
+            this._fitId = null;
+            if (this._cleanedUp)
+                return false;
+            this._fitAllTiles(this._tileInner);
+            return false;
+        }));
+    },
+
+    _fitAllTiles: function (inner) {
+        inner = inner || this._tileInner;
+        const samples = this._widthSamples || this._formatWidthSamples();
+        this._widthSamples = samples;
+        if (!inner)
+            return;
+        for (let i = 0; i < this._clockWidgets.length; i++)
+            this._clockWidgets[i].applyFittedSizes(inner, samples);
+        for (let i = 0; i < this._addTiles.length; i++)
+            this._applyAddTileSize(this._addTiles[i].label, inner);
+    },
+
+    _applyAddTileSize: function (label, inner) {
+        if (!label || !inner || !ClockActions || !ClockActions.computeFittedFontSizes)
+            return;
+        const sizes = ClockActions.computeFittedFontSizes(inner.width, inner.height, {}, {
+            time: Number(this.timeSize) || 40,
+            date: Number(this.dateSize) || 15,
+            timezone: Number(this.timezoneSize) || 12
+        });
+        label.set_style("font-size: " + sizes.add + "pt;");
     },
 
     _ensureClockDefaults: function () {
