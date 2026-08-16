@@ -34,6 +34,12 @@ function setTranslate(fn) {
         _translate = fn;
 }
 
+/* Call sites use _() so cinnamon-xlet-makepot's default keyword extracts
+ * them; _() always routes through the injected translator. */
+function _(str) {
+    return _translate(str);
+}
+
 var RenameWorkspaceDialog = GObject.registerClass(
 class RenameWorkspaceDialog extends ModalDialog.ModalDialog {
 
@@ -52,8 +58,8 @@ class RenameWorkspaceDialog extends ModalDialog.ModalDialog {
         this._settled = false;
 
         let content = new Dialog.MessageDialogContent({
-            title: _translate("Rename workspace"),
-            description: _translate("Leave the name empty to restore the default name.")
+            title: _("Rename workspace"),
+            description: _("Leave the name empty to restore the default name.")
         });
         this.contentLayout.add_child(content);
 
@@ -74,12 +80,12 @@ class RenameWorkspaceDialog extends ModalDialog.ModalDialog {
 
         this.setButtons([
             {
-                label: _translate("Cancel"),
+                label: _("Cancel"),
                 action: () => this._cancel(),
                 key: Clutter.KEY_Escape
             },
             {
-                label: _translate("Rename"),
+                label: _("Rename"),
                 action: () => this._commit(),
                 default: true
             }

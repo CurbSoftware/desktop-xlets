@@ -39,6 +39,12 @@ function setTranslate(fn) {
         _translate = fn;
 }
 
+/* Call sites use _() so cinnamon-xlet-makepot's default keyword extracts
+ * them; _() always routes through the injected translator. */
+function _(str) {
+    return _translate(str);
+}
+
 /* org.cinnamon.desktop.wm.preferences num-workspaces has range 1..36. */
 var MIN_WORKSPACES = 1;
 var MAX_WORKSPACES = 36;
@@ -276,7 +282,7 @@ function removeWorkspaceByIndex(index, params) {
         };
 
         if (params.confirm && !d.Main.hasDefaultWorkspaceName(index)) {
-            let prompt = _translate('Are you sure you want to remove workspace "%s"?')
+            let prompt = _('Are you sure you want to remove workspace "%s"?')
                 .format(getWorkspaceName(index));
             let dialog = new d.ModalDialog.ConfirmDialog(prompt, doRemove);
             dialog.open();

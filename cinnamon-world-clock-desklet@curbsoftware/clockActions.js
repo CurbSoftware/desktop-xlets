@@ -19,6 +19,12 @@ function setTranslate(fn) {
         _translate = fn;
 }
 
+/* Call sites use _() so cinnamon-xlet-makepot's default keyword extracts
+ * them; _() always routes through the injected translator. */
+function _(str) {
+    return _translate(str);
+}
+
 var MIN_CLOCKS = 1;
 var MAX_CLOCKS = 36;
 
@@ -447,12 +453,12 @@ function isValidIndex(clocks, index) {
  */
 function getClockLabel(clock) {
     if (!clock || typeof clock !== "object")
-        return _translate("Clock");
+        return _("Clock");
     if (typeof clock.name === "string" && clock.name.trim())
         return clock.name.trim();
     if (typeof clock.timezone === "string" && clock.timezone.trim())
         return timezoneDisplayName(clock.timezone);
-    return _translate("Clock");
+    return _("Clock");
 }
 
 /**
@@ -463,7 +469,7 @@ function getClockLabel(clock) {
  */
 function timezoneDisplayName(tz) {
     if (!tz || tz === "local")
-        return _translate("Local");
+        return _("Local");
     let parts = String(tz).split("/");
     return parts[parts.length - 1].replace(/_/g, " ");
 }
@@ -476,7 +482,7 @@ function timezoneDisplayName(tz) {
  */
 function timezoneListLabel(tz) {
     if (!tz || tz === "local")
-        return _translate("Local (system timezone)");
+        return _("Local (system timezone)");
     let pretty = timezoneDisplayName(tz);
     if (pretty === tz)
         return tz;

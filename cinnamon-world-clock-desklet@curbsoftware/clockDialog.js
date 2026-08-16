@@ -24,16 +24,22 @@ function setTranslate(fn) {
         _translate = fn;
 }
 
+/* Call sites use _() so cinnamon-xlet-makepot's default keyword extracts
+ * them; _() always routes through the injected translator. */
+function _(str) {
+    return _translate(str);
+}
+
 function _displayName(tz) {
     if (!tz || tz === "local")
-        return _translate("Local");
+        return _("Local");
     let parts = String(tz).split("/");
     return parts[parts.length - 1].replace(/_/g, " ");
 }
 
 function _listLabel(tz) {
     if (!tz || tz === "local")
-        return _translate("Local (system timezone)");
+        return _("Local (system timezone)");
     return _displayName(tz) + " — " + tz;
 }
 
@@ -100,29 +106,29 @@ class ClockConfigDialog extends ModalDialog.ModalDialog {
         let initialName = typeof initial.name === "string" ? initial.name.trim() : "";
 
         let content = new Dialog.MessageDialogContent({
-            title: title || _translate("Clock"),
-            description: _translate("Type a name, then pick a timezone from the list.")
+            title: title || _("Clock"),
+            description: _("Type a name, then pick a timezone from the list.")
         });
         this.contentLayout.add_child(content);
 
         this.contentLayout.add_child(new St.Label({
-            text: _translate("Name"),
+            text: _("Name"),
             style_class: "world-clock-dialog-label"
         }));
         this._nameEntry = this._createEntry(
             initialName,
-            _translate("Clock name"),
+            _("Clock name"),
             true
         );
         this.contentLayout.add_child(this._nameEntry);
 
         this.contentLayout.add_child(new St.Label({
-            text: _translate("Timezone"),
+            text: _("Timezone"),
             style_class: "world-clock-dialog-label"
         }));
         this._filterEntry = this._createEntry(
             "",
-            _translate("Search city or region"),
+            _("Search city or region"),
             false
         );
         this.contentLayout.add_child(this._filterEntry);
@@ -156,12 +162,12 @@ class ClockConfigDialog extends ModalDialog.ModalDialog {
 
         this.setButtons([
             {
-                label: _translate("Cancel"),
+                label: _("Cancel"),
                 action: () => this._cancel(),
                 key: Clutter.KEY_Escape
             },
             {
-                label: _translate("Save"),
+                label: _("Save"),
                 action: () => this._commit(),
                 default: true
             }
@@ -294,7 +300,7 @@ class ClockConfigDialog extends ModalDialog.ModalDialog {
 
     _updateSelectedLabel() {
         this._selectedLabel.set_text(
-            _translate("Selected: %s").format(_listLabel(this._selectedTimezone))
+            _("Selected: %s").format(_listLabel(this._selectedTimezone))
         );
     }
 
