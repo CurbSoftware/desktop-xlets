@@ -2,7 +2,6 @@
 const Applet = imports.ui.applet;
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
-const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Settings = imports.ui.settings;
 const SignalManager = imports.misc.signalManager;
@@ -11,7 +10,7 @@ const GLib = imports.gi.GLib;
 
 const uuid = "cinnamon-workspace-name-applet@curbsoftware";
 
-Gettext.bindtextdomain(uuid, GLib.get_home_dir() + "/.local/share/locale");
+Gettext.bindtextdomain(uuid, GLib.get_user_data_dir() + "/locale");
 
 function _(str) {
     return Gettext.dgettext(uuid, str);
@@ -75,13 +74,13 @@ WorkspaceNameApplet.prototype = {
         this.menuManager.addMenu(this.menu);
 
         try {
-            this._signalManager.connect(global.window_manager, 'switch-workspace', Lang.bind(this, this.updateLabel));
+            this._signalManager.connect(global.window_manager, 'switch-workspace', this.updateLabel.bind(this));
 
             /* Workspace names live in org.cinnamon.desktop.wm.preferences. The
              * key this applet used to watch does not exist in the org.cinnamon
              * schema at all, so renames were never picked up. */
             if (WorkspaceActions)
-                this._wsNameId = WorkspaceActions.connectNameChanges(Lang.bind(this, this.updateLabel));
+                this._wsNameId = WorkspaceActions.connectNameChanges(this.updateLabel.bind(this));
 
             // Initial update
             this.updateLabel();
@@ -188,9 +187,9 @@ WorkspaceNameApplet.prototype = {
                     menuItem.label.add_style_class_name('popup-subtitle-menu-item');
                 }
 
-                menuItem.connect('activate', Lang.bind(this, function() {
+                menuItem.connect('activate', () => {
                     WorkspaceActions.activateWorkspaceByIndex(index);
-                }));
+                });
 
                 this.menu.addMenuItem(menuItem);
             }
@@ -201,21 +200,21 @@ WorkspaceNameApplet.prototype = {
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
             let renameItem = new PopupMenu.PopupMenuItem("Rename current workspace…");
-            renameItem.connect('activate', Lang.bind(this, function() {
+            renameItem.connect('activate', () => {
                 this._onRenameWorkspace(WorkspaceActions.getActiveWorkspaceIndex());
-            }));
+            });
             this.menu.addMenuItem(renameItem);
 
             let removeItem = new PopupMenu.PopupMenuItem("Remove current workspace");
             removeItem.setSensitive(WorkspaceActions.canRemove());
-            removeItem.connect('activate', Lang.bind(this, function() {
+            removeItem.connect('activate', () => {
                 this._onRemoveWorkspace(WorkspaceActions.getActiveWorkspaceIndex());
-            }));
+            });
             this.menu.addMenuItem(removeItem);
 
             let addItem = new PopupMenu.PopupMenuItem("Add workspace");
             addItem.setSensitive(WorkspaceActions.canAdd());
-            addItem.connect('activate', Lang.bind(this, this._onAddWorkspace));
+            addItem.connect('activate', this._onAddWorkspace.bind(this));
             this.menu.addMenuItem(addItem);
         } catch (e) {
             global.logError(uuid + " menu build failed: " + e);

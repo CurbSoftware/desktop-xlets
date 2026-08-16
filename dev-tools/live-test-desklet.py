@@ -436,6 +436,10 @@ suite("fixed layout smaller than the workspace count")
 orig_mode = d('D.layoutMode')
 orig_rows = d('D.fixedRows')
 orig_cols = d('D.fixedCols')
+# Pin the count so the expectations below hold whatever the session baseline
+# is: 4 workspaces overflow a 2x2 fixed grid by one.
+d('while (WA.getWorkspaceCount() < 4) WA.addWorkspace(); true')
+settle(0.5)
 d('D.layoutMode="fixed"; D.fixedRows=2; D.fixedCols=2; D._rebuildGrid(); true')
 settle(0.3)
 eq("2x2 grid renders 3 workspaces + the add tile", d('D.buttons.length'), 3)
@@ -451,6 +455,9 @@ eq("1x1 grid renders only the add tile", d('D.buttons.length'), 0)
 d(f'D.layoutMode={json.dumps(orig_mode)}; D.fixedRows={orig_rows}; D.fixedCols={orig_cols};'
   'D._rebuildGrid(); true')
 settle(0.3)
+d(f'while (WA.getWorkspaceCount() > {ORIG_COUNT}) '
+  f'  WA.removeWorkspaceByIndex(WA.getWorkspaceCount()-1, {{confirm:false}}); true')
+settle(0.5)
 eq("layout restored", d('D.buttons.length'), ORIG_COUNT)
 
 # ------------------------------------------------------------------ #
