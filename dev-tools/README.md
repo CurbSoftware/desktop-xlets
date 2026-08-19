@@ -113,19 +113,27 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | `vm-config.sh` | Manage VM (start, stop, SSH, network config). Override the domain with `CINNAMON_VM=` |
 | `start-sandbox.sh` | Xephyr options (limited, run with --help) |
 | `cinnamon_eval.py` | Run JavaScript inside the live Cinnamon process over DBus |
+| `screenshot.sh` | Capture the host X11 session (whole screen or a crop box) |
+| `vm-screenshot.sh` | Capture the VM display as PNG (`virsh screenshot` + PPM→PNG) |
 | `test-workspace-actions.js` | Headless unit tests for the shared workspace logic (`gjs`) |
+| `test-clock-actions.js` | Headless unit tests for the world-clock helpers (`gjs`) |
+| `test-card-actions.js` | Headless unit tests for the color-timer color engine (`gjs`) |
 | `live-test-desklet.py` | Live edge-case matrix for the workspace grid desklet |
 | `live-test-applet.py` | Live test for the workspace name applet |
+| `live-test-color-desklet.py` | Live matrix for the color-timer clock desklet (schedules, timer/chrono machines, reload persistence) |
 
 ## Testing
 
 ```bash
 # Headless: pure logic only, no Cinnamon process required
 gjs dev-tools/test-workspace-actions.js
+gjs dev-tools/test-clock-actions.js
+gjs dev-tools/test-card-actions.js
 
 # Live: drives the running desktop through org.Cinnamon.Eval
 python3 dev-tools/live-test-desklet.py
 python3 dev-tools/live-test-applet.py
+python3 dev-tools/live-test-color-desklet.py   # desklet must be installed and enabled
 ```
 
 `St` widgets cannot be instantiated outside the Cinnamon process — `libst.so`
@@ -136,10 +144,12 @@ That is what `cinnamon_eval.py` is for:
 ./dev-tools/cinnamon_eval.py 'global.workspace_manager.n_workspaces'
 ```
 
-Both live drivers are non-destructive by construction: they only remove
-workspaces they appended themselves, restore workspace names, count, active
-index and `enabled-applets` on exit (including on failure, via `atexit`), and
-fail if `~/.xsession-errors` gained a single new `JS ERROR` line during the run.
+All live drivers are non-destructive by construction: the workspace drivers
+only remove workspaces they appended themselves, restore workspace names,
+count, active index and `enabled-applets` on exit (including on failure, via
+`atexit`), and fail if `~/.xsession-errors` gained a single new `JS ERROR`
+line during the run. The color-timer driver likewise restores every settings
+value and timer/chronometer state it touches.
 
 Reload an xlet without the Looking Glass GUI:
 
