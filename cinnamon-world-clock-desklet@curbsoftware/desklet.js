@@ -173,8 +173,14 @@ ClockWidget.prototype = {
             try {
                 const timeString = baseDate.toLocaleString("en-US", { timeZone: timezoneName });
                 displayDate = new Date(timeString);
+                this._lastBadTimezone = null;
             } catch (e) {
-                global.logError(uuid + " invalid timezone: " + timezoneName + ": " + e);
+                /* update() runs on every 1 s tick: one typo must not flood
+                 * ~/.xsession-errors, so log once per distinct bad value. */
+                if (this._lastBadTimezone !== timezoneName) {
+                    this._lastBadTimezone = timezoneName;
+                    global.logError(uuid + " invalid timezone: " + timezoneName + ": " + e);
+                }
                 timezoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
                 displayDate = baseDate;
             }
