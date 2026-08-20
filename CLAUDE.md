@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Do NOT use em-dashes ever.  Do not use "—" symbol anywhere, change and code or text copy found during tasks to remove them.  Write in a humanistic way.
 
 ## Project Overview
 This is a Cinnamon extensions monorepo containing workspace management and clock desklets/applets for the Cinnamon desktop environment.
@@ -109,6 +110,12 @@ global.logError("Error message"); // Error logging
 tail -f ~/.xsession-errors | grep -i cinnamon
 ```
 
+### Extension Settings and Screenshots
+```bash
+cinnamon-settings desklets '<uuid>'        # open settings directly (or applets)
+./dev-tools/screenshot.sh out.png [X Y W H] # capture the live X11 session (visual QA)
+```
+
 ### Extension Install Locations
 - Desklets: `~/.local/share/cinnamon/desklets/`
 - Applets: `~/.local/share/cinnamon/applets/`
@@ -118,7 +125,9 @@ tail -f ~/.xsession-errors | grep -i cinnamon
 - **Xlet-local modules**: `imports.ui.deskletManager.desklets[uuid].<file>` /
   `imports.ui.appletManager.applets[uuid].<file>` (resolve lazily, inside `_init`)
 - **Inheritance**: Extend `Desklet.Desklet.prototype` or `Applet.Applet.prototype`
-- **Settings**: Use `Settings.DeskletSettings` or `Settings.AppletSettings` with JSON schema binding
+- **Settings**: Use `Settings.DeskletSettings` or `Settings.AppletSettings` with JSON schema binding. Schema keys are hyphenated, bound properties camelCase (`"layout-mode"` → `this.layoutMode`). In-process `settings.setValue()` does NOT fire bind callbacks (compensate manually); the bound values themselves do refresh.
+- **Identity**: `metadata.json` `uuid` MUST equal the directory name or Cinnamon refuses to load the xlet
+- **Signal cleanup**: disconnect everything in `on_desklet_removed`/`on_applet_removed_from_panel` — `SignalManager.SignalManager` (`disconnectAllSignals()`) or tracked ids. `Mainloop` timeout callbacks must return `false` explicitly to stop repeating (an omitted return keeps the source armed)
 - **Workspace Manager**: Access via `global.workspace_manager`
 - **Event Handling**: Connect to 'switch-workspace', 'workspace-added', 'workspace-removed'
 - **Workspace add/remove/rename**: Always go through `Main._addWorkspace()`,
@@ -149,3 +158,21 @@ tail -f ~/.xsession-errors | grep -i cinnamon
 - Live test drivers restore settings via `atexit` — kill them with anything
   but SIGTERM (a plain `timeout` skips the restore and contaminates the next
   run's saved "originals"; the drivers now route SIGTERM through sys.exit).
+
+## Spices Publication
+
+The full submission manual is `docs/spices-publication.md` — follow it for
+new submissions. Summary of the flow:
+
+- This monorepo (flat layout) is the dev home; each shipped xlet ALSO has a
+  standalone repo under the CurbSoftware org holding the Spices layout
+  (`info.json`, `screenshot.png`, `README.md`, `LICENSE` at root;
+  `files/<uuid>/…` with everything Cinnamon installs).
+- PRs go to `linuxmint/cinnamon-spices-desklets` from fork
+  `RobertAlexanderH/cinnamon-spices-desklets`, branch `<name>-initial` off
+  `upstream/master`, one UUID per PR. Run `./validate-spice <uuid>` and
+  `./cinnamon-spices-makepot <uuid>` in a clone of the spices repo before
+  submitting; sync any pot changes back here.
+- Post-merge: bump `metadata.json` `version` on every functional change;
+  NEVER edit `last-edited` (the website pipeline owns it); watch for issues
+  titled `spice name: description`.

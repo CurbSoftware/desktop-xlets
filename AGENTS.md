@@ -2,6 +2,9 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+Do NOT use em-dashes ever.  Do not use "—" symbol anywhere, change and code or text copy found during tasks to remove them.  Write in a humanistic way.
+
+
 ## Critical Commands
 
 - Install extensions (desklets + applets): `./dev-tools/install-extensions.sh`
