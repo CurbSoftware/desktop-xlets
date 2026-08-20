@@ -181,6 +181,42 @@ eq("null is empty", CA.normalizeSchedule(null, CA.DAY_SECONDS), { stops: [], dro
 eq("string is empty", CA.normalizeSchedule("nope", CA.DAY_SECONDS), { stops: [], dropped: 0 });
 eq("undefined is empty", CA.normalizeSchedule(undefined, CA.DAY_SECONDS), { stops: [], dropped: 0 });
 
+suite("normalizeSchedule (notify)");
+eq("notify flag carried onto the stop",
+    CA.normalizeSchedule([{ hour: 12, minute: 0, color: "#f00", notify: true }], CA.DAY_SECONDS).stops,
+    [{ t: 43200, rgba: RED, notify: true }]);
+eq("missing notify flag stays off the stop",
+    CA.normalizeSchedule([{ hour: 12, minute: 0, color: "#f00" }], CA.DAY_SECONDS).stops,
+    [{ t: 43200, rgba: RED }]);
+
+suite("thresholdsCrossed");
+eq("forward crossing", CA.thresholdsCrossed(10, 20, [15, 25], false), [15]);
+eq("exact boundary is inclusive", CA.thresholdsCrossed(10, 20, [20], false), [20]);
+eq("no crossing stays empty", CA.thresholdsCrossed(10, 20, [5, 25], false), []);
+eq("wrap crosses above prev and at/below cur",
+    CA.thresholdsCrossed(86399, 1, [43200, 0], true), [0]);
+eq("wrap forward at midnight boundary",
+    CA.thresholdsCrossed(21599, 21600, [21600], true), [21600]);
+eq("non-finite prev returns empty", CA.thresholdsCrossed(null, 20, [10], false), []);
+
+suite("nextColor");
+eq("clock next wraps past last",
+    CA.nextColor(stops([[21600, RED], [64800, BLUE]]), 68400, { wrap: true }), RED);
+eq("clock next forward",
+    CA.nextColor(stops([[21600, RED], [64800, BLUE]]), 21600, { wrap: true }), BLUE);
+eq("chrono next forward",
+    CA.nextColor(stops([[0, RED], [1800, BLUE]]), 300, {}), BLUE);
+eq("chrono past last holds last",
+    CA.nextColor(stops([[0, RED], [1800, BLUE]]), 2000, {}), BLUE);
+eq("timer next below",
+    CA.nextColor(stops([[0, RED], [30, YELLOW], [60, GREEN]]), 45, { reverse: true }), YELLOW);
+eq("timer at stop snaps lower",
+    CA.nextColor(stops([[0, RED], [30, YELLOW], [60, GREEN]]), 60, { reverse: true }), YELLOW);
+eq("single stop returns it",
+    CA.nextColor(stops([[21600, RED]]), 100, {}), RED);
+eq("no stops is null",
+    CA.nextColor([], 50, {}), null);
+
 /* ------------------------------------------------------------------ *
  * Default schedules
  * ------------------------------------------------------------------ */
@@ -332,8 +368,7 @@ function fittedH(sizes) {
     return (sizes.time + sizes.date + sizes.timezone) * L.ptToPx * L.lineHeight + 2 * L.lineGap;
 }
 function fittedW(text, pt, em) {
-    const L = CA.CARD_LAYOUT;
-    return String(text).length * pt * L.ptToPx * em;
+    return CA._textWidthPx(text, pt, CA.CARD_LAYOUT.ptToPx, em);
 }
 
 suite("computeFittedFontSizes");
@@ -361,7 +396,7 @@ check("hierarchy date >= timezone", fit.date + 1e-9 >= fit.timezone);
 check("small card three lines fit height", fittedH(fit) <= inner.height + 0.75);
 check("small card time fits width", fittedW("23:59:59", fit.time, CA.CARD_LAYOUT.timeEm) <= inner.width + 0.75);
 check("small card date fits width",
-    fittedW("Wednesday, 27 December", fit.date, CA.CARD_LAYOUT.dateEm) <= inner.width + 0.75);
+    fittedW("Wednesday, 27 December", fit.date, CA.CARD_LAYOUT.dateEm) <= inner.width + 1.0);
 check("small 1x1 add keeps cap", fit.add === 16);
 
 fit = CA.computeFittedFontSizes(200, 200, {

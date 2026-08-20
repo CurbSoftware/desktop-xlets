@@ -298,8 +298,7 @@ function fittedH(sizes) {
     return (sizes.time + sizes.date + sizes.timezone) * L.ptToPx * L.lineHeight + 2 * L.lineGap;
 }
 function fittedW(text, pt, em) {
-    const L = CA.TILE_LAYOUT;
-    return String(text).length * pt * L.ptToPx * em;
+    return CA._textWidthPx(text, pt, CA.TILE_LAYOUT.ptToPx, em);
 }
 
 suite("computeFittedFontSizes");
