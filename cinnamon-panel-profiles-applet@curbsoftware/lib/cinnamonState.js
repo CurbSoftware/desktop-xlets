@@ -294,7 +294,12 @@ function restoreSettingsExceptEnabledApplets(snapshot) {
             }
             if (getRaw(key) !== rec.value) {
                 result.ok = false;
-                result.warnings.push("readback mismatch for " + key);
+                /* Panel-layout key values only (never applet config), so
+                 * printing them cannot leak anything private. Seeing both
+                 * sides is the only way to tell a formatting difference
+                 * from a real lost write. */
+                result.warnings.push("readback mismatch for " + key +
+                    ": stored " + rec.value + " live " + getRaw(key));
             }
         });
     } catch (e) {

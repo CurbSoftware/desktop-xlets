@@ -1,32 +1,126 @@
 # Development
 
-Stub. Completed by the final work package; the workflow notes below are
-already true and worth keeping.
+How to build, test and iterate on the Panel Profiles applet.
 
-## Iterating on this applet
+## Module map
 
-- Install for live testing: `./dev-tools/install-extensions.sh -n '*panel-profiles*'`
-- Reload after editing applet.js alone:
-  `Win+L` (Looking Glass), Extensions tab, Reload Code, or
-  `gdbus call --session --dest org.Cinnamon --object-path /org/Cinnamon \
-    --method org.Cinnamon.ReloadXlet 'cinnamon-panel-profiles-applet@curbsoftware' APPLET`
-- ReloadXlet re-runs applet.js but does NOT re-import lib/ modules and does
-  NOT re-read stylesheet.css. After editing anything under lib/ or the css,
-  restart Cinnamon: `cinnamon --replace &`
-- Logs: `tail -f ~/.xsession-errors | grep PanelProfiles`
+- `applet.js`: composition root. Lifecycle, menu, settings binding, dirty
+  tracking, notifications, and the dependency injection that feeds the lib.
+- `dialogs.js`: Save, Manage and StartupOffer dialogs. St/Clutter only, no
+  lib imports, no require.
+- `lib/constants.js`: paths, `PANEL_SETTING_KEYS`, schema versions, dir/file
+  modes, timings.
+- `lib/logger.js`: `[PanelProfiles]` prefix, three levels, never logs config
+  contents or home paths.
+- `lib/atomicFile.js`: private-mode atomic writes (temp sibling plus rename,
+  0600) and sha256.
+- `lib/cinnamonState.js`: variant codec, capture/restore/verify, parsers,
+  canonicalization, manager-anchor repair.
+- `lib/appletConfigStore.js`: applet config capture/restore/watch plus the
+  relative-path sanitization boundary.
+- `lib/profileSchema.js`: validate and migrate profiles, ids and name rules.
+- `lib/profileStore.js`: profile CRUD, state.json, rollback rotation.
+- `lib/monitorTopology.js`: topology read/match/wait over an injectable
+  layout provider.
+- `lib/applyController.js`: the apply transaction state machine and the
+  single-operation lock.
 
-## Headless module checks
+The lib modules have no St/Clutter imports and no require calls, so they load
+headless. They share state through `setDependencies()`/`resetDependencies()`
+seams. Public names use `var`/`function` so both require and the plain
+`imports.<mod>` loader see them.
 
-lib/ modules load without a Cinnamon session:
+Related notes: `RESEARCH.md` (Cinnamon 6.6.9 live inspection),
+`docs/SCHEMA.md` (profile JSON), `docs/TESTING.md` (manual VM checklist),
+`fixtures/vm-two-screens.example.json` (sanitized example profile).
+
+The UUID is `cinnamon-panel-profiles-applet@curbsoftware`. An older export
+used `panel-profiles@curbsoftware.com`. Do not revive that UUID.
+
+## Tests
+
+Three headless suites, no Cinnamon session needed:
 
 ```bash
-cd cinnamon-panel-profiles-applet@curbsoftware
-cjs -c 'imports.searchPath.unshift("lib"); print(imports.constants.PANEL_SETTING_KEYS.length)'
+gjs dev-tools/test-pp-capture.js
+XDG_CONFIG_HOME=$(mktemp -d) gjs dev-tools/test-pp-storage.js
+XDG_CONFIG_HOME=$(mktemp -d) gjs dev-tools/test-pp-apply.js
 ```
 
-The full headless suite (dev-tools/test-panel-profiles.js) arrives with the
-capture work package.
+The storage and apply suites refuse to run against your real config dir, so
+they take a throwaway `XDG_CONFIG_HOME`. Capture is pure codec work and runs
+straight.
 
-## Test matrix
+The live acceptance driver walks the full spec section 41-49 matrix through
+the running desktop:
 
-Live driver and VM reboot procedure are documented here once written.
+```bash
+python3 dev-tools/live-test-panel-profiles.py
+```
+
+It restores every panel key, the applet state dir and the applet config files
+verbatim via atexit, and exits non-zero on any failing assertion.
+
+## Reload rules
+
+- Editing `applet.js` alone: reload via Looking Glass (Win+L, Extensions,
+  Reload Code) or:
+  `gdbus call --session --dest org.Cinnamon --object-path /org/Cinnamon \
+    --method org.Cinnamon.ReloadXlet 'cinnamon-panel-profiles-applet@curbsoftware' APPLET`
+- ReloadXlet re-runs applet.js but does NOT re-import `lib/` modules and does
+  NOT re-read `stylesheet.css`. After editing anything under lib/ or the css,
+  restart Cinnamon: `cinnamon --replace &`.
+
+## Live-test safety
+
+Before any live run:
+
+- Note the coredump baseline: `coredumpctl list --no-pager | tail -2`. Stop
+  live work on any new coredump.
+- Kill drivers only with SIGTERM. The driver routes SIGTERM through sys.exit
+  so atexit still restores. A plain `timeout` is fine; SIGKILL is not.
+- The driver restores enabled-applets, next-applet-id, every panel key, the
+  config files and the state dir verbatim, before it exits.
+
+Log location: `~/.xsession-errors` normally. If Cinnamon was restarted with a
+custom stderr target, point the driver at it with
+`CINNAMON_LOG=/tmp/some-cinnamon.log`.
+
+## Two-head VM procedure
+
+The release-blocking scenario is a VM whose second head appears after Cinnamon
+starts. Drive it through libvirt:
+
+```bash
+export CINNAMON_VM=linuxmint-user   # run `virsh list --all` first, override if needed
+./dev-tools/vm-config.sh bridge      # one-time: bridged networking
+./dev-tools/vm-config.sh start       # boot the VM, prints its IP
+./dev-tools/vm-config.sh ssh         # then install the applet there
+./dev-tools/vm-config.sh console     # open virt-viewer
+```
+
+Manual detach-window procedure, when you cannot script the display arrival:
+
+1. Set up the two-panel layout, save it, mark it as startup.
+2. Shut down. Start the VM with only the first head attached, or detach the
+   second virt-viewer window.
+3. Boot. Cinnamon comes up with one monitor and the applet shows Waiting for
+   display 2.
+4. Reattach the second window. Cinnamon sees the monitor, the applet waits for
+   the stabilization delay, then restores the profile.
+5. Confirm the second panel and its applets are back and the profile verified.
+
+## Known Cinnamon 6.6 landmine
+
+Cinnamon 6.6 can segfault when a `St.ScrollView` is torn down with children
+still in it. `destroy_all_children()` frees children in place, and a style
+recompute already in flight then walks a freed widget
+(`st_scroll_view_style_changed` on freed memory).
+
+The fix, used in `dialogs.js`:
+
+- Unparent every child before destroying it (`_clearContainer`), so the style
+  cascade only ever sees live actors.
+- Do not put a `Tooltip` or initial key focus on a row inside a scroll list.
+  `_statusIcon` uses `accessible_name` instead of a tooltip, and the manage
+  dialog focuses the scroll view itself, never a row button.

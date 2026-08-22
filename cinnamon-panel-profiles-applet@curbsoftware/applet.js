@@ -57,7 +57,7 @@ function _loadLib() {
             Dialogs: require("./dialogs")
         };
     } catch (e) {
-        global.logError(uuid + " could not load lib modules: " + e);
+        global.logError("[PanelProfiles] could not load lib modules: " + e);
         _lib = null;
     }
     return _lib;
@@ -104,6 +104,14 @@ PanelProfilesApplet.prototype = {
         /* Notification wrapper shared with the apply controller. */
         this._notifier = null;
 
+        /* Startup-recovery state: the stabilization timer (sufficient-monitor
+         * path) and the monitors-changed watch shared by the stabilization
+         * restart and the primary-placement nag. */
+        this._startupStabilizeId = null;
+        this._startupApplyProfileId = null;
+        this._startupApplyRequiredCount = 0;
+        this._monitorsChangedId = null;
+
         /* lib modules resolve their siblings through the plain importer
          * (imports.constants and friends), so the lib directory must sit on
          * the search path before anything calls into them. */
@@ -143,8 +151,12 @@ PanelProfilesApplet.prototype = {
         this.set_applet_icon_symbolic_path(metadata.path + "/icon-symbolic.svg");
         this.set_applet_tooltip(_("Panel Profiles"));
 
-        if (this._modules)
+        if (this._modules) {
             this._initDirtyTracking();
+            this._startupCheck();
+            this._runPrimaryPlacementCheck();
+            this._connectMonitorsChanged();
+        }
     },
 
     /* ---------------------------------------------------------------- *
@@ -476,6 +488,221 @@ PanelProfilesApplet.prototype = {
     },
 
     /* ---------------------------------------------------------------- *
+     * Startup recovery
+     * ---------------------------------------------------------------- */
+
+    /* Runs once per instance, after module wiring and dirty tracking. A
+     * pendingApply was already resumed in _wireModules and always outranks
+     * the startup path, so this returns early when one is on disk. */
+    _startupCheck: function() {
+        if (this._destroyed || !this._modules)
+            return;
+        const M = this._modules;
+
+        let state;
+        try {
+            state = M.ProfileStore.getState();
+        } catch (e) {
+            M.Logger.error("startup check could not read state", e);
+            return;
+        }
+        if (state.pendingApply)
+            return;
+        if (!this.startupAutoRestore || !state.startupProfileId)
+            return;
+
+        let loaded;
+        try {
+            loaded = M.ProfileStore.loadProfile(state.startupProfileId);
+        } catch (e) {
+            loaded = null;
+        }
+        if (!loaded || loaded.error || !loaded.profile) {
+            M.Logger.warn("startup profile is unreadable; skipping startup " +
+                "restore");
+            return;
+        }
+        const profile = loaded.profile;
+
+        /* a. Fingerprint short-circuit: live state already equals the
+         * startup profile, so mark it active and stop. No rollback, no
+         * profile writes, no churn. */
+        let live = null;
+        try {
+            live = M.ApplyController.computeCurrentFingerprint();
+        } catch (e) {
+            live = null;
+        }
+        if (live !== null && typeof profile.fingerprint === "string" &&
+                profile.fingerprint.length > 0 && live === profile.fingerprint) {
+            try {
+                M.ProfileStore.mutateState((s) => {
+                    s.activeProfileId = profile.id;
+                });
+            } catch (e) {
+                M.Logger.error("could not mark startup profile active", e);
+            }
+            this._dirtyStatus = DIRTY_ACTIVE;
+            M.Logger.log("startup profile already matches the live layout; " +
+                "no restore needed");
+            this._rebuildDirtyTracking();
+            return;
+        }
+
+        let required = 1;
+        try {
+            const t = profile.monitorTopology;
+            if (t && Number.isFinite(Number(t.expectedCount)))
+                required = Math.max(1, Math.floor(Number(t.expectedCount)));
+        } catch (ignored) {
+            /* profile without a readable topology defaults to one monitor */
+        }
+        const currentCount = M.MonitorTopology.getMonitorCount();
+
+        if (M.MonitorTopology.topologySatisfies(currentCount, required)) {
+            /* b. Enough monitors now: settle briefly (restarting on any
+             * churn), re-check, then apply. */
+            this._startStabilize(profile.id, required);
+        } else if (this.startupWaitDisplays) {
+            /* c. Not enough monitors: the apply controller owns the wait
+             * internally (stabilization, single timeout warning, menu wait
+             * display). beginApply returns {started:true} for the startup
+             * reason and carries on. */
+            M.ApplyController.beginApply(profile.id, { reason: "startup" });
+        } else {
+            /* d. Not enough monitors and waiting is off: leave the desktop
+             * untouched. Log once, never retry. */
+            M.Logger.log("startup profile needs " + required +
+                " displays but only " + currentCount +
+                " are available and display waiting is disabled");
+        }
+    },
+
+    /* Arm (or re-arm on churn) the short stabilization timer used when the
+     * required monitor count is already present at startup. */
+    _startStabilize: function(profileId, required) {
+        if (this._startupStabilizeId !== null) {
+            Mainloop.source_remove(this._startupStabilizeId);
+            this._startupStabilizeId = null;
+        }
+        this._startupApplyProfileId = profileId;
+        this._startupApplyRequiredCount = required;
+        const delayMs = Math.max(0, Number(this.stabilizationDelay) || 0) * 1000;
+        this._startupStabilizeId = Mainloop.timeout_add(delayMs, () => {
+            this._startupStabilizeId = null;
+            if (this._destroyed || !this._modules) {
+                this._startupApplyProfileId = null;
+                return false;
+            }
+            const M = this._modules;
+            const id = this._startupApplyProfileId;
+            const req = this._startupApplyRequiredCount;
+            this._startupApplyProfileId = null;
+            const count = M.MonitorTopology.getMonitorCount();
+            if (count >= req || this.startupWaitDisplays) {
+                /* Sufficient, or dropped below but waiting is on: the
+                 * controller either applies now or waits internally. */
+                M.ApplyController.beginApply(id, { reason: "startup" });
+            } else {
+                M.Logger.log("startup profile needs " + req +
+                    " displays but only " + count +
+                    " are available and display waiting is disabled");
+            }
+            return false;
+        });
+    },
+
+    _connectMonitorsChanged: function() {
+        if (this._monitorsChangedId !== null)
+            return;
+        try {
+            this._monitorsChangedId = Main.layoutManager.connect(
+                "monitors-changed", () => this._onMonitorsChanged());
+        } catch (e) {
+            if (this._modules)
+                this._modules.Logger.error("could not watch monitors-changed", e);
+        }
+    },
+
+    _onMonitorsChanged: function() {
+        if (this._destroyed || !this._modules)
+            return;
+        if (this._startupApplyProfileId !== null)
+            this._startStabilize(this._startupApplyProfileId,
+                this._startupApplyRequiredCount);
+        this._runPrimaryPlacementCheck();
+    },
+
+    /* One-time info notice when startup recovery is on but the applet sits
+     * on a non-primary monitor. The flag resets once the applet is back on
+     * the primary, so a later regression warns again. Never repeats while
+     * the flag is set. */
+    _runPrimaryPlacementCheck: function() {
+        if (this._destroyed || !this._modules || !this.startupAutoRestore)
+            return;
+        const M = this._modules;
+        let eaStrv = null;
+        let peStrv = null;
+        try {
+            if (!this._cinnamonSettings)
+                return;
+            eaStrv = this._cinnamonSettings.get_strv("enabled-applets");
+            peStrv = this._cinnamonSettings.get_strv("panels-enabled");
+        } catch (e) {
+            return;
+        }
+        const parsedEa = M.CinnamonState.parseEnabledApplets(eaStrv);
+        const selfEntry = (parsedEa.entries || []).find(
+            (entry) => entry.uuid === this.metadata.uuid);
+        if (!selfEntry)
+            return; /* not installed yet; nothing to judge */
+        const parsedPe = M.CinnamonState.parsePanelsEnabled(peStrv);
+        const panel = (parsedPe.panels || []).find(
+            (p) => p.id === selfEntry.panelId);
+        if (!panel)
+            return; /* own panel is not in panels-enabled; cannot place it */
+        let primaryIndex = -1;
+        try {
+            primaryIndex = Main.layoutManager.primaryIndex;
+        } catch (e) {
+            return;
+        }
+        const onPrimary = panel.monitor === primaryIndex;
+        let state;
+        try {
+            state = M.ProfileStore.getState();
+        } catch (e) {
+            return;
+        }
+        if (!onPrimary) {
+            if (!state.warnedPrimaryPlacement) {
+                try {
+                    Main.notify(_("Panel Profiles"),
+                        _("Move Panel Profiles to a panel on the primary " +
+                            "monitor for reliable startup recovery."));
+                } catch (e) {
+                    /* notification is best-effort */
+                }
+                try {
+                    M.ProfileStore.mutateState((s) => {
+                        s.warnedPrimaryPlacement = true;
+                    });
+                } catch (e) {
+                    M.Logger.error("could not record placement warning", e);
+                }
+            }
+        } else if (state.warnedPrimaryPlacement) {
+            try {
+                M.ProfileStore.mutateState((s) => {
+                    s.warnedPrimaryPlacement = false;
+                });
+            } catch (e) {
+                M.Logger.error("could not clear placement warning", e);
+            }
+        }
+    },
+
+    /* ---------------------------------------------------------------- *
      * Menu
      * ---------------------------------------------------------------- */
 
@@ -493,7 +720,7 @@ PanelProfilesApplet.prototype = {
         try {
             this.menu.removeAll();
 
-            this._addDimMenuItem(_("Panel Profiles"));
+            this._addDimMenuItem(_("Panel Profiles"), null, true);
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
             if (!M) {
@@ -505,6 +732,11 @@ PanelProfilesApplet.prototype = {
             const state = M.ProfileStore.getState();
             const busy = M.ApplyController.isBusy();
             const controllerState = M.ApplyController.getState();
+            /* During a monitor wait the profile rows stay clickable so the
+             * user can manually load a different (e.g. one-monitor) profile;
+             * _applyProfile cancels the pending wait first. */
+            const waiting = controllerState ===
+                M.ApplyController.STATE_WAITING_FOR_MONITORS;
 
             if (profiles.length === 0) {
                 /* First run: nothing saved yet, only save and manage. */
@@ -543,7 +775,7 @@ PanelProfilesApplet.prototype = {
                         item.addActor(tag, { expand: true, span: -1, align: St.Align.END });
                     }
                 }
-                if (busy)
+                if (busy && !waiting)
                     item.setSensitive(false);
                 item.connect("activate", () => {
                     self._deferAction(() => self._applyProfile(profile.id));
@@ -594,16 +826,21 @@ PanelProfilesApplet.prototype = {
             if (M)
                 M.Logger.error("menu build failed", e);
             else
-                global.logError(uuid + " menu build failed: " + e);
+                global.logError("[PanelProfiles] menu build failed: " + e);
         }
     },
 
-    /* Dim, non-reactive informational row. */
-    _addDimMenuItem: function(text, extraStyle) {
+    /* Dim, non-reactive informational row. Defaults to the theme's inactive
+     * item look (normal weight, dimmed); pass bold=true for a section title.
+     * The subtitle class forces font-weight: bold under Numix, which reads as
+     * a header, not as secondary text, so it is opt-in only. */
+    _addDimMenuItem: function(text, extraStyle, bold) {
         const item = new PopupMenu.PopupMenuItem(text);
         item.actor.reactive = false;
         item.actor.can_focus = false;
-        item.label.add_style_class_name("popup-subtitle-menu-item");
+        item.label.add_style_class_name(bold
+            ? "popup-subtitle-menu-item"
+            : "popup-inactive-menu-item");
         if (extraStyle)
             item.label.add_style_class_name(extraStyle);
         this.menu.addMenuItem(item);
@@ -676,6 +913,12 @@ PanelProfilesApplet.prototype = {
         if (this._destroyed || !this._modules)
             return;
         const M = this._modules;
+        /* A manual load while the startup wait is pending must win over the
+         * wait: cancel it (this releases the lock and clears the menu wait
+         * display), then start the user's apply normally. */
+        if (M.ApplyController.getState() ===
+                M.ApplyController.STATE_WAITING_FOR_MONITORS)
+            M.ApplyController.cancelAll();
         const result = M.ApplyController.beginApply(profileId, { reason: "user" });
         if (result && result.failure && result.failure !== "waiting" &&
                 result.failure !== "busy") {
@@ -860,7 +1103,7 @@ PanelProfilesApplet.prototype = {
                 if (self._modules)
                     self._modules.Logger.error("deferred action failed", e);
                 else
-                    global.logError(uuid + " deferred action failed: " + e);
+                    global.logError("[PanelProfiles] deferred action failed: " + e);
             }
             return false;
         });
@@ -901,6 +1144,20 @@ PanelProfilesApplet.prototype = {
         if (this._dirtyDebounceId !== null) {
             Mainloop.source_remove(this._dirtyDebounceId);
             this._dirtyDebounceId = null;
+        }
+        if (this._startupStabilizeId !== null) {
+            Mainloop.source_remove(this._startupStabilizeId);
+            this._startupStabilizeId = null;
+        }
+        this._startupApplyProfileId = null;
+        this._startupApplyRequiredCount = 0;
+        if (this._monitorsChangedId !== null) {
+            try {
+                Main.layoutManager.disconnect(this._monitorsChangedId);
+            } catch (e) {
+                /* layout manager already finalized */
+            }
+            this._monitorsChangedId = null;
         }
         if (this._settingWatchIds.length && this._cinnamonSettings) {
             this._settingWatchIds.forEach((id) => {

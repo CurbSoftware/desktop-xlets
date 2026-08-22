@@ -13,6 +13,10 @@ Write all user facing text in a human-friendly way. Humanize writing by:
 ---
 
 
+Development lives in this repository (`/home/user/projects/cinnamon-monorepo`).
+Do not open `/home/user/projects/cinnamon-projects` (renamed to
+`cinnamon-projects.retired`).
+
 ## Critical Commands
 
 - Install extensions (desklets + applets): `./dev-tools/install-extensions.sh`

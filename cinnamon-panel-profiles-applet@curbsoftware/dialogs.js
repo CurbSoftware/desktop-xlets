@@ -215,7 +215,21 @@ function _clearContainer(box) {
     }
 }
 
+/* GType names are process-global and never unregistered, but this module
+ * CAN be re-evaluated: Cinnamon's requireModule cache drops it when the
+ * file size changes or when the last applet instance is removed and the
+ * xlet is freshly imported again. A second registerClass with the same
+ * auto-generated name then throws "Type name ... is already registered"
+ * and the applet loads dead. A per-evaluation suffix keeps every
+ * registration unique (the pomodoro spice uses the same trick). */
+let _typeSeq = 0;
+function _typeName(base) {
+    _typeSeq += 1;
+    return "PP_" + base + "_" + Date.now().toString(36) + "_" + _typeSeq;
+}
+
 var PanelProfilesConfirmDialog = GObject.registerClass(
+    { GTypeName: _typeName("ConfirmDialog") },
 class PanelProfilesConfirmDialog extends ModalDialog.ModalDialog {
 
     /**
@@ -288,6 +302,7 @@ class PanelProfilesConfirmDialog extends ModalDialog.ModalDialog {
 });
 
 var SaveProfileDialog = GObject.registerClass(
+    { GTypeName: _typeName("SaveDialog") },
 class SaveProfileDialog extends ModalDialog.ModalDialog {
 
     /**
@@ -404,9 +419,13 @@ class SaveProfileDialog extends ModalDialog.ModalDialog {
         this._replaceBox.hide();
         this.contentLayout.add_child(this._replaceBox);
 
-        /* "Use this profile at startup". The "check-box-2" theme class
-         * styles the glyph box and its spacing with no help from us. */
-        this._startupCheck = _makeToggleButton(_("Use this profile at startup"), "check-box-2");
+        /* "Use this profile at startup". The "check-box" theme class styles
+         * the glyph box (both Numix and the default theme carry it; the
+         * sibling "check-box-2" class only exists in the default theme and
+         * would leave the glyph invisible under Numix-Cinnamon-Transparent).
+         * Our own stylesheet supplies the glyph-to-label spacing because the
+         * theme's rule targets CinnamonGenericContainer, not our StBoxLayout. */
+        this._startupCheck = _makeToggleButton(_("Use this profile at startup"), "check-box panel-profiles-check");
         this._startupCheck.checked = false;
         this._handlerIds.push([this._startupCheck,
             this._startupCheck.connect("clicked", () => {
@@ -722,6 +741,7 @@ class SaveProfileDialog extends ModalDialog.ModalDialog {
 });
 
 var RenameProfileDialog = GObject.registerClass(
+    { GTypeName: _typeName("RenameDialog") },
 class RenameProfileDialog extends ModalDialog.ModalDialog {
 
     /**
@@ -853,6 +873,7 @@ class RenameProfileDialog extends ModalDialog.ModalDialog {
 });
 
 var ManageProfilesDialog = GObject.registerClass(
+    { GTypeName: _typeName("ManageDialog") },
 class ManageProfilesDialog extends ModalDialog.ModalDialog {
 
     /**
@@ -1193,6 +1214,7 @@ class ManageProfilesDialog extends ModalDialog.ModalDialog {
 });
 
 var StartupOfferDialog = GObject.registerClass(
+    { GTypeName: _typeName("StartupOffer") },
 class StartupOfferDialog extends ModalDialog.ModalDialog {
 
     /**

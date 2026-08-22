@@ -48,6 +48,14 @@ Cinnamon has no cross-xlet import path:
   persisted in hidden `generic` keys and survives reloads
 - Timer/chrono controls are on-card St.Buttons, not menus
 
+#### Panel Profiles Applet (`cinnamon-panel-profiles-applet@curbsoftware/`)
+- Saves the full panel environment (panel keys, applet placement and each
+  applet's settings) as named profiles and restores them transactionally,
+  with rollback and startup recovery that waits for the expected displays
+- Composition root in `applet.js`, dialogs in `dialogs.js`, pure headless
+  modules in `lib/` (capture, storage, apply engine, topology, fingerprint)
+- State and profiles live under `~/.config/cinnamon-panel-profiles/`
+
 ### Reference Materials (`cinnamon-docs/`)
 - **cinnamon-developer-docs/**: Official Cinnamon developer documentation
   - **write-applet.md**: Basic applet structure and API usage patterns
@@ -88,9 +96,13 @@ gdbus call --session --dest org.Cinnamon --object-path /org/Cinnamon \
 gjs dev-tools/test-workspace-actions.js    # headless unit tests, no Cinnamon needed
 gjs dev-tools/test-clock-actions.js        # world-clock helpers (headless)
 gjs dev-tools/test-card-actions.js         # color-timer color engine (headless)
+gjs dev-tools/test-pp-capture.js           # panel-profiles capture core (headless)
+XDG_CONFIG_HOME=$(mktemp -d) gjs dev-tools/test-pp-storage.js  # panel-profiles storage (headless)
+XDG_CONFIG_HOME=$(mktemp -d) gjs dev-tools/test-pp-apply.js    # panel-profiles apply engine (headless)
 python3 dev-tools/live-test-desklet.py     # live desklet edge-case matrix
 python3 dev-tools/live-test-applet.py      # live applet test (restores enabled-applets)
 python3 dev-tools/live-test-color-desklet.py # live color-timer clock matrix (restores settings)
+python3 dev-tools/live-test-panel-profiles.py # live panel-profiles acceptance matrix (restores settings)
 ```
 The live drivers script the running desktop through `org.Cinnamon.Eval` (see
 `dev-tools/cinnamon_eval.py`). They only remove workspaces they created and

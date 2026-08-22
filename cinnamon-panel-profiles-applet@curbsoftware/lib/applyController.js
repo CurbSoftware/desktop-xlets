@@ -700,10 +700,28 @@ function _bumpPastMaxId(profile) {
     }
 }
 
+/* Exactly one verification timer may be armed. When our own enabled-applets
+ * entry changes mid-apply, the dying instance has already scheduled one and
+ * the successor's resumePendingApply() schedules another; overwriting the id
+ * without cancelling leaks the first timer, and both then fire (double
+ * "profile loaded" notifications). Cancel-then-schedule keeps the newest
+ * timer the only one. */
+function _cancelVerifyTimer() {
+    if (_verifyTimerId !== null) {
+        try {
+            _scheduler().sourceRemove(_verifyTimerId);
+        } catch (e) {
+            /* source already gone */
+        }
+    }
+    _verifyTimerId = null;
+}
+
 function _scheduleVerification(profile, reason) {
     const scheduler = _scheduler();
     if (!scheduler || typeof scheduler.timeoutAdd !== "function")
         throw new Error("no scheduler available for verification");
+    _cancelVerifyTimer();
     _setState(STATE_VERIFYING);
     _verifyTimerId = scheduler.timeoutAdd(_const("VERIFY_SETTLE_MS", 1500),
         function () {
@@ -750,8 +768,26 @@ function _runVerification(profile, reason) {
                     "Panel profile loaded: " + profile.name);
         } else {
             const mismatched = verdict ? verdict.mismatchedKeys : [];
+            /* Log the live value of each mismatched panel key. These are
+             * org.cinnamon panel-layout keys only, never applet config
+             * contents, so nothing private can leak. Seeing the actual
+             * value is the difference between debugging a Cinnamon
+             * rewrite and guessing. */
+            let detail = "";
+            try {
+                const cs = _cinnamonState();
+                detail = mismatched.map(function (k) {
+                    const live = cs ? cs.getRaw(k) : null;
+                    const saved = profile.cinnamonSettings[k]
+                        ? profile.cinnamonSettings[k].value : "?";
+                    return k + " live=" + live + " saved=" + saved;
+                }).join("; ");
+            } catch (ignored) {
+                /* diagnostics must not mask the failure */
+            }
             _log("warn", "verification mismatched keys: " +
-                (mismatched.join(", ") || "fingerprint differs"));
+                (mismatched.join(", ") || "fingerprint differs") +
+                (detail ? " [" + detail + "]" : ""));
             _recordLastFailure("verification failed after apply", {
                 mismatchedKeys: mismatched,
                 fingerprintOk: fingerprintOk
@@ -831,6 +867,15 @@ function _continueApply(profile, reason) {
         return { started: false, failure: anchor.fatal };
     }
     const warnings = _collectApplyWarnings(profile);
+    if (warnings.length > 0) {
+        /* Spec 15/45: a missing third-party applet must not abort the
+         * restore, but the user has to hear about it. Surface the collected
+         * warnings once (log plus a warning notification; the notify wrapper
+         * already honors the notify-warnings setting). */
+        const text = warnings.join("; ");
+        _log("warn", "apply warnings: " + text);
+        _notify("warn", "Panel Profiles", "Profile loaded with warnings: " + text);
+    }
 
     /* 5. Monitor gate: only when the profile expects more heads than are
      * live. Both user- and startup-initiated applies wait internally and
@@ -1013,6 +1058,7 @@ function resumePendingApply() {
         _suppressDirty = true;
 
         if (pending.reason === "rollback") {
+            _cancelVerifyTimer();
             _setState(STATE_VERIFYING);
             _verifyTimerId = _scheduler().timeoutAdd(
                 _const("VERIFY_SETTLE_MS", 1500),
@@ -1034,6 +1080,7 @@ function resumePendingApply() {
             _log("warn", "pending apply target profile is gone");
             return false;
         }
+        _cancelVerifyTimer();
         _setState(STATE_VERIFYING);
         _verifyTimerId = _scheduler().timeoutAdd(
             _const("VERIFY_SETTLE_MS", 1500),

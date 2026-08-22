@@ -14,11 +14,12 @@
     opacity: 0.6;
 }
 
-/* Status lines under the profile list ("Current: ...", "Displays: 2 / 2"). */
+/* Status lines under the profile list ("Current: ...", "Displays: 2 / 2").
+ * Dimming comes from the theme's popup-inactive-menu-item class, so no
+ * extra opacity here (a second layer would render the text too faint). */
 .panel-profiles-status {
     padding-left: 4px;
     font-size: 0.95em;
-    opacity: 0.75;
 }
 
 /* Scroll container for long profile lists in the manage dialog. */
@@ -71,12 +72,12 @@
     spacing: 4px;
 }
 
-/* The theme spaces the radio glyph only for CinnamonGenericContainer
- * children; our radio buttons pack an StBoxLayout, so provide the same
- * gap ourselves. The check-box-2 startup toggle needs no such rule: the
- * theme already covers its StBoxLayout. */
-.panel-profiles-radio StBoxLayout {
-    spacing: 8px;
+/* The theme spaces the radio/check glyph only for CinnamonGenericContainer
+ * children (0.2em under Numix); our toggles pack an StBoxLayout, so provide
+ * the same gap ourselves at the same size. */
+.panel-profiles-radio StBoxLayout,
+.panel-profiles-check StBoxLayout {
+    spacing: 0.2em;
 }
 
 /* Replace-target list inside the save dialog. */
@@ -126,10 +127,11 @@
 /* Small in-row buttons: the theme's dialog-button visuals (hover, active,
  * insensitive, destructive) at a smaller size. Equal specificity with the
  * theme's ".dialog .dialog-button" rule and loaded after it, so these
- * values win. */
+ * values win. No border-radius here: the theme's button chrome is a
+ * border-image whose corners are already rounded, and a radius would clip
+ * them into double-rounded artifacts. */
 .dialog .panel-profiles-row-button {
     padding: 4px 10px;
-    border-radius: 8px;
     font-weight: normal;
 }
 

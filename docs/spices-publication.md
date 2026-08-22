@@ -1,8 +1,9 @@
 # Publishing the desklets to Cinnamon Spices
 
-This is the A-to-Z path from this monorepo to two isolated GitHub repos and two
-separate pull requests against
+This is the A-to-Z path from **this monorepo** (the only development tree) to
+isolated per-spice GitHub repos and separate pull requests against
 [linuxmint/cinnamon-spices-desklets](https://github.com/linuxmint/cinnamon-spices-desklets).
+Those clones are publish artifacts. Do not treat them as a second product.
 
 One spice per PR. Do not combine the two desklets.
 
@@ -107,7 +108,7 @@ projects. Start each desklet from a clean initial commit.
 ```bash
 # World Clock — repeat analogously for Workspace Grid
 UUID=cinnamon-world-clock-desklet@curbsoftware
-SRC=/home/user/projects/cinnamon--projects/$UUID
+SRC=/home/user/projects/cinnamon-monorepo/$UUID
 DEST=/home/user/projects/$UUID
 
 mkdir -p "$DEST/files/$UUID/po"

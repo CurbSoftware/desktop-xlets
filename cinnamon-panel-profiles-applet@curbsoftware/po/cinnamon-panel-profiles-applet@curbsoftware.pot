@@ -1,0 +1,257 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2026 curbsoftware
+# This file is distributed under the same license as the package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: cinnamon-panel-profiles-applet@curbsoftware v1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-21 00:50+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. cinnamon-panel-profiles-applet@curbsoftware->metadata.json, applet.js, applet.js, applet.js, applet.js, applet.js, applet.js
+msgid "Panel Profiles"
+msgstr ""
+
+#. cinnamon-panel-profiles-applet@curbsoftware->metadata.json
+msgid "Save panel layouts as named profiles and restore them, with rollback and startup recovery"
+msgstr ""
+
+#. dialogs.js
+msgid "%d displays"
+msgstr ""
+
+#. dialogs.js
+msgid "%d displays · updated %s"
+msgstr ""
+
+#. dialogs.js
+msgid "A profile with this name already exists"
+msgstr ""
+
+#. dialogs.js
+msgid "Active profile"
+msgstr ""
+
+#. dialogs.js
+msgid "Cancel"
+msgstr ""
+
+#. dialogs.js
+msgid "Close"
+msgstr ""
+
+#. applet.js
+msgid "Current: %s"
+msgstr ""
+
+#. dialogs.js
+msgid "Delete"
+msgstr ""
+
+#. dialogs.js
+msgid "Delete \"%s\"?"
+msgstr ""
+
+#. applet.js
+msgid "Displays: %d / %d"
+msgstr ""
+
+#. dialogs.js
+msgid "Duplicate"
+msgstr ""
+
+#. dialogs.js
+msgid "Enter a new name for the profile."
+msgstr ""
+
+#. dialogs.js
+msgid "Existing profile:"
+msgstr ""
+
+#. dialogs.js
+msgid "Its panels and applets will be restored automatically the next time Cinnamon starts. For the most reliable restore, keep this applet on a panel of your primary display."
+msgstr ""
+
+#. dialogs.js
+msgid "Load"
+msgstr ""
+
+#. applet.js
+msgid "Loading…"
+msgstr ""
+
+#. dialogs.js
+msgid "Manage Profiles"
+msgstr ""
+
+#. applet.js
+msgid "Manage profiles…"
+msgstr ""
+
+#. applet.js
+msgid "Modified"
+msgstr ""
+
+#. applet.js
+msgid "Move Panel Profiles to a panel on the primary monitor for reliable startup recovery."
+msgstr ""
+
+#. dialogs.js
+msgid "Name"
+msgstr ""
+
+#. dialogs.js
+msgid "New profile"
+msgstr ""
+
+#. applet.js, dialogs.js
+msgid "No panel profiles saved yet."
+msgstr ""
+
+#. dialogs.js
+msgid "Not now"
+msgstr ""
+
+#. dialogs.js
+msgid "Overwrite"
+msgstr ""
+
+#. applet.js
+msgid "Panel Profiles could not load."
+msgstr ""
+
+#. dialogs.js
+msgid "Profile name"
+msgstr ""
+
+#. dialogs.js
+msgid "Remove startup"
+msgstr ""
+
+#. dialogs.js
+msgid "Rename"
+msgstr ""
+
+#. dialogs.js
+msgid "Rename profile"
+msgstr ""
+
+#. dialogs.js
+msgid "Replace"
+msgstr ""
+
+#. dialogs.js
+msgid "Replace \"%s\"?"
+msgstr ""
+
+#. dialogs.js
+msgid "Replace existing profile"
+msgstr ""
+
+#. applet.js
+msgid "Restore previous layout"
+msgstr ""
+
+#. applet.js
+msgid "Restoring profile…"
+msgstr ""
+
+#. dialogs.js
+msgid "Save"
+msgstr ""
+
+#. dialogs.js
+msgid "Save Panel Profile"
+msgstr ""
+
+#. dialogs.js
+msgid "Save as:"
+msgstr ""
+
+#. applet.js
+msgid "Save current layout…"
+msgstr ""
+
+#. applet.js
+msgid "Save your current panel layout to create one."
+msgstr ""
+
+#. applet.js
+msgid "Saving…"
+msgstr ""
+
+#. dialogs.js
+msgid "Set as startup"
+msgstr ""
+
+#. dialogs.js
+msgid "Startup profile"
+msgstr ""
+
+#. applet.js
+msgid "Startup profile: %s"
+msgstr ""
+
+#. applet.js
+msgid "The profile could not be loaded."
+msgstr ""
+
+#. dialogs.js
+msgid "The saved profile will be removed. Your current panels are not changed."
+msgstr ""
+
+#. applet.js, dialogs.js
+msgid "The saved version of this profile will be replaced by your current panel configuration."
+msgstr ""
+
+#. applet.js
+msgid "Update"
+msgstr ""
+
+#. applet.js
+msgid "Update \"%s\""
+msgstr ""
+
+#. applet.js
+msgid "Update \"%s\"?"
+msgstr ""
+
+#. dialogs.js
+msgid "Use \"%s\" as your startup profile?"
+msgstr ""
+
+#. dialogs.js
+msgid "Use at startup"
+msgstr ""
+
+#. dialogs.js
+msgid "Use this profile at startup"
+msgstr ""
+
+#. applet.js
+msgid "Waiting for display %d…"
+msgstr ""
+
+#. applet.js
+msgid "Waiting…"
+msgstr ""
+
+#. applet.js
+msgid "modified"
+msgstr ""
+
+#. dialogs.js
+msgid "unreadable"
+msgstr ""
+
+#. dialogs.js
+msgid "updated %s"
+msgstr ""

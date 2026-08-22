@@ -1,175 +1,129 @@
-# Panel Profiles: Verified Environment Facts
+# Research notes: Cinnamon 6.6.9 (Linux Mint 22.3 Zena)
 
-Phase 1 research (spec section 61). Everything below was confirmed on this
-machine before any code was written: Mint 22.3, Cinnamon 6.6.9, X11, cjs
-115.1, live 2-head SPICE VM. Each fact has a re-verify command so anyone can
-re-check after a Cinnamon upgrade.
+Recorded 2026-08-19 on the development machine. Live inspection of installed packages, `/usr/share/cinnamon`, and `org.cinnamon` GSettings, not blog posts.
 
-## Panel GSettings keys (org.cinnamon)
+The live applet UUID is `cinnamon-panel-profiles-applet@curbsoftware`. An older export used `panel-profiles@curbsoftware.com`. Do not revive that UUID. Development lives in this monorepo directory only.
 
-Existing on 6.6, with types read from the live system:
+## Runtime
 
-- `panels-enabled`, `enabled-applets`, `panels-autohide`,
-  `panels-show-delay`, `panels-hide-delay`, `panels-height`: all `as`
-- `panel-scale-text-icons`: BOOLEAN (`type b`), NOT `as`
-- `panel-zone-icon-sizes`, `panel-zone-symbolic-icon-sizes`,
-  `panel-zone-text-sizes`: `as` holding JSON-in-string with arbitrary key
-  order. Parse and canonicalize, never string-compare.
-- `next-applet-id`: `i`. Allocator only, never restored (rewinding risks
-  instance-id collisions).
-- No `panels-resizable` or `panels-hide-mode` on 6.6.
+| Item | Value |
+|---|---|
+| OS | Linux Mint 22.3 Zena |
+| Cinnamon | 6.6.9+zena |
+| cjs | 115.1+zena |
+| Session | `XDG_SESSION_TYPE=x11` |
+| `imports.misc.config.PACKAGE_VERSION` | `6.6.9` |
 
-Capture must take the variant type from the live variant
-(`variant.get_type_string()`), never from a hardcoded table.
+## Module loading (first-party applets)
 
-Re-verify:
+Current first-party applets (calendar, grouped-window-list, notifications, sound) use:
 
-```bash
-gsettings list-recursively org.cinnamon | grep -E 'panels-|enabled-applets|next-applet-id|panel-zone|panel-scale'
-gsettings range org.cinnamon panel-scale-text-icons
+```javascript
+class MyApplet extends Applet.IconApplet {
+    constructor(orientation, panel_height, instance_id) {
+        super(orientation, panel_height, instance_id);
+    }
+}
+const Helper = require('./helper');
 ```
 
-## Phantom per-panel entries are normal
+`require()` is implemented in `/usr/share/cinnamon/js/misc/fileUtils.js`. Relative paths are resolved from the **xlet directory**, not the current file:
 
-Per-panel keys can contain ids with no matching `panels-enabled` entry. Live
-right now: `panels-autohide` is `['1:false', '2:false', '3:false']` while
-`panels-enabled` is `['1:0:bottom', '2:1:bottom']`. Panel id 3 does not
-exist. Preserve such entries verbatim in both capture and restore.
-
-Re-verify:
-
-```bash
-dconf read /org/cinnamon/panels-enabled
-dconf read /org/cinnamon/panels-autohide
+```javascript
+path = path.replace(/\.\//g, '');
+path = dir + "/" + path;   // dir is the applet root
 ```
 
-## Entry formats
+This applet's `lib/` modules stay loadable headless via `imports.searchPath`. They do not call `require()`. Public names use `var` / `function` so both loaders see them. See `DEVELOPMENT.md`.
 
-- `panels-enabled` entry: `panelId:monitorIndex:edge`, e.g. `1:0:bottom`.
-- `enabled-applets` entry: `panel<Id>:<zone>:<pos>:<uuid>:<applet_id>`.
-  Ids are explicit, gaps in positions are allowed. Keep ids as strings;
-  parseInt only for math (id "0" is falsy).
+`imports.ui.extension.getCurrentExtension()` is **not** present in this Cinnamon build. Do not use it.
 
-Re-verify:
+`Lang.bind()` still appears in older first-party files; calendar/notifications mix it with arrow functions. New code uses arrows and `.bind(this)`.
 
-```bash
-dconf read /org/cinnamon/panels-enabled
-dconf read /org/cinnamon/enabled-applets
+`settings.bind(key, property)` (three arguments) is the current API. `bindProperty` + `BindingDirection` is obsolete.
+
+## GSettings (`org.cinnamon`)
+
+From `/usr/share/glib-2.0/schemas/org.cinnamon.gschema.xml`:
+
+| Key | Type | Role |
+|---|---|---|
+| `panels-enabled` | `as` | `panelID:monitor:position` (`top`/`bottom`/`left`/`right`). Monitor `0` is primary. |
+| `enabled-applets` | `as` | `panelN:zone:order:uuid:instanceId` with optional overrides after a fifth colon. |
+| `panels-autohide` | `as` | `panelID:true\|false` |
+| `panels-show-delay` | `as` | milliseconds |
+| `panels-hide-delay` | `as` | milliseconds |
+| `panels-height` | `as` | `panelID:height` |
+| `panel-zone-icon-sizes` | `s` | JSON string, **not** `as` |
+| `panel-zone-symbolic-icon-sizes` | `s` | JSON string |
+| `panel-zone-text-sizes` | `s` | JSON string |
+| `next-applet-id` | `i` | Allocator only. **Never restore.** |
+
+Live values on this machine (two heads):
+
+```text
+panels-enabled: ['1:0:bottom', '2:1:bottom']
+panels-height:  ['1:40', '2:40', '3:40']
+panels-autohide:['1:false', '2:false', '3:false']
 ```
 
-## Applet config files
+Height/autohide can retain leftover panel IDs after a panel is removed. Capture and restore **verbatim**; do not "normalize" the lists.
 
-Location: `~/.config/cinnamon/spices/<uuid>/<instanceId>.json` for
-multi-instance applets, `<uuid>/<uuid>.json` for single-instance applets
-(the instanceId equals the uuid there even though enabled-applets carries a
-numeric id). Verified on disk: `calendar@cinnamon.org/13.json` and
-`16.json` (multi), `cinnamon-workspace-name-applet@curbsoftware/
-cinnamon-workspace-name-applet@curbsoftware.json` (single). Each file is a
-schema-mirror object with live `value` fields plus a trailing `__md5__`.
+`enabled-applets` entries on this machine all include instance IDs (`panel1:left:0:menu@cinnamon.org:0`). `appletManager.checkForUpgrade()` still appends an id to legacy 4-part strings and increments `next-applet-id`. The parser accepts both forms.
 
-Re-verify:
+Cinnamon reads settings with `global.settings` (`Gio.Settings` for `org.cinnamon`). Capture uses `get_value()` / `print(true)` / `set_value()` so variant types survive.
 
-```bash
-ls ~/.config/cinnamon/spices/calendar@cinnamon.org/
-ls ~/.config/cinnamon/spices/cinnamon-workspace-name-applet@curbsoftware/
-python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.config/cinnamon/spices/calendar@cinnamon.org/13.json'))); print('__md5__' in d)"
+## Applet configuration files
+
+Cinnamon settings for applets (from `xlet-settings.py` and live disk):
+
+- Current: `~/.config/cinnamon/spices/<uuid>/<instanceId>.json`
+- Legacy: `~/.cinnamon/configs/<uuid>/`
+- Single-instance applets historically used `<uuid>.json`
+
+Live examples:
+
+```text
+~/.config/cinnamon/spices/calendar@cinnamon.org/13.json
+~/.config/cinnamon/spices/calendar@cinnamon.org/16.json
+~/.config/cinnamon/spices/grouped-window-list@cinnamon.org/2.json
+~/.config/cinnamon/spices/menu@cinnamon.org/0.json
 ```
 
-## appletManager applies enabled-applets live
+Multi-instance files are numeric even when `max-instances` is 1 if an instance id exists. Capture only files referenced by `enabled-applets`. Never copy the entire spices tree. Never capture `cinnamon-panel-profiles-applet@curbsoftware` spice JSON or `~/.config/cinnamon-panel-profiles/`.
 
-appletManager connects to `changed::enabled-applets` and live-applies a
-diff DURING the `set_value` call. Consequence for restore: if our own entry
-changes, our instance is destroyed mid-call and a fresh instance is created
-with the SAME id (ids live in the key). The apply transaction therefore
-persists `pendingApply` to state.json before writing enabled-applets, and
-the new instance resumes from it in `_init`. Nothing after that write may
-touch `this`.
+## Restore order
 
-Re-verify:
+`appletManager.onEnabledAppletsChanged` destroys, moves, or recreates applet instances when `enabled-applets` changes, including this applet. Therefore:
 
-```bash
-grep -n "changed::enabled-applets" /usr/share/cinnamon/js/ui/appletManager.js
-grep -n "removeApplet\|_onEnabledAppletsChanged" /usr/share/cinnamon/js/ui/appletManager.js | head
-```
-
-## next-applet-id is forward-only
-
-Cinnamon appends missing ids to enabled-applets and writes the counter back,
-so entries lacking ids each get one allocated. Restore rule: never rewind
-the counter; bump it forward past the max restored id.
-
-Re-verify:
-
-```bash
-dconf read /org/cinnamon/next-applet-id
-grep -n "next-applet-id\|nextAppletId" /usr/share/cinnamon/js/ui/appletManager.js | head
-```
-
-## Cinnamon cleans up dropped config files
-
-When applet instances are removed, Cinnamon deletes their multi-instance
-config files itself (removeAppletFromPanels deleteConfig path). Restore code
-does not need stale-file handling.
-
-Re-verify:
-
-```bash
-grep -n "deleteConfig" /usr/share/cinnamon/js/ui/appletManager.js
-```
+1. Restore panel topology keys except `enabled-applets`
+2. Restore spice JSON atomically
+3. Persist `pendingApply` in `state.json`
+4. Set `enabled-applets` last
+5. On the next applet instance, verify and clear `pendingApply`
 
 ## Monitors
 
-`Main.layoutManager.monitors` is an array of
-`{index, x, y, width, height, name}` (no scale field on 6.6).
-`Main.layoutManager.primaryIndex` is the primary monitor and is NOT
-guaranteed to be 0. The signal is `'monitors-changed'` on
-Main.layoutManager. Spec section 3 says monitor 0 is primary; that is wrong,
-use primaryIndex everywhere.
+`Main.layoutManager` emits `monitors-changed` (wired to `Meta.MonitorManager`).
 
-Re-verify (Looking Glass or dev-tools/cinnamon_eval.py):
+`Monitor` objects (`js/ui/layout.js`) expose `index`, `x`, `y`, `width`, `height`, `name` (`global.display.get_monitor_name`). There is no required per-monitor scale on this build; scale is captured when `get_monitor_scale` exists.
 
-```bash
-python3 dev-tools/cinnamon_eval.py 'JSON.stringify(Main.layoutManager.monitors.map(function(m){return m.index}))' \
-  && python3 dev-tools/cinnamon_eval.py 'Main.layoutManager.primaryIndex'
-grep -n "monitors-changed" /usr/share/cinnamon/js/ui/layout.js | head -3
-```
+Do not call `xrandr`. Do not change display configuration.
 
-## Notifications and dialogs
+## UI APIs
 
-`Main.notify(msg, details)`, `Main.warningNotify`,
-`Main.criticalNotify`. `imports.ui.modalDialog` also exports
-`ConfirmDialog` (already used by this repo's workspaceActions.js).
+- Popup: `Applet.AppletPopupMenu` + `PopupMenu.PopupMenuItem`
+- Active profile: `item.setShowDot(true)`. First-party applets (sound, network, power, xrandr) use this DrawingArea `popup-menu-item-dot`. `OrnamentType.DOT` installs a `RadioBox` and is the wrong widget for "currently selected".
+- Dialogs: `ModalDialog.ModalDialog` + `Dialog.MessageDialogContent` + `St.Entry`
+- Radios: `imports.ui.radioButton.RadioButtonGroup`
+- Checkboxes: `imports.ui.checkBox.CheckBox`
+- Entry context menu: `imports.ui.cinnamonEntry.addContextMenu`
+- Notifications: `Main.notify`, `Main.warningNotify`, `Main.notifyError`
+- Signals: `imports.misc.signalManager.SignalManager`
+- Cleanup: `on_applet_removed_from_panel` must disconnect signals, file monitors, and Mainloop sources
 
-Re-verify:
+First-party references for visual tone: `calendar@cinnamon.org`, `notifications@cinnamon.org`, `sound@cinnamon.org`, `menu@cinnamon.org`.
 
-```bash
-grep -n "function notify\|warningNotify\|criticalNotify" /usr/share/cinnamon/js/ui/main.js | head
-grep -n "ConfirmDialog" /usr/share/cinnamon/js/ui/modalDialog.js | head -2
-```
+## Permissions helpers
 
-## Runtime and module loading
-
-GJS 115 supports ES6 classes, template literals, and arrow functions (this
-codebase still uses prototype style to match the reference applet).
-First-party Cinnamon code loads siblings with `require('./mod')`, which
-resolves against the xlet root via misc/fileUtils.js requireModule and
-works for subdirectories (`require('./lib/constants')`). Plain `gjs` on the
-command line has no require, so lib/ modules must also be importable via
-`imports.searchPath` and must declare public names with `var`/`function`.
-
-Re-verify:
-
-```bash
-cjs --version                       # expect 115.x
-grep -rn "require('./" /usr/share/cinnamon/js/ui/../misc/fileUtils.js | head -2
-cd cinnamon-panel-profiles-applet@curbsoftware && cjs -c 'imports.searchPath.unshift("lib"); print(imports.constants.PANEL_SETTING_KEYS.length)'
-```
-
-## Conventions frozen from these facts
-
-- Variant types always from the live variant at capture.
-- Zone-size keys canonicalized, phantom entries preserved verbatim.
-- enabled-applets restored last, in its own phase, after pendingApply is
-  persisted.
-- next-applet-id only ever bumped forward.
-- primaryIndex, never index 0.
+`imports.misc.fileUtils.changeModeGFile(file, octal)` sets `unix::mode`. This applet uses the same Gio.FileInfo approach plus `Gio.FileCreateFlags.PRIVATE` for atomic `replace_contents`.
