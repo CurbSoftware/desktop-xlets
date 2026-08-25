@@ -51,9 +51,15 @@
 }
 
 .curb-workspace-grid-preview {
-  background-color: rgba(5, 8, 13, 0.62);
+  background-color: rgba(2, 4, 7, 0.52);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 4px;
+}
+
+.curb-workspace-grid-monitor {
+  background-color: rgba(16, 22, 31, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 2px;
 }
 
 .curb-workspace-grid-window {

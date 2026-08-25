@@ -24,13 +24,15 @@ Workspace Names applet. Headless tests enforce this.
 
 ## Preview mode
 
-Each visual tile retains its workspace name. Clipped drawing layers map
-interesting, non-minimized, unobscured windows into workspace work-area
-coordinates. Windows sort from oldest to newest user time. Each rectangle and
-icon pair enters the actor stack together, preserving visual stacking. Focused
-windows use stronger color. App icons appear only when their window rectangle
-can contain them. Preview dimensions can shrink below 48 by 32 pixels, so dense
-grids do not exceed configured desklet bounds.
+Each visual tile retains its workspace name. The preview fits the union of all
+monitor work areas without changing its aspect ratio, then paints a separate
+bounded surface for every monitor. Clipped drawing layers map interesting,
+non-minimized, unobscured windows into that same geometry. Windows sort from
+oldest to newest user time. Each rectangle and icon pair enters the actor stack
+together, preserving visual stacking. Focused windows use stronger color. App
+icons appear only when their window rectangle can contain them. Preview
+dimensions can shrink below 48 by 32 pixels, so dense grids do not exceed
+configured desklet bounds.
 
 Preview signals cover window add, remove, move, resize, minimize, focus, and
 monitor changes. Rebuilds reconnect these through a dedicated `SignalManager`.

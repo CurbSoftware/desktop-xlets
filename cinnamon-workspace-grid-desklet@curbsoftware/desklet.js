@@ -389,15 +389,40 @@ MyDesklet.prototype = {
         if (!workspace)
             return preview;
 
-        const desktop = workspace.get_work_area_all_monitors();
+        const monitorAreas = Main.layoutManager.monitors.map(function (monitor, position) {
+            const index = typeof monitor.index === "number" ? monitor.index : position;
+            return workspace.get_work_area_for_monitor(index);
+        });
+        const desktop = PreviewGeometry.boundingRect(monitorAreas) ||
+            workspace.get_work_area_all_monitors();
+        const viewport = PreviewGeometry.fitRect(desktop, previewWidth, previewHeight);
+        if (!viewport)
+            return preview;
+
+        for (let monitorIndex = 0; monitorIndex < monitorAreas.length; monitorIndex++) {
+            const monitorRect = PreviewGeometry.projectRectInto(
+                monitorAreas[monitorIndex], desktop, viewport);
+            if (!monitorRect)
+                continue;
+            const monitorActor = new St.Widget({
+                style_class: "curb-workspace-grid-monitor",
+                reactive: false,
+                x: monitorRect.x,
+                y: monitorRect.y,
+                width: monitorRect.width,
+                height: monitorRect.height
+            });
+            preview.add_child(monitorActor);
+        }
+
         const windows = this._getPreviewWindows(workspace);
         const tracker = Cinnamon.WindowTracker.get_default();
         const iconSize = Math.max(4, Math.min(24,
             Math.floor(Math.min(previewWidth, previewHeight) * 0.16)));
         for (let i = 0; i < windows.length; i++) {
             const win = windows[i];
-            const rect = PreviewGeometry.projectRect(
-                win.get_buffer_rect(), desktop, previewWidth, previewHeight);
+            const rect = PreviewGeometry.projectRectInto(
+                win.get_buffer_rect(), desktop, viewport);
             if (!rect)
                 continue;
 

@@ -1,6 +1,6 @@
 Duplicate an existing applet for a good reference and starting point.
 
-I want you to build at the level of the most recent Linux Mint developer to perfection. It should be utterly perfect, visually beautiful, with every single thing done at AAA quality—from layouts & UI, to integration with backend data handling, and user config/settings and everything  and anything else you can think of.
+I want you to build at the level of the most recent Linux Mint developer to perfection. It should be utterly perfect, visually beautiful, with every single thing done at AAA quality-from layouts & UI, to integration with backend data handling, and user config/settings and everything  and anything else you can think of.
 
 Fan out sub-agents and have sub-agents tackle each one individually so that the project is utterly perfect. You should /loop on each item and have a separate sub-agent check it visually to ensure it looks triple A. That separate sub-agent should be a really harsh critic, and if it doesn't look tripple A, it should keep going.
 
@@ -16,7 +16,7 @@ Suggested UUID:
 
 `panel-profiles@curbsoftware.com`
 
-The applet manages named Cinnamon panel configurations. A user must be able to configure their panels normally using Cinnamon — add/remove panels, move panels between monitors, change panel height/autohide settings, add/remove/rearrange applets, configure individual applets — and then save that complete state as a named profile.
+The applet manages named Cinnamon panel configurations. A user must be able to configure their panels normally using Cinnamon - add/remove panels, move panels between monitors, change panel height/autohide settings, add/remove/rearrange applets, configure individual applets - and then save that complete state as a named profile.
 
 Later, clicking a saved profile in the Panel Profiles applet must restore that panel environment.
 
@@ -772,14 +772,14 @@ Do not simply loop randomly over saved settings.
 
 Preferred sequence:
 
-### Phase A — prepare
+### Phase A - prepare
 
 * pause dirty-state monitoring
 * validate profile
 * write a `pendingApply` marker
 * make rollback snapshot
 
-### Phase B — restore panel topology
+### Phase B - restore panel topology
 
 Restore panel-related settings except `enabled-applets`.
 
@@ -794,13 +794,13 @@ For example:
 * symbolic icon sizing
 * text sizing
 
-### Phase C — restore applet configuration files
+### Phase C - restore applet configuration files
 
 Restore saved Cinnamon-managed applet configuration using atomic file operations.
 
 Do not overwrite the Panel Profiles applet's own state/configuration snapshot.
 
-### Phase D — restore enabled applets LAST
+### Phase D - restore enabled applets LAST
 
 Set:
 
@@ -812,11 +812,11 @@ last.
 
 This is intentional.
 
-Changing enabled applets can cause Cinnamon to destroy, recreate, move, or reload applet instances — including potentially the Panel Profiles applet itself.
+Changing enabled applets can cause Cinnamon to destroy, recreate, move, or reload applet instances - including potentially the Panel Profiles applet itself.
 
 By doing this last, the important restoration work is already complete before Cinnamon may reload this applet.
 
-### Phase E — resume after reinitialization
+### Phase E - resume after reinitialization
 
 Because the applet may be recreated after `enabled-applets` changes, persist:
 
@@ -888,12 +888,12 @@ Example:
 Profile expects: 2 monitors
 Current monitors: 1
 
-→ wait
-→ listen for monitor topology changes
-→ second SPICE/virt-viewer head appears
-→ current monitors becomes 2
-→ small stabilization delay
-→ restore profile
+-> wait
+-> listen for monitor topology changes
+-> second SPICE/virt-viewer head appears
+-> current monitors becomes 2
+-> small stabilization delay
+-> restore profile
 ```
 
 This is essential.
@@ -1081,7 +1081,7 @@ Use:
 * JSON parsing
 * SHA-256 hashing where useful
 
-If an optional utility process eventually becomes necessary, use `Gio.Subprocess` with an argument array — never shell interpolation — but version 1 should preferably remain a self-contained Cinnamon applet.
+If an optional utility process eventually becomes necessary, use `Gio.Subprocess` with an argument array - never shell interpolation - but version 1 should preferably remain a self-contained Cinnamon applet.
 
 ---
 
@@ -2004,7 +2004,7 @@ Exact commands.
 
 ## Usage
 
-Save → modify → restore.
+Save to modify to restore.
 
 ## Startup Recovery
 
@@ -2160,7 +2160,7 @@ If the number of profiles becomes large, support scrolling or a manageable subme
 
 ---
 
-# 59. Future-Ready Features — Design For Them, Do Not Block v1
+# 59. Future-Ready Features - Design For Them, Do Not Block v1
 
 Architect the code so these could be added later:
 
@@ -2235,7 +2235,7 @@ The project is complete only when all of the following work.
 
 Implement in this order.
 
-### Phase 1 — Research
+### Phase 1 - Research
 
 Inspect:
 
@@ -2255,7 +2255,7 @@ RESEARCH.md
 
 Do not rely solely on old blog posts.
 
-### Phase 2 — Snapshot Engine
+### Phase 2 - Snapshot Engine
 
 Implement:
 
@@ -2265,33 +2265,33 @@ CinnamonState.capture()
 
 Print/log a sanitized snapshot and verify it correctly represents an existing one- and two-panel layout.
 
-### Phase 3 — Profile Store
+### Phase 3 - Profile Store
 
 Implement create/read/update/delete/duplicate and schema validation.
 
-### Phase 4 — Restore Engine
+### Phase 4 - Restore Engine
 
 Implement rollback and ordered application.
 
 Test repeatedly before implementing startup automation.
 
-### Phase 5 — Applet UI
+### Phase 5 - Applet UI
 
 Add popup, save dialogs, profile selection, management.
 
-### Phase 6 — Dirty Tracking
+### Phase 6 - Dirty Tracking
 
 Implement active/modified state.
 
-### Phase 7 — Monitor Topology
+### Phase 7 - Monitor Topology
 
 Add safe monitor matching and monitor-change event handling.
 
-### Phase 8 — Startup Restore
+### Phase 8 - Startup Restore
 
 Implement last, once normal profile loading is highly reliable.
 
-### Phase 9 — Hardening
+### Phase 9 - Hardening
 
 Run every acceptance test.
 
@@ -2367,11 +2367,11 @@ Do not declare the project complete until the two-head virt-viewer reboot/recove
 
 The key success condition is:
 
-> I configure my Cinnamon panels once, save the layout as a profile, and can reliably get those same panels, applets, positions, and applet settings back — including after a VM reboot where the second virtual monitor appears after Cinnamon starts.
+> I configure my Cinnamon panels once, save the layout as a profile, and can reliably get those same panels, applets, positions, and applet settings back - including after a VM reboot where the second virtual monitor appears after Cinnamon starts.
 
 
 
-I want you to build at the level of the most recent Linux mint developer to perfection. It should be utterly perfect, visually beautiful, with every single thing done at AAA quality—from layouts & UI, to integration with backend data handling, and user config/settings and everything  and anything else you can think of.
+I want you to build at the level of the most recent Linux mint developer to perfection. It should be utterly perfect, visually beautiful, with every single thing done at AAA quality-from layouts & UI, to integration with backend data handling, and user config/settings and everything  and anything else you can think of.
 
 Fan out sub-agents and have sub-agents tackle each one individually so that the project is utterly perfect. You should /loop on each item and have a separate sub-agent check it visually to ensure it looks triple A. That separate sub-agent should be a really harsh critic, and if it doesn't look tripple A, it should keep going.
 

@@ -14,17 +14,68 @@ function normalizeRect(rect) {
     };
 }
 
+/** Returns the smallest rectangle containing every non-empty rectangle. */
+function boundingRect(rects) {
+    const areas = (rects || []).map(normalizeRect).filter(function (rect) {
+        return rect.width > 0 && rect.height > 0;
+    });
+    if (!areas.length)
+        return null;
+
+    let left = areas[0].x;
+    let top = areas[0].y;
+    let right = areas[0].x + areas[0].width;
+    let bottom = areas[0].y + areas[0].height;
+    for (let index = 1; index < areas.length; index++) {
+        const rect = areas[index];
+        left = Math.min(left, rect.x);
+        top = Math.min(top, rect.y);
+        right = Math.max(right, rect.x + rect.width);
+        bottom = Math.max(bottom, rect.y + rect.height);
+    }
+    return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/** Fits source inside the target size without changing its aspect ratio. */
+function fitRect(source, targetWidth, targetHeight) {
+    const area = normalizeRect(source);
+    const width = Math.max(0, _number(targetWidth, 0));
+    const height = Math.max(0, _number(targetHeight, 0));
+    if (!area.width || !area.height || !width || !height)
+        return null;
+
+    const scale = Math.min(width / area.width, height / area.height);
+    const fittedWidth = Math.max(1, Math.round(area.width * scale));
+    const fittedHeight = Math.max(1, Math.round(area.height * scale));
+    return {
+        x: Math.round((width - fittedWidth) / 2),
+        y: Math.round((height - fittedHeight) / 2),
+        width: fittedWidth,
+        height: fittedHeight
+    };
+}
+
 /**
  * projectRect maps a desktop rectangle into a preview and clips it to bounds.
  * Returns null when source or intersection has no area.
  */
 function projectRect(rect, desktop, previewWidth, previewHeight) {
+    return projectRectInto(rect, desktop, {
+        x: 0,
+        y: 0,
+        width: previewWidth,
+        height: previewHeight
+    });
+}
+
+/** Maps and clips a desktop rectangle into an offset target rectangle. */
+function projectRectInto(rect, desktop, target) {
     const source = normalizeRect(rect);
     const area = normalizeRect(desktop);
-    const width = Math.max(0, _number(previewWidth, 0));
-    const height = Math.max(0, _number(previewHeight, 0));
+    const output = normalizeRect(target);
 
-    if (!source.width || !source.height || !area.width || !area.height || !width || !height)
+    if (!source.width || !source.height || !area.width || !area.height ||
+            !output.width || !output.height)
         return null;
 
     const left = Math.max(source.x, area.x);
@@ -35,10 +86,10 @@ function projectRect(rect, desktop, previewWidth, previewHeight) {
         return null;
 
     return {
-        x: Math.round((left - area.x) * width / area.width),
-        y: Math.round((top - area.y) * height / area.height),
-        width: Math.max(1, Math.round((right - left) * width / area.width)),
-        height: Math.max(1, Math.round((bottom - top) * height / area.height))
+        x: output.x + Math.round((left - area.x) * output.width / area.width),
+        y: output.y + Math.round((top - area.y) * output.height / area.height),
+        width: Math.max(1, Math.round((right - left) * output.width / area.width)),
+        height: Math.max(1, Math.round((bottom - top) * output.height / area.height))
     };
 }
 

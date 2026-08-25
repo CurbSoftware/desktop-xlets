@@ -23,6 +23,7 @@ package-lock.json
 *.7z
 *.zip
 *.tar.gz
+/dist/
 
 # OS files
 .DS_Store

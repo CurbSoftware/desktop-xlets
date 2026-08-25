@@ -121,6 +121,10 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | `live-test-desklet.py` | Live edge-case matrix for the workspace grid desklet |
 | `live-test-applet.py` | Live test for the workspace name applet |
 | `live-test-color-desklet.py` | Live matrix for the color-timer clock desklet (schedules, timer/chrono machines, reload persistence) |
+| `live-test-xlet-smoke.py` | Reload smoke test for enabled xlets without a dedicated live matrix |
+| `spices-release.py` | Check, test, build, and officially validate independent Spices submissions |
+| `release-spice.sh` | One-spice wrapper around the complete release gate |
+| `sync-spice-project.py` | Sync standalone per-spice Git repos and prepare one-spice registry branches |
 
 ## Testing
 
@@ -134,6 +138,12 @@ gjs dev-tools/test-card-actions.js
 python3 dev-tools/live-test-desklet.py
 python3 dev-tools/live-test-applet.py
 python3 dev-tools/live-test-color-desklet.py   # desklet must be installed and enabled
+
+# Release: one independently staged spice
+./dev-tools/release-spice.sh workspace-grid
+
+# Publish tree: update one standalone Git repo from the monorepo
+python3 dev-tools/sync-spice-project.py sync workspace-grid --commit
 ```
 
 `St` widgets cannot be instantiated outside the Cinnamon process because `libst.so`

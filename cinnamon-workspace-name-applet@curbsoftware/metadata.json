@@ -2,7 +2,5 @@
     "uuid": "cinnamon-workspace-name-applet@curbsoftware",
     "name": "Workspace Names",
     "version": "1.0.0",
-    "description": "Show named workspace buttons in the panel and manage workspaces from the applet menu",
-    "author": "willurd, curbsoftware",
-    "last-edited": 1757438742
+    "description": "Show named workspace buttons in the panel and manage workspaces from the applet menu"
 }

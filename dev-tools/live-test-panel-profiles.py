@@ -364,6 +364,11 @@ def enable_debug():
     a('A.settings.setValue("debug-logging", true); true')
 
 
+def notification_counts():
+    return js('global._ppNotificationProbe ? global._ppNotificationProbe.counts : '
+              '{success:0,warn:0}')
+
+
 def duplicate_pairs():
     apps = ast.literal_eval(gs_get("enabled-applets"))
     seen = {}
@@ -440,6 +445,10 @@ def _restore():
     try:
         close_modals()
         js(PRE + "if (A && A.menu && A.menu.isOpen) A.menu.close(); true")
+        js('let M=imports.ui.main; if (global._ppNotificationProbe) {'
+           'M.notify=global._ppNotificationProbe.notify;'
+           'M.warningNotify=global._ppNotificationProbe.warningNotify;'
+           'delete global._ppNotificationProbe;} true')
     except Exception as exc:
         print("pre-restore cleanup failed: " + str(exc), file=sys.stderr)
     gs_set("enabled-applets", ORIG_APPLETS)
@@ -502,6 +511,17 @@ if APPLET in ORIG_APPLETS:
 check("not already on a panel", APPLET not in gs_get("enabled-applets"))
 
 add_applet()
+js('let M=imports.ui.main; if (!global._ppNotificationProbe) {'
+   'global._ppNotificationProbe={'
+   'notify:M.notify,warningNotify:M.warningNotify,counts:{success:0,warn:0}};'
+   'M.notify=function(title,details){'
+   'if(title==="Panel Profiles")global._ppNotificationProbe.counts.success++;'
+   'return global._ppNotificationProbe.notify(title,details);};'
+   'M.warningNotify=function(title,details,icon){'
+   'if(title==="Panel Profiles")global._ppNotificationProbe.counts.warn++;'
+   'return global._ppNotificationProbe.warningNotify(title,details,icon);};} true')
+a('A.settings.setValue("notify-success", true);'
+  'A.settings.setValue("notify-warnings", true); true')
 state = a('({modules: !!A._modules, watchIds: A._settingWatchIds.length,'
           ' dirtyPanel: A._dirtyStatus.panel, notif: !!A._notifier,'
           ' idle: A._idleSources.length})')
@@ -795,8 +815,9 @@ missing_body = (
 )
 missing_id, made = craft(SW_A, "Missing Applet", missing_body)
 check("Missing profile crafted", made == missing_id, "result=%r" % made)
-seg7 = log_size()
-a('A._applyProfile(' + json.dumps(missing_id) + '); true')
+before_warning = notification_counts()["warn"]
+missing_result = a('A._modules.ApplyController.beginApply(' +
+                   json.dumps(missing_id) + ',{reason:"user"})')
 wait_apply(missing_id)
 check("applet still alive after missing-applet load", a("!!A") is True)
 eq("active profile is the missing-applet profile",
@@ -804,9 +825,11 @@ eq("active profile is the missing-applet profile",
 check("missing entry preserved in enabled-applets",
       any("missing-applet@test.invalid" in e
           for e in ast.literal_eval(gs_get("enabled-applets"))))
-seg = new_log(seg7)
-check("warning about the missing applet was logged",
-      count_log(seg, "applet not installed: missing-applet@test.invalid") >= 1)
+check("missing applet returned as an apply warning",
+      any("applet not installed: missing-applet@test.invalid" in warning
+          for warning in missing_result.get("warnings", [])), str(missing_result))
+eq("missing applet raised one warning notification",
+   notification_counts()["warn"] - before_warning, 1)
 
 # Cinnamon preserves entries for unavailable extensions. Remove this synthetic
 # entry before exact-restore phases so it cannot become unrelated live drift.
@@ -923,7 +946,7 @@ resume_body = (
 )
 resume_b, made = craft(RESUME_SRC, "Resume B", resume_body)
 check("Resume B crafted", made == resume_b, "result=%r" % made)
-segd = log_size()
+success_before = notification_counts()["success"]
 a("global._wp11Ref = A; true")
 a('A._applyProfile(' + json.dumps(resume_b) + '); true')
 wait_for(lambda: js("global._wp11Ref._destroyed") is True,
@@ -941,10 +964,8 @@ apps = ast.literal_eval(gs_get("enabled-applets"))
 check("resume: our uuid now on panel1",
       any(e.startswith("panel1:") and APPLET in e for e in apps), str(apps))
 check("resume: next-applet-id never decreased", next_id() >= NEXT_FLOOR)
-seg = new_log(segd)
 eq("resume: exactly ONE success notification (verification ran once)",
-   count_log(seg, "verification succeeded for Resume B"), 1,
-   "\n".join(l for l in seg.splitlines() if "verification succeeded" in l))
+   notification_counts()["success"] - success_before, 1)
 
 
 suite("11b host panel deletion handoff")
@@ -975,7 +996,7 @@ host_body = (
 )
 host_id, made = craft(RESUME_SRC, "Host Handoff", host_body)
 check("host handoff profile crafted", made == host_id, "result=%r" % made)
-segd = log_size()
+success_before = notification_counts()["success"]
 a("global._hostPanelRef = A; true")
 a('A._applyProfile(' + json.dumps(host_id) + '); true')
 wait_for(lambda: js("global._hostPanelRef._destroyed") is True,
@@ -989,9 +1010,8 @@ check("manager anchored on surviving panel 2",
       str(apps))
 check("configured applets moved to panel 2",
       all(e.startswith("panel2:") for e in apps), str(apps))
-seg = new_log(segd)
 eq("host handoff verified exactly once",
-   count_log(seg, "verification succeeded for Host Handoff"), 1)
+   notification_counts()["success"] - success_before, 1)
 js("delete global._hostPanelRef; true")
 
 

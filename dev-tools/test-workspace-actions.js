@@ -211,6 +211,19 @@ eq("partial row remains reachable", WA.computeScrollTarget(4, 8, 3, "row", 1), 7
 eq("row mode stops on final row", WA.computeScrollTarget(7, 8, 3, "row", 1), 7);
 
 suite("workspace preview geometry");
+eq("horizontal monitor union includes both monitors",
+    Geometry.boundingRect([
+        { x: 0, y: 0, width: 1920, height: 1040 },
+        { x: 1920, y: 0, width: 1920, height: 1040 }
+    ]), { x: 0, y: 0, width: 3840, height: 1040 });
+eq("offset monitor union preserves negative coordinates",
+    Geometry.boundingRect([
+        { x: -1280, y: 0, width: 1280, height: 1024 },
+        { x: 0, y: 200, width: 1920, height: 1080 }
+    ]), { x: -1280, y: 0, width: 3200, height: 1280 });
+eq("wide monitor union is fitted without distortion",
+    Geometry.fitRect({ x: 0, y: 0, width: 3840, height: 1040 }, 210, 84),
+    { x: 0, y: 14, width: 210, height: 57 });
 eq("full desktop fills preview",
     Geometry.projectRect({ x: 0, y: 0, width: 1920, height: 1080 },
         { x: 0, y: 0, width: 1920, height: 1080 }, 192, 108),
@@ -226,6 +239,12 @@ eq("window clips at desktop edge",
 eq("offscreen window omitted",
     Geometry.projectRect({ x: 2000, y: 0, width: 100, height: 100 },
         { x: 0, y: 0, width: 1920, height: 1080 }, 192, 108), null);
+eq("second monitor maps into right half of fitted desktop",
+    Geometry.projectRectInto(
+        { x: 1920, y: 0, width: 1920, height: 1040 },
+        { x: 0, y: 0, width: 3840, height: 1040 },
+        { x: 0, y: 13, width: 210, height: 57 }),
+    { x: 105, y: 13, width: 105, height: 57 });
 eq("icon centered when it fits",
     Geometry.iconRect({ x: 10, y: 10, width: 40, height: 20 }, 12),
     { x: 24, y: 14, width: 12, height: 12 });

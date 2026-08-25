@@ -14,7 +14,7 @@ The World Clock desklet displays a homogeneous grid of clocks on the Cinnamon de
 
 - Grid of clock tiles (time, date, label) with auto or fixed rows×cols
 - Trailing `+` tile to add a clock
-- Right-click a tile → Edit… / Remove / Add clock
+- Right-click a tile to Edit… / Remove / Add clock
 - Shared strftime formats and font sizes via Cinnamon desklet settings
 - `timezone === "local"` tiles use the `:outlined` pseudo-class
 - Live update every second (label text only; the grid is not rebuilt)
@@ -69,7 +69,7 @@ tail -f ~/.xsession-errors | grep -i world-clock
 Desklet.Desklet
     └── MyDesklet
             ├── _rebuildGrid()          St.Table of clock / add tiles
-            ├── _scheduleUpdate()       1s tick → ClockWidget.update()
+            ├── _scheduleUpdate()       1s tick to ClockWidget.update()
             └── _cleanup()              destroy + on_desklet_removed
 
 ClockWidget
@@ -93,7 +93,7 @@ ClockDialog = dir.clockDialog;
 
 ### Grid rebuild
 
-Settings or the `clocks` array change → `_rebuildGrid()`:
+Settings or the `clocks` array change -> `_rebuildGrid()`:
 
 1. Destroy the tile menu (parented to `Main.uiGroup`).
 2. `destroy_all_children()` on the container.
@@ -134,10 +134,10 @@ Per-clock records are `{ id, name, timezone }`. `"local"` or an IANA id. Legacy 
 
 All functions are pure (no St/Clutter):
 
-- `computeGridDims(cellCount, mode, fixedRows, fixedCols)` → `{ rows, cols }`
-- `planCells(clockCount, showAddTile, rows, cols)` → `[{ kind: "clock"|"add", index }]`
-- `normalizeClockList(list, { generateId })` → `{ clocks, changed }`
-- `buildClock(values, existingId, opts)` → `{ id, name, timezone }`
+- `computeGridDims(cellCount, mode, fixedRows, fixedCols)` -> `{ rows, cols }`
+- `planCells(clockCount, showAddTile, rows, cols)` -> `[{ kind: "clock"|"add", index }]`
+- `normalizeClockList(list, { generateId })` -> `{ clocks, changed }`
+- `buildClock(values, existingId, opts)` -> `{ id, name, timezone }`
 - `addClock` / `updateClock` / `removeClock` (remove refuses the last clock)
 - `canAdd` (cap 36) / `canRemove` / `isValidIndex` / `getClockLabel`
 
@@ -162,7 +162,7 @@ Headless coverage: grid dims, `planCells` overflow (add tile stays last), normal
 
 ## Gotchas
 
-- Tile menus on `Main.uiGroup` survive `destroy_all_children()` — destroy them explicitly.
+- Tile menus on `Main.uiGroup` survive `destroy_all_children()` - destroy them explicitly.
 - `Desklet.destroy()` emits `destroy` immediately but defers `on_desklet_removed()` by a 500 ms fade. Hook both; `_cleanup()` is idempotent.
 - Never `Mainloop.idle_add` for user-visible actions; use `timeout_add(0)`.
 - Invalid IANA ids are logged and that tile falls back to local time.

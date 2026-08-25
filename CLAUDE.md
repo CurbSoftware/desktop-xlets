@@ -32,8 +32,8 @@ This is a Cinnamon extensions monorepo containing workspace management and clock
 
 Both xlets share two modules, **duplicated verbatim** in each directory because
 Cinnamon has no cross-xlet import path:
-- `workspaceActions.js` — all add/remove/rename logic plus pure grid maths
-- `renameDialog.js` — `ModalDialog` subclass wrapping an `St.Entry`
+- `workspaceActions.js` - all add/remove/rename logic plus pure grid maths
+- `renameDialog.js` - `ModalDialog` subclass wrapping an `St.Entry`
 
 `dev-tools/test-workspace-actions.js` fails if the two copies drift apart.
 
@@ -89,7 +89,7 @@ The script auto-discovers extensions and installs them to
 ### Reload Extensions (No Restart) - Recommended
 1. Press `Win+L` to open Looking Glass
 2. Go to "Extensions" tab
-3. Right-click extension → "Reload Code"
+3. Right-click extension to "Reload Code"
 
 Scriptable equivalent (no GUI needed):
 ```bash
@@ -117,7 +117,7 @@ restored. `St` cannot be loaded outside the Cinnamon process, so widget
 behaviour is only testable live.
 
 ### VM Testing (Crash Isolation)
-Credentials `cinnamon/cinnamon`. The domain name is host-specific — run
+Credentials `cinnamon/cinnamon`. The domain name is host-specific - run
 `virsh list --all` first and override if needed:
 ```bash
 export CINNAMON_VM=linuxmint-user  # default is 'cinnamon-cinnanom'
@@ -152,9 +152,9 @@ cinnamon-settings desklets '<uuid>'        # open settings directly (or applets)
 - **Xlet-local modules**: `imports.ui.deskletManager.desklets[uuid].<file>` /
   `imports.ui.appletManager.applets[uuid].<file>` (resolve lazily, inside `_init`)
 - **Inheritance**: Extend `Desklet.Desklet.prototype` or `Applet.Applet.prototype`
-- **Settings**: Use `Settings.DeskletSettings` or `Settings.AppletSettings` with JSON schema binding. Schema keys are hyphenated, bound properties camelCase (`"layout-mode"` → `this.layoutMode`). In-process `settings.setValue()` does NOT fire bind callbacks (compensate manually); the bound values themselves do refresh.
+- **Settings**: Use `Settings.DeskletSettings` or `Settings.AppletSettings` with JSON schema binding. Schema keys are hyphenated, bound properties camelCase (`"layout-mode"` to `this.layoutMode`). In-process `settings.setValue()` does NOT fire bind callbacks (compensate manually); the bound values themselves do refresh.
 - **Identity**: `metadata.json` `uuid` MUST equal the directory name or Cinnamon refuses to load the xlet
-- **Signal cleanup**: disconnect everything in `on_desklet_removed`/`on_applet_removed_from_panel` — `SignalManager.SignalManager` (`disconnectAllSignals()`) or tracked ids. `Mainloop` timeout callbacks must return `false` explicitly to stop repeating (an omitted return keeps the source armed)
+- **Signal cleanup**: disconnect everything in `on_desklet_removed`/`on_applet_removed_from_panel` - `SignalManager.SignalManager` (`disconnectAllSignals()`) or tracked ids. `Mainloop` timeout callbacks must return `false` explicitly to stop repeating (an omitted return keeps the source armed)
 - **Workspace Manager**: Access via `global.workspace_manager`
 - **Event Handling**: Connect to 'switch-workspace', 'workspace-added', 'workspace-removed'
 - **Workspace add/remove/rename**: Always go through `Main._addWorkspace()`,
@@ -165,7 +165,7 @@ cinnamon-settings desklets '<uuid>'        # open settings directly (or applets)
 - Extension crashes may be due to improper error handling or API version compatibility
 - **Workspace names live in `org.cinnamon.desktop.wm.preferences` key `workspace-names`.**
   `org.cinnamon workspace-name-overrides` is `['DEPRECATED']` and never changes.
-  GSettings `connect('changed::<nonexistent-key>')` does not throw — the handler
+  GSettings `connect('changed::<nonexistent-key>')` does not throw - the handler
   just silently never fires, so watching the wrong key looks like nothing is broken.
 - `num-workspaces` is capped at 36 (`gsettings range org.cinnamon.desktop.wm.preferences num-workspaces`)
 - **Never `Mainloop.idle_add` for user-visible actions.** Idle sits below
@@ -173,7 +173,7 @@ cinnamon-settings desklets '<uuid>'        # open settings directly (or applets)
   `Mainloop.timeout_add(0, ...)`.
 - `Desklet.destroy()` emits `destroy` immediately but defers
   `on_desklet_removed()` by a 500 ms fade. Hook both, with idempotent cleanup.
-- Menu items must not act synchronously — `PopupMenuBase` closes the menu in its
+- Menu items must not act synchronously - `PopupMenuBase` closes the menu in its
   own `activate` handler, which runs *after* yours. Defer the real work.
 - Popup menus parented to `Main.uiGroup` are not destroyed by
   `destroy_all_children()` on your own container. Track and destroy them.
@@ -182,13 +182,13 @@ cinnamon-settings desklets '<uuid>'        # open settings directly (or applets)
   NOT re-import helper modules (`imports.ui.deskletManager.desklets[uuid].<file>`
   stays cached) and does not re-read `stylesheet.css`. Editing a helper module
   or stylesheet requires restarting Cinnamon (`cinnamon --replace`).
-- Live test drivers restore settings via `atexit` — kill them with anything
+- Live test drivers restore settings via `atexit` - kill them with anything
   but SIGTERM (a plain `timeout` skips the restore and contaminates the next
   run's saved "originals"; the drivers now route SIGTERM through sys.exit).
 
 ## Spices Publication
 
-The full submission manual is `docs/spices-publication.md` — follow it for
+The full submission manual is `docs/spices-publication.md` - follow it for
 new submissions. Summary of the flow:
 
 - This monorepo (flat layout) is the dev home; each shipped xlet ALSO has a
@@ -209,7 +209,7 @@ new submissions. Summary of the flow:
 
 This file provides guidance to agents when working with code in this repository.
 
-Do NOT use em-dashes ever.  Do not use "—" symbol anywhere, change and code or text copy found during tasks to remove them.  Write in a humanistic way.
+Do NOT use em-dashes ever. Do not use the `\u2014` symbol anywhere. Change code or text found during tasks to remove it. Write in a humanistic way.
 
 
 ## Critical Commands
@@ -236,16 +236,16 @@ Do NOT use em-dashes ever.  Do not use "—" symbol anywhere, change and code or
 - Settings binding: `this.settings.bind("key", "property", callback)` - key is hyphenated in schema
 - Debounced updates: Check `if (this._timeout) Mainloop.source_remove(this._timeout)` before `Mainloop.timeout_add()`
 - Workspace names: read/write via `Main.getWorkspaceName(i)` / `Main.setWorkspaceName(i, name)`. The backing store is `org.cinnamon.desktop.wm.preferences` key `workspace-names`
-- Workspace add/remove: `Main._addWorkspace()` / `Main._removeWorkspace(ws)` — they maintain the names array and refuse to remove the last workspace
+- Workspace add/remove: `Main._addWorkspace()` / `Main._removeWorkspace(ws)` - they maintain the names array and refuse to remove the last workspace
 - Active workspace highlight: Use `add_style_pseudo_class('outlined')` not custom CSS classes
 - Main file must be `desklet.js` or `applet.js` (not `index.js` or other names)
 
 ## Gotchas
 
 - There is no `workspace-name-changed` signal. Watch `Gio.Settings({schema_id:'org.cinnamon.desktop.wm.preferences'})` for `changed::workspace-names`
-- `org.cinnamon workspace-name-overrides` is `['DEPRECATED']` and never changes. GSettings `connect('changed::<nonexistent-key>')` does NOT throw — the handler just never fires, so a wrong key looks like working code
+- `org.cinnamon workspace-name-overrides` is `['DEPRECATED']` and never changes. GSettings `connect('changed::<nonexistent-key>')` does NOT throw - the handler just never fires, so a wrong key looks like working code
 - Never `Mainloop.idle_add` for user-visible actions: idle sits below Clutter's redraw priority and starves while menus/dialogs animate. Use `Mainloop.timeout_add(0, ...)`
-- `Desklet.destroy()` emits `destroy` immediately but defers `on_desklet_removed()` by a 500 ms fade — hook both, with idempotent cleanup
+- `Desklet.destroy()` emits `destroy` immediately but defers `on_desklet_removed()` by a 500 ms fade - hook both, with idempotent cleanup
 - Popup menus parented to `Main.uiGroup` survive `destroy_all_children()` on your own container; track and destroy them explicitly
 - Settings schema keys use hyphens (`layout-mode`) but bound properties use camelCase (`layoutMode`)
 - Extension directory format: `UUID@domain` (e.g., `cinnamon-workspace-grid-desklet@curbsoftware`). `metadata.json` `uuid` MUST equal the directory name or Cinnamon refuses to load it

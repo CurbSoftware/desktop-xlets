@@ -7,7 +7,7 @@ icons. Both modes retain workspace names and active workspace highlighting.
 ## Features
 
 - One clickable tile per workspace
-- Name tiles or graphical desktop previews
+- Name tiles or graphical desktop previews with every connected monitor
 - Live unobscured window, focus, monitor, workspace, and name updates
 - Auto or fixed-column layout
 - Fixed layouts expand rows so no workspace is hidden

@@ -543,17 +543,29 @@ eq("one preview per workspace",
    d('D.buttons.map(function(b){return b.get_child().get_children().filter(function(c){'
      'return c.get_style_class_name&&c.get_style_class_name()==="curb-workspace-grid-preview";'
      '}).length;}).reduce(function(a,b){return a+b;},0)'), ws_count())
+eq("each preview represents every connected monitor",
+   d('D.buttons.map(function(b){let p=b.get_child().get_children().filter(function(c){'
+     'return c.get_style_class_name&&c.get_style_class_name()==="curb-workspace-grid-preview";'
+     '})[0];return p?p.get_children().filter(function(c){return c.get_style_class_name&&'
+     'c.get_style_class_name()==="curb-workspace-grid-monitor";}).length:0;})'),
+   [d('M.layoutManager.monitors.length')] * ws_count())
 check("preview event signals connected", d('D._previewSignals._storage.length') > 0)
 ordered = d('let w=global.workspace_manager.get_workspace_by_index(0);'
             'D._getPreviewWindows(w).map(function(win){return win.get_user_time();})')
 eq("preview windows sorted from back to front", ordered, sorted(ordered))
 expected_drawings = d('let w=global.workspace_manager.get_workspace_by_index(0);'
+                      'let areas=M.layoutManager.monitors.map(function(m,i){return '
+                      'w.get_work_area_for_monitor(typeof m.index==="number"?m.index:i);});'
+                      'let desktop=imports.ui.deskletManager.desklets["' + DESKLET + '"]'
+                      '.previewGeometry.boundingRect(areas)||w.get_work_area_all_monitors();'
+                      'let viewport=imports.ui.deskletManager.desklets["' + DESKLET + '"]'
+                      '.previewGeometry.fitRect(desktop,'
+                      'D.buttons[0].get_child().get_children()[0].width,'
+                      'D.buttons[0].get_child().get_children()[0].height);'
                       'D._getPreviewWindows(w).filter(function(win){return '
                       'imports.ui.deskletManager.desklets["' + DESKLET + '"]'
-                      '.previewGeometry.projectRect(win.get_buffer_rect(),'
-                      'w.get_work_area_all_monitors(),'
-                      'D.buttons[0].get_child().get_children()[0].width,'
-                      'D.buttons[0].get_child().get_children()[0].height)!==null;}).length')
+                      '.previewGeometry.projectRectInto(win.get_buffer_rect(),'
+                      'desktop,viewport)!==null;}).length')
 rendered_drawings = d('D.buttons[0].get_child().get_children()[0].get_children()'
                       '.filter(function(c){return c.get_style_class_name&&'
                       'c.get_style_class_name()&&'
