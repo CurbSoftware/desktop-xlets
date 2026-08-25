@@ -8,6 +8,9 @@ XDG_CONFIG_HOME=$(mktemp -d) gjs dev-tools/test-pp-storage.js
 XDG_CONFIG_HOME=$(mktemp -d) gjs dev-tools/test-pp-apply.js
 ```
 
+The storage suite starts a short Python settings-widget worker to exercise
+real cross-process lock contention against the GJS store.
+
 Live acceptance driver (running Cinnamon desktop):
 
 ```bash
@@ -26,13 +29,14 @@ The following must be run on a Cinnamon session. Items marked **release blocker*
 ## Save / manage
 
 - [ ] First click with no profiles shows the empty-state copy
-- [ ] **Save current layout…** requires a non-empty name, max 80 characters
+- [ ] **Save current layout…** requires a non-empty name, max 80 characters,
+      and offers an **Include desklets** checkbox
 - [ ] Duplicate names warn but still save (IDs are UUIDs)
-- [ ] First save can offer **Use at startup**
-- [ ] **Edit** (active profile): Rename, Duplicate (`Name Copy`, new UUID, not startup), Set/remove startup, Delete with confirm
-- [ ] **Manage profiles…** is a Load picker (Close / Load)
+- [ ] The settings window's profiles page: Rename, Duplicate (`Name Copy`,
+      new UUID), Delete with confirm
 - [ ] Deleting the active profile does not change the desktop
-- [ ] Deleting the startup profile clears `startupProfileId`
+- [ ] Deleting the active profile clears its bold row from the menu on the
+      next open
 
 ## Restore
 
@@ -58,8 +62,8 @@ The following must be run on a Cinnamon session. Items marked **release blocker*
 ## Rollback
 
 - [ ] Load a valid profile (creates `backups/last-good.json`)
-- [ ] **Restore previous layout** returns the pre-load layout
 - [ ] A deliberately invalid profile is rejected before `enabled-applets` changes
+- [ ] The rollback machinery restores panels, applets and desklets
 
 ## Corrupt files
 
@@ -72,20 +76,24 @@ The following must be run on a Cinnamon session. Items marked **release blocker*
 
 ## Dirty state
 
-- [ ] Load a profile, move an applet: menu shows **Modified** and **Update “Name”**
+- [ ] Load a profile, move an applet: its row shows **Modified** and the menu
+      offers **Update profile "Name"**
+- [ ] Load a profile that includes desklets, move a desklet: its row shows
+      **Modified** and offers the same update action
 - [ ] Update writes a new snapshot and clears Modified
 - [ ] Settings changes during an in-progress restore do not flip dirty/apply loops
 
 ## Cinnamon restart
 
-- [ ] After save, load, modify, and set startup: restart Cinnamon (`r`)
-- [ ] Metadata persists; startup designation remains; no duplicate Panel Profiles instances
+- [ ] After save, load, modify: restart Cinnamon (`r`)
+- [ ] Nothing restores on its own at boot; metadata and profiles persist;
+      no duplicate Panel Profiles instances
 
-## Startup timeout (one display)
+## Apply-time display wait (one display)
 
-- [ ] Startup profile expects 2 monitors
-- [ ] Boot / start Cinnamon with one display
-- [ ] After the timeout (default 60s): current layout unchanged, **one** warning, no retry loop
+- [ ] A profile captured on 2 monitors, applied with 1 connected
+- [ ] The menu shows the waiting row; after the timeout: layout unchanged,
+      **one** warning, no retry loop
 - [ ] User can still load a one-monitor profile manually
 
 ## Two-head virt-viewer reboot (**release blocker**)
@@ -93,23 +101,35 @@ The following must be run on a Cinnamon session. Items marked **release blocker*
 Environment: Linux Mint Cinnamon VM, libvirt/QEMU/KVM, SPICE, virt-viewer, two virtual heads.
 
 1. With both heads connected, create two bottom panels (primary + secondary) and customize applets on each.
-2. Save as **VM Two Screens**. Set it as the startup profile.
-3. Confirm Panel Profiles sits on the **primary** panel.
-4. Reboot the VM (or restart virt-viewer so the second head appears late).
-5. Expected:
-   - Cinnamon starts with one monitor
-   - Panel Profiles waits (`Waiting for display 2…`)
-   - Second SPICE head appears
-   - After ~2s stabilization the saved layout restores
-   - Second panel, applets, order, and applet settings return
-   - Looking Glass shows `[PanelProfiles] Profile verification succeeded`
+2. Save as **VM Two Screens**.
+3. Reboot the VM (or restart virt-viewer so the second head appears late).
+4. Cinnamon starts with one monitor; nothing restores on its own at boot.
+5. Click **VM Two Screens**: the applet waits (`Waiting for displays…`),
+   the second SPICE head appears, and after ~2s stabilization the saved
+   layout restores.
+6. Expected: second panel, applets, order, and applet settings return;
+   Looking Glass shows `[PanelProfiles] verification succeeded`.
 
 If this environment cannot be driven from the agent, run the steps above by hand before release. Headless suites cover wait/timeout/stabilize logic; the live driver covers the desktop matrix.
+
+## Manual-only checks (not drivable headless or via the live driver)
+
+- [ ] Restart Cinnamon menu item restarts Cinnamon (X11; on Wayland it logs
+      a warning and does nothing)
+- [ ] The settings window shows the display-info row (connected count plus
+      the active profile's expected count)
+- [ ] Profiles manager widget: rename, duplicate, delete round-trip; the
+      new name/row appears in the panel menu on its next open without a
+      restart
+- [ ] Deleting the active profile clears its bold row from the menu on the
+      next open
+- [ ] Unreadable profile rows show in the widget and are deletable
+- [ ] The active profile renders bold at the top of the profile list
 
 ## Logging checks
 
 ```bash
-# Looking Glass → Log, or:
+# Looking Glass Log tab, or:
 journalctl --user -b | grep PanelProfiles
 ```
 

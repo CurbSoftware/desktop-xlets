@@ -134,6 +134,8 @@ function _configRootPath() {
  * class alone would tolerate (a bare ".." component is dots, which are
  * otherwise legal in names). */
 const REL_PATH_RE = /^[A-Za-z0-9-._+@]+\/[A-Za-z0-9-._+@]+\.json$/;
+const COMPONENT_RE = /^[A-Za-z0-9-._+@]+$/;
+const SHA256_RE = /^[0-9a-f]{64}$/;
 
 /**
  * sanitizeRelativePath:
@@ -165,6 +167,54 @@ function sanitizeRelativePath(rel) {
         return rel;
     } catch (ignored) {
         return null;
+    }
+}
+
+function _isSymlink(path) {
+    try {
+        return GLib.file_test(path, GLib.FileTest.IS_SYMLINK);
+    } catch (ignored) {
+        return true;
+    }
+}
+
+function _ownedConfigPath(config) {
+    try {
+        if (!config || typeof config !== "object" ||
+                typeof config.uuid !== "string" ||
+                !COMPONENT_RE.test(config.uuid) || config.uuid === "..")
+            return null;
+        const rel = sanitizeRelativePath(config.relativePath);
+        if (rel === null)
+            return null;
+        const parts = rel.split("/");
+        if (parts[0] !== config.uuid)
+            return null;
+        const instanceId = config.instanceId === undefined ||
+            config.instanceId === null ? "" : String(config.instanceId);
+        if (instanceId.length > 0 &&
+                (!COMPONENT_RE.test(instanceId) || instanceId === ".."))
+            return null;
+        const singleton = config.uuid + ".json";
+        const instance = instanceId.length > 0 ? instanceId + ".json" : "";
+        if (parts[1] !== singleton && parts[1] !== instance)
+            return null;
+        return rel;
+    } catch (ignored) {
+        return null;
+    }
+}
+
+function _pathContained(root, rel) {
+    try {
+        if (!root || _isSymlink(root))
+            return false;
+        const parts = rel.split("/");
+        const dir = GLib.build_filenamev([root, parts[0]]);
+        const target = GLib.build_filenamev([dir, parts[1]]);
+        return !_isSymlink(dir) && !_isSymlink(target);
+    } catch (ignored) {
+        return false;
     }
 }
 
@@ -219,12 +269,17 @@ function captureConfigs(entries) {
             let rel = null;
             if (instanceId.length > 0) {
                 const r = uuid + "/" + instanceId + ".json";
-                if (_atomicFile.fileExists(GLib.build_filenamev([root, r])))
+                /* Live uuid/id strings are not profile data, but the probe
+                 * path is built from them all the same, so run it through
+                 * the same jail the restore side enforces. */
+                if (sanitizeRelativePath(r) !== null && _pathContained(root, r) &&
+                        _atomicFile.fileExists(GLib.build_filenamev([root, r])))
                     rel = r;
             }
             if (rel === null) {
                 const r = uuid + "/" + uuid + ".json";
-                if (_atomicFile.fileExists(GLib.build_filenamev([root, r])))
+                if (sanitizeRelativePath(r) !== null && _pathContained(root, r) &&
+                        _atomicFile.fileExists(GLib.build_filenamev([root, r])))
                     rel = r;
             }
             if (rel === null || seenPaths[rel])
@@ -252,73 +307,227 @@ function captureConfigs(entries) {
  * Restore
  * ------------------------------------------------------------------ */
 
-/**
- * restoreConfigs:
- * @configs (array): [{uuid, relativePath, content, sha256}] from a profile.
- *
- * Writes each config atomically under the config root. relativePath is
- * re-sanitized per entry; a violation (or a config belonging to this applet
- * itself, self-preservation) skips that entry and records a warning without
- * aborting the rest. When a config carries a sha256, the written file is
- * read back and verified; a mismatch warns but still counts as written.
- *
- * Returns (object): {written, skipped, warnings[]} (never null).
- */
-function restoreConfigs(configs) {
-    const result = { written: 0, skipped: 0, warnings: [] };
+function _preflightConfigState(configs, tombstones) {
+    const result = { ok: true, written: 0, removed: 0, skipped: 0,
+        warnings: [], writes: [], removals: [] };
     _resolveSiblings();
-    if (!_atomicFile)
+    if (!_atomicFile) {
+        result.ok = false;
+        result.warnings.push("config store unavailable");
         return result;
+    }
     try {
-        if (!Array.isArray(configs))
+        if (!Array.isArray(configs) || !Array.isArray(tombstones)) {
+            result.ok = false;
+            result.warnings.push("config state is not an array");
             return result;
+        }
         const root = _configRootPath();
         const self = _selfUuidValue();
-        for (let i = 0; i < configs.length; i++) {
-            const config = configs[i];
+        const seen = {};
+        function inspect(config, index, removal) {
             if (!config || typeof config !== "object") {
                 result.skipped++;
-                result.warnings.push("config " + i + ": not an object");
-                continue;
+                result.warnings.push("config " + index + ": not an object");
+                result.ok = false;
+                return;
             }
-            if (self.length > 0 && config.uuid === self) {
-                /* Expected by design: own config never round-trips. */
+            const sanitized = sanitizeRelativePath(config.relativePath);
+            const pathOwner = sanitized ? sanitized.split("/")[0] : "";
+            if (self.length > 0 && (config.uuid === self || pathOwner === self)) {
+                if (config.uuid !== self || pathOwner !== self) {
+                    result.warnings.push("config " + index +
+                        ": rejected self-owned path");
+                    result.ok = false;
+                }
                 result.skipped++;
-                continue;
+                return;
             }
-            const rel = sanitizeRelativePath(config.relativePath);
+            const rel = _ownedConfigPath(config);
             if (rel === null) {
                 result.skipped++;
-                result.warnings.push("config " + i + ": rejected relativePath");
+                result.warnings.push("config " + index +
+                    ": path is not owned by its uuid and instance");
+                result.ok = false;
+                return;
+            }
+            if (!_pathContained(root, rel)) {
+                result.skipped++;
+                result.warnings.push("config " + index +
+                    ": symlinked path rejected");
+                result.ok = false;
+                return;
+            }
+            if (seen[rel]) {
+                result.skipped++;
+                result.warnings.push("config " + index +
+                    ": duplicate target " + rel);
+                result.ok = false;
+                return;
+            }
+            seen[rel] = true;
+            if (!removal && typeof config.content !== "string") {
+                result.skipped++;
+                result.warnings.push("config " + index +
+                    ": content is not a string");
+                result.ok = false;
+                return;
+            }
+            if (!removal && (typeof config.sha256 !== "string" ||
+                    !SHA256_RE.test(config.sha256))) {
+                result.skipped++;
+                result.warnings.push("config " + index +
+                    ": missing or malformed sha256 for " + config.uuid);
+                result.ok = false;
+                return;
+            }
+            if (!removal &&
+                    _atomicFile.sha256Hex(config.content) !== config.sha256) {
+                result.skipped++;
+                result.warnings.push("config " + index +
+                    ": saved content hash mismatch for " + config.uuid);
+                result.ok = false;
+                return;
+            }
+            const item = { index: index, rel: rel,
+                target: GLib.build_filenamev([root, rel]),
+                content: config.content, sha256: config.sha256,
+                uuid: config.uuid, instanceId: config.instanceId };
+            (removal ? result.removals : result.writes).push(item);
+        }
+        for (let i = 0; i < configs.length; i++)
+            inspect(configs[i], i, false);
+        for (let i = 0; i < tombstones.length; i++)
+            inspect(tombstones[i], configs.length + i, true);
+    } catch (e) {
+        result.ok = false;
+        result.warnings.push("config preflight failed: " + e);
+    }
+    return result;
+}
+
+function validateConfigState(configs, tombstones) {
+    const checked = _preflightConfigState(configs, tombstones || []);
+    return { ok: checked.ok, skipped: checked.skipped,
+        warnings: checked.warnings.slice() };
+}
+
+function restoreConfigState(configs, tombstones) {
+    const result = _preflightConfigState(configs, tombstones || []);
+    if (!result.ok) {
+        delete result.writes;
+        delete result.removals;
+        return result;
+    }
+    try {
+        for (let i = 0; i < result.writes.length; i++) {
+            const item = result.writes[i];
+            const dir = GLib.path_get_dirname(item.target);
+            if (!_atomicFile.ensurePrivateDir(dir) ||
+                    !_pathContained(_configRootPath(), item.rel)) {
+                result.skipped++;
+                result.warnings.push("config " + item.index +
+                    ": unsafe directory for " + item.uuid);
+                result.ok = false;
                 continue;
             }
-            if (typeof config.content !== "string") {
+            if (!_atomicFile.writePrivateFileAtomic(item.target, item.content)) {
                 result.skipped++;
-                result.warnings.push("config " + i + ": content is not a string");
-                continue;
-            }
-            const target = GLib.build_filenamev([root, rel]);
-            const dir = GLib.path_get_dirname(target);
-            if (!_atomicFile.ensurePrivateDir(dir)) {
-                result.skipped++;
-                result.warnings.push("config " + i + ": could not create directory");
-                continue;
-            }
-            if (!_atomicFile.writePrivateFileAtomic(target, config.content)) {
-                result.skipped++;
-                result.warnings.push("config " + i + ": write failed");
+                result.warnings.push("config " + item.index +
+                    ": write failed for " + item.uuid);
+                result.ok = false;
                 continue;
             }
             result.written++;
-            if (typeof config.sha256 === "string" && config.sha256.length > 0) {
-                const written = _atomicFile.readTextFile(target);
-                if (written === null || _atomicFile.sha256Hex(written) !== config.sha256)
-                    result.warnings.push("config " + i + ": written content hash mismatch");
+            if (typeof item.sha256 === "string" && item.sha256.length > 0) {
+                const written = _atomicFile.readTextFile(item.target);
+                if (written === null ||
+                        _atomicFile.sha256Hex(written) !== item.sha256) {
+                    result.warnings.push("config " + item.index +
+                        ": written content hash mismatch for " + item.uuid);
+                    result.ok = false;
+                }
+            }
+        }
+        for (let i = 0; i < result.removals.length; i++) {
+            const item = result.removals[i];
+            if (!_pathContained(_configRootPath(), item.rel)) {
+                result.skipped++;
+                result.warnings.push("config " + item.index +
+                    ": unsafe removal path for " + item.uuid);
+                result.ok = false;
+                continue;
+            }
+            try {
+                const file = Gio.File.new_for_path(item.target);
+                if (file.query_exists(null)) {
+                    file.delete(null);
+                    result.removed++;
+                }
+            } catch (e) {
+                result.skipped++;
+                result.warnings.push("config " + item.index +
+                    ": removal failed for " + item.uuid);
+                result.ok = false;
             }
         }
     } catch (e) {
-        _warn("restoreConfigs failed: " + e);
-        result.warnings.push("restoreConfigs failed: " + e);
+        result.ok = false;
+        result.warnings.push("restoreConfigState failed: " + e);
+    }
+    delete result.writes;
+    delete result.removals;
+    return result;
+}
+
+function restoreConfigs(configs) {
+    return restoreConfigState(configs, []);
+}
+
+function captureRollbackState(currentConfigs, targetConfigs) {
+    const result = { ok: true, configs: [], tombstones: [], warnings: [] };
+    try {
+        currentConfigs = Array.isArray(currentConfigs) ? currentConfigs : [];
+        targetConfigs = Array.isArray(targetConfigs) ? targetConfigs : [];
+        const checked = _preflightConfigState(targetConfigs, []);
+        if (!checked.ok) {
+            result.ok = false;
+            result.warnings = checked.warnings.slice();
+            return result;
+        }
+        result.configs = currentConfigs.map(function (item) {
+            return JSON.parse(JSON.stringify(item));
+        });
+        const seen = {};
+        result.configs.forEach(function (item) {
+            const rel = _ownedConfigPath(item);
+            if (rel)
+                seen[rel] = true;
+        });
+        checked.writes.forEach(function (item) {
+            if (seen[item.rel])
+                return;
+            seen[item.rel] = true;
+            if (_atomicFile.fileExists(item.target)) {
+                const content = _atomicFile.readTextFile(item.target);
+                if (content === null) {
+                    result.ok = false;
+                    result.warnings.push("could not capture " + item.rel);
+                    return;
+                }
+                result.configs.push({ uuid: item.uuid,
+                    instanceId: item.instanceId === undefined ? "" :
+                        String(item.instanceId), relativePath: item.rel,
+                    sha256: _atomicFile.sha256Hex(content), content: content });
+            } else {
+                result.tombstones.push({ uuid: item.uuid,
+                    instanceId: item.instanceId === undefined ? "" :
+                        String(item.instanceId), relativePath: item.rel });
+            }
+        });
+    } catch (e) {
+        result.ok = false;
+        result.warnings.push("rollback config capture failed: " + e);
     }
     return result;
 }

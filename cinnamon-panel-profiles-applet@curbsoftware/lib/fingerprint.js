@@ -12,10 +12,10 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-/* Injected by applet.js: the canonicalizer (settings snapshot -> string)
- * and the digest (text -> hex sha256). Defaults are null so this module is
- * safe standalone; without an injected digest the result is "" and callers
- * treat the fingerprint as unevaluable. */
+/* Injected by applet.js: the canonicalizer (settings snapshot, scope ->
+ * string) and the digest (text -> hex sha256). Defaults are null so this
+ * module is safe standalone; without an injected digest the result is ""
+ * and callers treat the fingerprint as unevaluable. */
 let _canonicalize = null;
 let _sha256 = null;
 
@@ -48,7 +48,11 @@ function resetDependencies() {
  * computeFingerprint:
  * @settingsSnapshot (object): capture/profile shape consumed by the
  *   injected canonicalizer.
- * @configHashes (array): sha256 hex strings of captured applet configs.
+ * @configHashes (array): sha256 hex strings of captured configs (applets
+ *   and/or desklets per the kind).
+ * @kind (string): profile kind forwarded to the canonicalizer so the
+ *   settings part covers exactly what the profile restores. Omitted
+ *   defaults to "panel" (the historical digest).
  *
  * Sorting the config hashes means the capture order of config files never
  * matters; only their content set does. With no configs the digest covers
@@ -57,10 +61,11 @@ function resetDependencies() {
  * Returns (string): lowercase hex sha256, or "" when dependencies are
  * missing or anything throws.
  */
-function computeFingerprint(settingsSnapshot, configHashes) {
+function computeFingerprint(settingsSnapshot, configHashes, kind) {
     try {
         const part = _canonicalize
-            ? String(_canonicalize(settingsSnapshot) || "") : "";
+            ? String(_canonicalize(settingsSnapshot,
+                kind === undefined ? "panel" : kind) || "") : "";
         const hashes = (Array.isArray(configHashes) ? configHashes : [])
             .map(function (h) { return String(h); })
             .sort();

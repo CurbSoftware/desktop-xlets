@@ -14,73 +14,14 @@
     opacity: 0.6;
 }
 
-/* Status lines under the profile list ("Current: ...", "Displays: 2 / 2").
- * Dimming comes from the theme's popup-inactive-menu-item class, so no
- * extra opacity here (a second layer would render the text too faint). */
-.panel-profiles-status {
-    padding-left: 4px;
-    font-size: 0.95em;
+/* Active profile row label in the panel menu. Own class on purpose:
+ * popup-subtitle-menu-item is reserved for section headers and drags
+ * dimming semantics along with its bold weight. */
+.panel-profiles-active-row {
+    font-weight: bold;
 }
 
-/* Scroll container for long profile lists in the manage dialog. */
-.panel-profiles-manage-scroll {
-    padding: 4px;
-}
-
-/* One row of the manage dialog's profile list. */
-.panel-profiles-manage-row {
-    padding: 6px 8px;
-    spacing: 8px;
-}
-
-/* Secondary text inside a manage row ("2 displays, updated ..."). */
-.panel-profiles-row-meta {
-    font-size: 0.9em;
-    opacity: 0.6;
-}
-
-/* --- Dialog styling (WP5 additions below; nothing above this line is
- * edited). Spacing, sizing, and dimming only. Colors stay with the theme
- * except the neutral greys on the selectable rows, which match the sibling
- * clock dialog's in-dialog hover treatment so both read the same. --- */
-
-/* Field captions in the save dialog ("Name", "Save as:", "Existing
- * profile:"). */
-.panel-profiles-field-label {
-    padding-top: 10px;
-    padding-bottom: 2px;
-    font-size: 0.95em;
-    opacity: 0.75;
-}
-
-/* Name entry in the save and rename dialogs. The run-dialog-entry class
- * carries the theme's native entry look; this hook only sets a floor so
- * the entry does not collapse on short names. */
-.panel-profiles-entry {
-    min-width: 280px;
-}
-
-/* Inline duplicate-name warning under the save dialog's name entry. */
-.panel-profiles-name-warning {
-    padding-top: 4px;
-    font-size: 0.9em;
-    opacity: 0.85;
-}
-
-/* "New profile" / "Replace existing profile" pair container. */
-.panel-profiles-radio-box {
-    spacing: 4px;
-}
-
-/* The theme spaces the radio/check glyph only for CinnamonGenericContainer
- * children (0.2em under Numix); our toggles pack an StBoxLayout, so provide
- * the same gap ourselves at the same size. */
-.panel-profiles-radio StBoxLayout,
-.panel-profiles-check StBoxLayout {
-    spacing: 0.2em;
-}
-
-/* Replace-target list inside the save dialog. */
+/* Scroll container for the save dialog's replace list. */
 .panel-profiles-replace-scroll {
     max-height: 200px;
 }
@@ -100,48 +41,42 @@
     background-color: rgba(128, 128, 128, 0.18);
 }
 
-/* Manage dialog: cap the profile list height. The earlier
- * panel-profiles-manage-scroll rule above sets padding; St merges both
- * blocks, both apply. */
-.panel-profiles-manage-scroll {
-    max-height: 320px;
+/* --- Dialog styling. Spacing, sizing, and dimming only. Colors stay with
+ * the theme except the neutral greys on the selectable rows, which match
+ * the sibling clock dialog's in-dialog hover treatment so both read the
+ * same. --- */
+
+/* Field captions in the save dialog ("Name", "Save as:", "Existing
+ * profile:"). */
+.panel-profiles-field-label {
+    padding-top: 10px;
+    padding-bottom: 2px;
+    font-size: 0.95em;
+    opacity: 0.75;
 }
 
-/* Vertical gap between manage rows. */
-.panel-profiles-manage-list {
-    spacing: 2px;
+/* Name entry in the save dialog. The run-dialog-entry class carries the
+ * theme's native entry look; this hook only sets a floor so the entry
+ * does not collapse on short names. */
+.panel-profiles-entry {
+    min-width: 280px;
 }
 
-/* Status icon column at the left of a manage row. The min-width keeps
- * names aligned whether a row shows no icon, one, or two. */
-.panel-profiles-row-icons {
-    min-width: 36px;
-    spacing: 2px;
+/* Inline duplicate-name warning under the save dialog's name entry. */
+.panel-profiles-name-warning {
+    padding-top: 4px;
+    font-size: 0.9em;
+    opacity: 0.85;
 }
 
-/* Right-aligned action cluster inside a manage row. */
-.panel-profiles-row-actions {
+/* "New profile" / "Replace existing profile" pair container. */
+.panel-profiles-radio-box {
     spacing: 4px;
 }
 
-/* Small in-row buttons: the theme's dialog-button visuals (hover, active,
- * insensitive, destructive) at a smaller size. Equal specificity with the
- * theme's ".dialog .dialog-button" rule and loaded after it, so these
- * values win. No border-radius here: the theme's button chrome is a
- * border-image whose corners are already rounded, and a radius would clip
- * them into double-rounded artifacts. */
-.dialog .panel-profiles-row-button {
-    padding: 4px 10px;
-    font-weight: normal;
-}
-
-/* Invalid (unreadable) profile rows are dimmed; Delete stays reachable. */
-.panel-profiles-row-invalid {
-    opacity: 0.5;
-}
-
-/* Empty-list hint in the manage dialog. */
-.panel-profiles-empty-label {
-    padding: 8px;
-    opacity: 0.6;
+/* The theme spaces the radio glyph only for CinnamonGenericContainer
+ * children (0.2em under Numix); our toggles pack an StBoxLayout, so provide
+ * the same gap ourselves at the same size. */
+.panel-profiles-radio StBoxLayout {
+    spacing: 0.2em;
 }

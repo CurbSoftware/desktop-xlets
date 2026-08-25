@@ -49,11 +49,17 @@ Cinnamon has no cross-xlet import path:
 - Timer/chrono controls are on-card St.Buttons, not menus
 
 #### Panel Profiles Applet (`cinnamon-panel-profiles-applet@curbsoftware/`)
-- Saves the full panel environment (panel keys, applet placement and each
-  applet's settings) as named profiles and restores them transactionally,
-  with rollback and startup recovery that waits for the expected displays
-- Composition root in `applet.js`, dialogs in `dialogs.js`, pure headless
-  modules in `lib/` (capture, storage, apply engine, topology, fingerprint)
+- Saves the panel world and the desklet world as separate named profile
+  kinds and restores them transactionally with rollback; profiles apply
+  only on explicit click (no boot-time restore)
+- Profiles carry a per-profile kind (panel / desklet); kind decides what a
+  restore writes, verifies and fingerprints, and rollback snapshots always
+  capture both families (internal kind "both")
+- Composition root in `applet.js`, the save dialog in `dialogs.js`, pure
+  headless modules in `lib/` (capture, storage, apply engine, topology,
+  fingerprint), plus two custom settings widgets: displayInfoWidget.py
+  (read-only display summary) and profilesManagerWidget.py (rename,
+  duplicate, delete on the profile files)
 - State and profiles live under `~/.config/cinnamon-panel-profiles/`
 
 ### Reference Materials (`cinnamon-docs/`)

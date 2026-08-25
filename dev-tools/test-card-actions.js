@@ -15,6 +15,7 @@
 const System = imports.system;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
+const ByteArray = imports.byteArray;
 
 const SCRIPT_DIR = GLib.path_get_dirname(
     Gio.File.new_for_commandline_arg(System.programInvocationName).get_path());
@@ -30,16 +31,16 @@ let currentSuite = "";
 
 function suite(name) {
     currentSuite = name;
-    print("\n• " + name);
+    print("\n[SUITE] " + name);
 }
 
 function check(label, condition, detail) {
     if (condition) {
         passed++;
-        print("  ✓ " + label);
+        print("  PASS " + label);
     } else {
         failures.push(currentSuite + " / " + label + (detail ? " -- " + detail : ""));
-        print("  ✗ " + label + (detail ? " -- " + detail : ""));
+        print("  FAIL " + label + (detail ? " -- " + detail : ""));
     }
 }
 
@@ -206,16 +207,26 @@ eq("clock next forward",
     CA.nextColor(stops([[21600, RED], [64800, BLUE]]), 21600, { wrap: true }), BLUE);
 eq("chrono next forward",
     CA.nextColor(stops([[0, RED], [1800, BLUE]]), 300, {}), BLUE);
-eq("chrono past last holds last",
-    CA.nextColor(stops([[0, RED], [1800, BLUE]]), 2000, {}), BLUE);
 eq("timer next below",
     CA.nextColor(stops([[0, RED], [30, YELLOW], [60, GREEN]]), 45, { reverse: true }), YELLOW);
 eq("timer at stop snaps lower",
     CA.nextColor(stops([[0, RED], [30, YELLOW], [60, GREEN]]), 60, { reverse: true }), YELLOW);
-eq("single stop returns it",
-    CA.nextColor(stops([[21600, RED]]), 100, {}), RED);
+eq("forward schedule past last has no next colour",
+    CA.nextColor(stops([[0, RED], [1800, BLUE]]), 2000, {}), null);
+eq("reverse schedule below last has no next colour",
+    CA.nextColor(stops([[0, RED], [30, YELLOW]]), 0, { reverse: true }), null);
 eq("no stops is null",
     CA.nextColor([], 50, {}), null);
+
+suite("nextStop");
+eq("returns stop time and a colour copy",
+    CA.nextStop(stops([[0, RED], [1800, BLUE]]), 300, {}),
+    { t: 1800, rgba: BLUE });
+eq("clock wraps with stop metadata",
+    CA.nextStop(stops([[21600, RED], [64800, BLUE]]), 68400, { wrap: true }),
+    { t: 21600, rgba: RED });
+eq("non-wrap schedule ends cleanly",
+    CA.nextStop(stops([[0, RED], [1800, BLUE]]), 2000, {}), null);
 
 /* ------------------------------------------------------------------ *
  * Default schedules
@@ -427,37 +438,61 @@ check("does not scale above caps", scaled.time <= 20 && scaled.date <= 10 && sca
  * Module surface
  * ------------------------------------------------------------------ */
 
-suite("fitKinds (narrow-width auto-hide)");
-eq("wide width keeps all three",
-    CA.fitKinds(["clock", "timer", "chrono"], 840, 6),
-    ["clock", "timer", "chrono"]);
-eq("exact minimum fits (3 x 132 + 8 = 404)",
-    CA.fitKinds(["clock", "timer", "chrono"], 404, 6),
-    ["clock", "timer", "chrono"]);
-eq("one px short drops the chronometer",
-    CA.fitKinds(["clock", "timer", "chrono"], 403, 6),
-    ["clock", "timer"]);
-eq("200px keeps only the clock",
-    CA.fitKinds(["clock", "timer", "chrono"], 200, 6),
-    ["clock"]);
-eq("a single kind survives any width",
-    CA.fitKinds(["chrono"], 10, 6),
-    ["chrono"]);
-eq("spacing widens the per-card minimum",
-    CA.fitKinds(["clock", "timer"], 200, 24),
-    ["clock"]);
-eq("zero spacing minimum (2 x 120 + 8 = 248 fits)",
-    CA.fitKinds(["clock", "timer"], 248, 0),
-    ["clock", "timer"]);
-eq("non-finite width falls back to the default",
-    CA.fitKinds(["clock", "timer", "chrono"], undefined, 6),
-    ["clock", "timer", "chrono"]);
-eq("non-array kinds returns empty safely",
-    CA.fitKinds(null, 840, 6),
-    []);
-eq("input list is not mutated",
-    (function () { const k = ["clock", "timer", "chrono"]; CA.fitKinds(k, 200, 6); return k; })(),
-    ["clock", "timer", "chrono"]);
+suite("computeResponsiveGrid");
+eq("wide width uses one row",
+    CA.computeResponsiveGrid(3, 840, 6), { rows: 1, cols: 3 });
+eq("medium width wraps without dropping a card",
+    CA.computeResponsiveGrid(3, 600, 6), { rows: 2, cols: 2 });
+eq("narrow width stacks every card",
+    CA.computeResponsiveGrid(3, 200, 6), { rows: 3, cols: 1 });
+eq("single card survives any width",
+    CA.computeResponsiveGrid(1, 10, 6), { rows: 1, cols: 1 });
+eq("zero cards returns an empty grid",
+    CA.computeResponsiveGrid(0, 840, 6), { rows: 0, cols: 0 });
+eq("invalid width uses default width",
+    CA.computeResponsiveGrid(3, undefined, 6), { rows: 1, cols: 3 });
+eq("string count is accepted",
+    CA.computeResponsiveGrid("3", 200, 6), { rows: 3, cols: 1 });
+
+suite("computeResponsiveHeight");
+eq("one row preserves configured height",
+    CA.computeResponsiveHeight(1, 260, 6), 260);
+eq("two rows gain safe height",
+    CA.computeResponsiveHeight(2, 120, 6), 280);
+eq("three rows gain safe height",
+    CA.computeResponsiveHeight(3, 120, 6), 416);
+eq("large configured height is preserved",
+    CA.computeResponsiveHeight(3, 600, 6), 600);
+eq("invalid row count is safe",
+    CA.computeResponsiveHeight(0, 120, 6), 144);
+
+suite("desklet drag ownership contract");
+let deskletBytes = GLib.file_get_contents(DESKLET_DIR + "/desklet.js")[1];
+let deskletSource = ByteArray.toString(deskletBytes);
+check("desklet never changes private draggable inhibit",
+    deskletSource.indexOf("_draggable.inhibit") === -1);
+check("desklet never synthesizes a DND release",
+    deskletSource.indexOf("fakeRelease") === -1);
+check("desklet has ReloadXlet helper-cache fallbacks",
+    deskletSource.indexOf("function _responsiveGrid") !== -1 &&
+    deskletSource.indexOf("function _nextScheduleStop") !== -1);
+
+suite("next-colour preview contract");
+let stylesheetBytes = GLib.file_get_contents(DESKLET_DIR + "/stylesheet.css")[1];
+let stylesheetSource = ByteArray.toString(stylesheetBytes);
+check("preview chip is 20px",
+    deskletSource.indexOf("this._swatch.set_width(20)") !== -1 &&
+    deskletSource.indexOf("this._swatch.set_height(20)") !== -1);
+check("every card uses the labelled preview footer",
+    deskletSource.indexOf('text: _("Next")') !== -1 &&
+    deskletSource.indexOf("bottom.add(this._nextPreview") !== -1);
+check("preview has two contrast rings",
+    deskletSource.indexOf("cr.setLineWidth(2)") !== -1 &&
+    deskletSource.indexOf("cr.setLineWidth(1.5)") !== -1);
+check("footer and chip have intentional surfaces",
+    stylesheetSource.indexOf(".ctc-card-bottom") !== -1 &&
+    stylesheetSource.indexOf(".ctc-next-preview") !== -1 &&
+    stylesheetSource.indexOf(".ctc-next-label") !== -1);
 
 suite("module surface");
 check("lerpRgba exported", typeof CA.lerpRgba === "function");

@@ -1,5 +1,48 @@
 # Changelog
 
+## v1.3.0 - 2026-08-25
+
+- Profiles now always restore panels and applets, with an optional Include
+  desklets choice. Existing profile files migrate without losing captured
+  data.
+- Restores survive deleting the panel that hosts Panel Profiles. The new
+  applet instance reuses the live manager identity and completes the same
+  durable transaction.
+- Failed restores automatically roll back panel, applet, desklet and config
+  changes. Restore previous layout is available from the menu.
+- Configuration batches are validated before any file is written. Monitor
+  mapping and applet ID allocation now fail safely on ambiguous input.
+- Profile schema v4 and state schema v3 replace separate active panel and
+  desklet slots with one active profile.
+
+## v1.2.0 - 2026-08-22
+
+- Two profile kinds. Panel profiles save panels, applets and each applet's
+  settings; desklet profiles save the desklet list, desklet settings and
+  each desklet's config. Each list lives in its own section of the menu
+  and restores only its own world, so loading a profile always changes
+  something you can see.
+- Profiles apply only when you click them. Cinnamon boots with whatever
+  layout it saved itself; there is no startup designation, no boot-time
+  restore and no primary-monitor nag anymore.
+- Profile data management moved into the applet's settings window: a
+  profiles page lists both kinds with Rename, Duplicate and Delete. The
+  popover's Manage and Duplicate dialogs are gone. Loading stays in the
+  menu.
+- The menu is simpler: the two profile lists, Save panel layout, Save
+  desklet layout, Configure and Restart Cinnamon. Restore previous layout
+  is gone from the menu (the rollback machinery still protects every
+  apply internally).
+- Fix: Configure now reliably opens the applet's settings window
+  (argv-array spawn instead of the shell-string form).
+- Schema v3: profiles carry a kind instead of a scope; v1 and v2 files
+  migrate on load (scope "desklets" becomes a desklet profile; "both" and
+  "none" become panel profiles). state.json v2 tracks the active panel
+  and desklet profiles separately.
+- Fix: verification and modified-detection recompute digests under the
+  profile's current kind, so a migrated profile verifies instead of
+  showing a phantom mismatch.
+
 ## v1.0.0 - 2026-08-20
 
 First release.

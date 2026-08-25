@@ -278,7 +278,7 @@ function topologySatisfies(current, required) {
  * unmatched: [savedIndex]}. With no live monitors everything is unmatched.
  */
 function mapSavedMonitorsToCurrent(profileTopologyObj) {
-    const result = { indexMap: {}, unmatched: [] };
+    const result = { indexMap: {}, unmatched: [], ambiguous: [] };
     try {
         const saved = (profileTopologyObj &&
             Array.isArray(profileTopologyObj.monitors))
@@ -287,6 +287,27 @@ function mapSavedMonitorsToCurrent(profileTopologyObj) {
 
         const used = {};
         const matched = {};
+        const blocked = {};
+        const savedIndexCounts = {};
+        const currentIndexCounts = {};
+        saved.forEach(function (sm) {
+            savedIndexCounts[sm.savedIndex] =
+                (savedIndexCounts[sm.savedIndex] || 0) + 1;
+        });
+        current.forEach(function (cm) {
+            currentIndexCounts[cm.savedIndex] =
+                (currentIndexCounts[cm.savedIndex] || 0) + 1;
+        });
+        function markAmbiguous(savedIndex) {
+            blocked[savedIndex] = true;
+            if (result.ambiguous.indexOf(savedIndex) === -1)
+                result.ambiguous.push(savedIndex);
+        }
+        saved.forEach(function (sm) {
+            if (savedIndexCounts[sm.savedIndex] > 1 ||
+                    currentIndexCounts[sm.savedIndex] > 1)
+                markAmbiguous(sm.savedIndex);
+        });
         /* The primary-flag round only carries information when the live
          * topology actually names a primary: without one, "not primary"
          * would match every monitor and starve the stronger geometry
@@ -317,31 +338,51 @@ function mapSavedMonitorsToCurrent(profileTopologyObj) {
             }
         }
 
+        function claimUnique(savedIndex, candidates) {
+            const available = candidates.filter(function (cur) {
+                return !used[cur.savedIndex];
+            });
+            if (available.length <= 1) {
+                claim(savedIndex, available);
+                return;
+            }
+            const exact = available.filter(function (cur) {
+                return cur.savedIndex === savedIndex;
+            });
+            if (exact.length === 1) {
+                claim(savedIndex, exact);
+                return;
+            }
+            markAmbiguous(savedIndex);
+        }
+
         saved.forEach(function (sm) {
-            if (matched[sm.savedIndex] ||
+            if (matched[sm.savedIndex] || blocked[sm.savedIndex] ||
                 typeof sm.name !== "string" || sm.name.length === 0)
                 return;
-            claim(sm.savedIndex, current.filter(function (cm) {
+            claimUnique(sm.savedIndex, current.filter(function (cm) {
                 return cm.name === sm.name;
             }));
         });
         saved.forEach(function (sm) {
-            if (matched[sm.savedIndex] || !hasCurrentPrimary)
+            if (matched[sm.savedIndex] || blocked[sm.savedIndex] ||
+                    !hasCurrentPrimary || !sm.primary)
                 return;
             claim(sm.savedIndex, current.filter(function (cm) {
-                return !!cm.primary === !!sm.primary;
+                return !!cm.primary;
             }));
         });
         saved.forEach(function (sm) {
-            if (matched[sm.savedIndex])
+            if (matched[sm.savedIndex] || blocked[sm.savedIndex])
                 return;
-            claim(sm.savedIndex, current.filter(function (cm) {
-                return cm.x === sm.x && cm.y === sm.y &&
+            const candidates = current.filter(function (cm) {
+                return !used[cm.savedIndex] && cm.x === sm.x && cm.y === sm.y &&
                     cm.width === sm.width && cm.height === sm.height;
-            }));
+            });
+            claimUnique(sm.savedIndex, candidates);
         });
         saved.forEach(function (sm) {
-            if (matched[sm.savedIndex])
+            if (matched[sm.savedIndex] || blocked[sm.savedIndex])
                 return;
             claim(sm.savedIndex, current.filter(function (cm) {
                 return cm.savedIndex === sm.savedIndex;
@@ -354,7 +395,7 @@ function mapSavedMonitorsToCurrent(profileTopologyObj) {
         });
     } catch (e) {
         _log("warn", "mapSavedMonitorsToCurrent failed: " + e);
-        return { indexMap: {}, unmatched: [] };
+        return { indexMap: {}, unmatched: [], ambiguous: [] };
     }
     return result;
 }

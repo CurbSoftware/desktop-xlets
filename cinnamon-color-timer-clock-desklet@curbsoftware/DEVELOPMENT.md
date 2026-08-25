@@ -1,4 +1,4 @@
-# Color Timer Clock Desklet - Development Guide
+# Color Timer Clock Desklet: Development Guide
 
 ## Overview
 
@@ -8,19 +8,17 @@ The Color Timer Clock desklet shows up to three cards (Clock, Timer, Chronometer
 
 **Type**: Cinnamon Desklet
 
----
-
 ## Features
 
 - Clock card: time-of-day color schedule wrapping over midnight, optional IANA timezone
 - Timer card: countdown by time-remaining schedule; `stopped|paused|running|expired` state machine with wall-clock `endMs`, persisted across restarts
 - Chronometer card: elapsed-time schedule; `accumMs` + `startMs` pause/resume, persisted across restarts
-- On-card St.Button controls (play/pause, reset, timer ±60 s while stopped) — no PopupMenu, so none of the grab/teardown/deferral bug class; every control carries a tooltip
+- On-card `St.Button` controls (play/pause, reset, timer plus or minus 60 s while stopped). Buttons use normal Cinnamon event flow and never change private DND state
+- Responsive card grid that wraps every enabled card, centers incomplete rows and grows to a safe row-dependent minimum height
+- Context-menu schedule reload, labelled 20 px next-stop chips, accessible names and a useful all-cards-disabled state
 - Optional chronometer hundredths display: a 50 ms text-only tick armed only while the chronometer runs with the setting on
 - Adaptive text/border colors by measured WCAG contrast ratio (translucent colors are composited over the dark card backing first; mid-tones that fail AA with either softened candidate fall back to the solid extreme)
 - "Reset all schedules to defaults" settings button
-
----
 
 ## Project Structure
 
@@ -70,7 +68,7 @@ tail -f ~/.xsession-errors | grep -i color-timer
 ```
 Desklet.Desklet
     └── MyDesklet
-            ├── _rebuildCards()         St.Table 1xN of CardWidgets
+            ├── _rebuildCards()         Responsive St.Table of CardWidgets
             ├── _updateAll()            1s tick: expiry, evaluate(), paint
             ├── _timerControl()         stopped|paused|running|expired
             ├── _chronoControl()        stopped|paused|running
@@ -81,10 +79,10 @@ CardWidget(kind)
             ├── title label
             ├── value label
             ├── sub label
-            └── controls pill (timer/chrono only): play/pause, reset, ±60 s
+            └── footer: controls pill plus labelled next-colour preview
 
-cardActions.js     parseColor, normalizeSchedule, evaluate, luma/contrast,
-                   computeCardInnerSize / computeFittedFontSizes
+cardActions.js     parseColor, normalizeSchedule, evaluate, nextStop,
+                   responsive grid and text-fit helpers
 ```
 
 Modules are loaded lazily:
@@ -100,7 +98,7 @@ CardActions = dir.cardActions;
 
 ### Timer state machine
 
-`endMs` is wall-clock while running, so restarts during a run resolve correctly: `_restoreState()` maps a running timer whose `endMs` has passed to `expired`. State is persisted only on transitions (`_persistTimer`), never per tick. Pausing after `endMs` transitions straight to `expired` — `_updateAll` only expires a running timer.
+`endMs` is wall-clock while running, so restarts during a run resolve correctly: `_restoreState()` maps a running timer whose `endMs` has passed to `expired`. State is persisted only on transitions (`_persistTimer`), never per tick. Pausing after `endMs` transitions straight to `expired`; `_updateAll` only expires a running timer.
 
 ### Schedules
 
@@ -123,7 +121,7 @@ CardActions = dir.cardActions;
 | `time-size` / `date-size` / `label-size` | spinbutton | `34` / `13` / `11` | pt caps |
 | `card-spacing` | spinbutton | `6` | Card margin px |
 | `width` / `height` | spinbutton | `840` / `260` | Desklet bounds |
-| `reset-schedules` | button | — | Callback `resetSchedules` |
+| `reset-schedules` | button | none | Callback `resetSchedules` |
 | `timer-state` / `chrono-state` | generic | stopped | Persisted state stores |
 
 Colors accept `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` (either case) and 13 CSS names; anything else drops the row with a log line.
@@ -134,12 +132,13 @@ Colors accept `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` (either case) and 13 CSS n
 
 All functions are pure (no St/Clutter):
 
-- `parseColor(str)` → `{ ok, rgba }`
-- `rgbaToCss` / `rgbaToKey` — style string / canonical change-detection key
-- `normalizeSchedule(rows, maxT)` → `{ stops, dropped }`
-- `evaluate(stops, t, { wrap, smooth })` → rgba or `null` (no stops)
-- `lerpRgba`, `luma`, `contrastColors(rgba)` → `{ fg, border }`
-- `computeCardInnerSize` / `computeFittedFontSizes` — copied from clockActions.js
+- `parseColor(str)` returns `{ ok, rgba }`
+- `rgbaToCss` / `rgbaToKey`: style string / canonical change-detection key
+- `normalizeSchedule(rows, maxT)` returns `{ stops, dropped }`
+- `evaluate(stops, t, { wrap, smooth })` returns rgba or `null` when no stops exist
+- `nextStop(stops, t, { wrap, reverse })` returns upcoming stop metadata
+- `lerpRgba`, `luma`, `contrastColors(rgba)` return colour values
+- `computeResponsiveGrid`, `computeCardInnerSize`, `computeFittedFontSizes`: layout helpers
 
 ---
 
@@ -156,10 +155,11 @@ Headless coverage: parse variants, normalize (sort/clamp/drop/merge), evaluate (
 
 1. Install with the symlink command above and reload the desklet.
 2. Smooth ramp visibly animates over a 60 s timer; step mode jumps exactly at stops.
-3. Red→blue passes purple; the 18:00→06:00 clock wrap ramps through the night.
-4. Yellow card → dark text; a malformed color row logs a fallback, the card never blanks.
+3. Red to blue passes purple; the 18:00 to 06:00 clock wrap ramps through the night.
+4. Yellow card uses dark text; a malformed color row logs a fallback, the card never blanks.
 5. Timer survives ReloadXlet to the correct expiry; expiry during downtime shows expired on load; chrono accumulates across pause/resume/reload.
-6. show-* toggles rebuild cleanly; width 200–2000 sweep: no overflow, equal cards.
+6. `show-*` toggles rebuild cleanly. Sweep width from 200 to 2000 px and confirm every enabled card remains visible.
+7. Drag from each card and gutter, release, then move the pointer again. Desklet must stay at the released location.
 
 ---
 
@@ -167,7 +167,9 @@ Headless coverage: parse variants, normalize (sort/clamp/drop/merge), evaluate (
 
 - `Desklet.destroy()` emits `destroy` immediately but defers `on_desklet_removed` by a 500 ms fade. Hook both; `_cleanup()` is idempotent.
 - Never `Mainloop.idle_add` for user-visible actions; use `timeout_add(0)`.
-- St ignores `transition-property`; a `transition-duration` alone crossfades the whole node paint. The card's inline style owns the duration (1000 ms smooth / 0 ms step) — do not move it into the stylesheet.
+- St ignores `transition-property`; a `transition-duration` alone crossfades the whole node paint. The card's inline style owns the duration (1000 ms smooth / 0 ms step). Do not move it into the stylesheet.
+- Desklet DND belongs to Cinnamon. Never write `_draggable.inhibit`, call `fakeRelease()`, or synthesize pointer releases.
+- `ReloadXlet` can retain an older `cardActions` module in GJS import cache. Keep local layout and next-stop fallbacks compatible until a full Cinnamon restart refreshes the module.
 - The card's entire inline style (margin + colors + duration) is one string; a separate `set_style` anywhere on the actor would clobber the rest.
 - Invalid IANA timezone ids log once per distinct bad value (the check runs every second) and fall back to local time.
 - `toLocaleFormat` is a GJS `Date` extension (strftime).

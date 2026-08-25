@@ -6,7 +6,8 @@
  *
  * St/Clutter cannot be instantiated outside the Cinnamon process, so this
  * harness covers only what runs headless: profile CRUD, state recovery,
- * rollback rotation, config capture/restore/watch and path sanitization.
+ * rollback storage, cross-process contention, config capture/restore/watch
+ * and path sanitization.
  *
  * ISOLATION, read this first: constants.js resolves STATE_DIR and
  * SPICES_CONFIG_ROOT from GLib.get_user_config_dir() at import time, which
@@ -57,6 +58,7 @@ const CONSTANTS = imports.constants;
 const ATOMIC = imports.atomicFile;
 const PS = imports.profileStore;
 const ACS = imports.appletConfigStore;
+const PSCHEMA = imports.profileSchema;
 
 const STATE_DIR = CONSTANTS.STATE_DIR;
 const PROFILES_DIR = STATE_DIR + "/profiles";
@@ -165,7 +167,41 @@ function isoParses(iso) {
     }
 }
 
-/* A schema v1 snapshot input shaped like a real capture. */
+function deleteRaw(path) {
+    try {
+        Gio.File.new_for_path(path).delete(null);
+    } catch (ignored) {
+    }
+}
+
+function startWidgetLockWorker(action, profileId, tag) {
+    const ready = CONFIG_DIR + "/" + tag + ".ready";
+    const release = CONFIG_DIR + "/" + tag + ".release";
+    deleteRaw(ready);
+    deleteRaw(release);
+    const process = Gio.Subprocess.new([
+        "python3", SCRIPT_DIR + "/pp-widget-lock-helper.py", "hold",
+        XLET_DIR + "/profilesManagerWidget.py", action, profileId,
+        ready, release
+    ], Gio.SubprocessFlags.NONE);
+    const deadline = GLib.get_monotonic_time() + 5000000;
+    while (!exists(ready) && GLib.get_monotonic_time() < deadline)
+        GLib.usleep(10000);
+    return {
+        process: process,
+        ready: exists(ready),
+        release: function () {
+            writeRaw(release, "release\n");
+            try {
+                return process.wait_check(null);
+            } catch (ignored) {
+                return false;
+            }
+        }
+    };
+}
+
+/* A schema v4 snapshot input shaped like a real capture. */
 function snapshotInput(name) {
     return {
         name: name,
@@ -176,9 +212,16 @@ function snapshotInput(name) {
         },
         configs: [{
             uuid: "x@x", instanceId: "1",
-            relativePath: "x@x/1.json", sha256: "deadbeef", content: "{}"
+            relativePath: "x@x/1.json", sha256: ATOMIC.sha256Hex("{}"), content: "{}"
         }],
-        configHashes: ["x@x|1|deadbeef"],
+        deskletConfigs: [{
+            uuid: "clock@x", instanceId: "0",
+            relativePath: "clock@x/clock@x.json",
+            sha256: ATOMIC.sha256Hex("{}"), content: "{}"
+        }],
+        includeDesklets: true,
+        configHashes: ["x@x|1|" + ATOMIC.sha256Hex("{}"),
+            "clock@x|0|" + ATOMIC.sha256Hex("{}")],
         topology: { expectedCount: 2, monitors: [{ savedIndex: 0, primary: true }] },
         fingerprint: "fp-" + name,
         cinnamonVersion: "6.6.9",
@@ -206,13 +249,11 @@ PS.setDependencies({ logger: psLog });
 suite("init creates layout with private modes");
 const initResult = PS.init();
 eq("init returns default state", initResult.state, {
-    schemaVersion: 1,
+    schemaVersion: 3,
     activeProfileId: null,
-    startupProfileId: null,
     pendingApply: null,
     lastSuccessfulApply: null,
-    lastFailure: null,
-    warnedPrimaryPlacement: false
+    lastFailure: null
 });
 eq("no recovery warnings on clean start", initResult.recoveredWarnings, []);
 check("state dir mode 0700", fileMode(STATE_DIR) === 0o700,
@@ -252,12 +293,14 @@ check("wrong schemaVersion treated as corrupt",
     wrongShape.recoveredWarnings.length === 1);
 eq("defaults returned", wrongShape.state.activeProfileId, null);
 
-suite("partial state.json is merged, not quarantined");
+suite("v1 state.json migrates instead of quarantining");
 writeRaw(STATE_FILE, "{\"schemaVersion\": 1, \"activeProfileId\": \"keepme\"}");
 const merged = PS.init();
 eq("no spurious recovery", merged.recoveredWarnings, []);
-eq("known key kept", merged.state.activeProfileId, "keepme");
-eq("missing keys defaulted", merged.state.startupProfileId, null);
+eq("v1 active id preserved", merged.state.activeProfileId, "keepme");
+eq("v1 startup designation dropped", merged.state.startupProfileId, undefined);
+eq("state upgraded to v3 on disk",
+    JSON.parse(readRaw(STATE_FILE)).schemaVersion, 3);
 /* Two quarantine files by now: the garbage one and the wrong-shape one. */
 check("no extra quarantine files beyond the two corruptions",
     listDirNames(STATE_DIR).filter(function (n) {
@@ -269,10 +312,10 @@ PS.init(); /* rewrite clean state for later suites */
  * save / load / list
  * ------------------------------------------------------------------ */
 
-suite("createFromSnapshot builds schema v1");
+suite("createFromSnapshot builds schema v4");
 const created = PS.createFromSnapshot(snapshotInput("Work"));
 check("returns a profile", created !== null);
-check("schemaVersion 1", created.schemaVersion === 1);
+check("schemaVersion is current", created.schemaVersion === CONSTANTS.SCHEMA_VERSION);
 check("id looks like a uuid", /^[0-9a-f-]{36}$/.test(created.id), created.id);
 eq("name kept", created.name, "Work");
 eq("description kept", created.description, "made by test");
@@ -288,6 +331,9 @@ eq("cinnamonSettings recorded", created.cinnamonSettings,
     snapshotInput("Work").snapshot);
 eq("appletConfigs recorded", created.appletConfigs,
     snapshotInput("Work").configs);
+eq("deskletConfigs recorded", created.deskletConfigs,
+    snapshotInput("Work").deskletConfigs);
+eq("desklet option recorded", created.includeDesklets, true);
 eq("fingerprint recorded", created.fingerprint, "fp-Work");
 eq("managerAnchor set", created.managerAnchor,
     { uuid: CONSTANTS.selfUuid(), required: true });
@@ -295,6 +341,18 @@ check("configHashes not duplicated into the profile",
     !("configHashes" in created));
 check("createFromSnapshot without a name fails",
     PS.createFromSnapshot({ snapshot: {} }) === null);
+const kindJunk = PS.createFromSnapshot(Object.assign(
+    snapshotInput("NoDesklets"), { includeDesklets: false }));
+check("false desklet option preserved", kindJunk.includeDesklets === false);
+const kindless = PS.createFromSnapshot((function () {
+    const input = snapshotInput("DefaultScope");
+    delete input.includeDesklets;
+    return input;
+})());
+check("missing desklet option defaults false", kindless.includeDesklets === false);
+/* Drop the probe profiles so the later list suite stays deterministic. */
+deleteRaw(PROFILES_DIR + "/" + kindJunk.id + ".json");
+deleteRaw(PROFILES_DIR + "/" + kindless.id + ".json");
 
 suite("save/load roundtrip is byte-exact");
 check("saveProfile true", PS.saveProfile(created) === true);
@@ -316,23 +374,209 @@ check("bad id pattern errors", PS.loadProfile("../nope").error !== null);
 writeRaw(PROFILES_DIR + "/zz-broken.json", "not json at all");
 const broken = PS.loadProfile("zz-broken");
 check("invalid JSON errors", broken.error !== null && broken.profile === null);
+const mismatchedFile = JSON.parse(readRaw(PROFILES_DIR + "/" + created.id + ".json"));
+writeRaw(PROFILES_DIR + "/mismatched-file.json", JSON.stringify(mismatchedFile));
+check("profile id must match its filename",
+    PS.loadProfile("mismatched-file").error !== null);
+deleteRaw(PROFILES_DIR + "/mismatched-file.json");
 
 suite("listProfiles");
+PSCHEMA.setDependencies({ logger: psLog, constants: CONSTANTS });
+PS.setDependencies({
+    logger: psLog,
+    validateProfile: function (profile) {
+        const verdict = PSCHEMA.validate(profile);
+        return verdict && verdict.ok ? null : verdict.errors.join("; ");
+    },
+    migrateProfile: function (profile) {
+        return PSCHEMA.migrate(profile).profile;
+    }
+});
 PS.createFromSnapshot(snapshotInput("Bravo"));
 PS.createFromSnapshot(snapshotInput("alpha"));
 PS.createFromSnapshot(snapshotInput("delta"));
+writeRaw(PROFILES_DIR + "/bad-shape.json",
+    JSON.stringify({ schemaVersion: 4, id: "bad-shape", name: "Looks valid" }));
 const listed = PS.listProfiles();
-eq("all files listed (invalid included)", listed.length, 5);
-eq("locale-sorted by name, invalid file last",
+eq("all files listed (invalid included)", listed.length, 6);
+eq("locale-sorted by display name",
     listed.map(function (p) { return p.name; }),
-    ["alpha", "Bravo", "delta", "Work", "zz-broken"]);
+    ["alpha", "bad-shape", "Bravo", "delta", "Work", "zz-broken"]);
 eq("valid flags", listed.map(function (p) { return p.valid; }),
-    [true, true, true, true, false]);
+    [true, false, true, true, true, false]);
+check("valid JSON with an invalid schema is listed invalid",
+    listed[1].name === "bad-shape" && listed[1].valid === false);
 eq("invalid entry name comes from the filename",
-    listed[4].name, "zz-broken");
+    listed[5].name, "zz-broken");
 eq("expectedCount surfaced from topology", listed[0].expectedCount, 2);
 check("updatedAt surfaced", typeof listed[0].updatedAt === "string");
-eq("expectedCount null for invalid", listed[4].expectedCount, null);
+eq("expectedCount null for invalid", listed[5].expectedCount, null);
+
+/* ------------------------------------------------------------------ *
+ * v1/v2 profile files migrate on load (schema validators wired the way
+ * the apply controller wires them in production)
+ * ------------------------------------------------------------------ */
+
+suite("v1 and v2 profiles migrate on load");
+PS.setDependencies({
+    logger: psLog,
+    validateProfile: function (profile) {
+        const verdict = PSCHEMA.validate(profile);
+        return verdict && verdict.ok ? null
+            : verdict.errors.join("; ");
+    },
+    migrateProfile: function (profile) {
+        return PSCHEMA.migrate(profile).profile;
+    }
+});
+(function () {
+    function handVersion(version, extra) {
+        const base = snapshotInput("Legacy");
+        const hand = {
+            schemaVersion: version,
+            id: "legacy111-2222-3333-4444-555555555555",
+            name: "Legacy",
+            description: "",
+            createdAt: "2026-01-01T00:00:00+00:00",
+            updatedAt: "2026-01-01T00:00:00+00:00",
+            environment: { cinnamonVersion: "6.6.9", sessionType: "x11" },
+            monitorTopology: { expectedCount: 1, monitors: [] },
+            cinnamonSettings: base.snapshot,
+            appletConfigs: base.configs,
+            fingerprint: "fp-legacy",
+            managerAnchor: { uuid: CONSTANTS.selfUuid(), required: true }
+        };
+        Object.keys(extra || {}).forEach(function (k) {
+            hand[k] = extra[k];
+        });
+        return hand;
+    }
+
+    /* v1: no kind, no deskletConfigs. */
+    writeRaw(PROFILES_DIR + "/legacy111-2222-3333-4444-555555555555.json",
+        JSON.stringify(handVersion(1, {
+            kind: undefined,
+            deskletConfigs: undefined
+        }), null, 2));
+    let loaded = PS.loadProfile("legacy111-2222-3333-4444-555555555555");
+    check("v1 loads without error", loaded.error === null, loaded.error);
+    eq("v1 migrates to current version", loaded.profile.schemaVersion,
+        CONSTANTS.SCHEMA_VERSION);
+    eq("v1 excludes desklets", loaded.profile.includeDesklets, false);
+    eq("v1 deskletConfigs backfilled", loaded.profile.deskletConfigs, []);
+
+    /* v2 with a legacy desklets scope becomes a desklet-kind profile. */
+    writeRaw(PROFILES_DIR + "/legacy222-2222-3333-4444-555555555555.json",
+        JSON.stringify(handVersion(2, {
+            id: "legacy222-2222-3333-4444-555555555555",
+            kind: undefined,
+            scope: "desklets",
+            deskletConfigs: []
+        }), null, 2));
+    loaded = PS.loadProfile("legacy222-2222-3333-4444-555555555555");
+    check("v2 desklets-scope loads without error", loaded.error === null, loaded.error);
+    eq("v2 desklets scope includes desklets",
+        loaded.profile.includeDesklets, true);
+
+    /* v2 with scope both becomes panel with a warning about the desklet
+     * half, and still validates. */
+    writeRaw(PROFILES_DIR + "/legacy333-2222-3333-4444-555555555555.json",
+        JSON.stringify(handVersion(2, {
+            id: "legacy333-2222-3333-4444-555555555555",
+            kind: undefined,
+            scope: "both",
+            deskletConfigs: []
+        }), null, 2));
+    loaded = PS.loadProfile("legacy333-2222-3333-4444-555555555555");
+    check("v2 both-scope loads without error", loaded.error === null, loaded.error);
+    eq("v2 both scope includes desklets",
+        loaded.profile.includeDesklets, true);
+})();
+/* Restore the logger-only seam the earlier suites assumed. */
+PS.setDependencies({ logger: psLog });
+
+/* ------------------------------------------------------------------ *
+ * v1 state.json migration (active routing per kind)
+ * ------------------------------------------------------------------ */
+
+suite("v1 state migration preserves the active id");
+(function () {
+    function resetState(raw) {
+        writeRaw(STATE_FILE, JSON.stringify(raw));
+    }
+    const deskletMade = PS.createFromSnapshot(
+        Object.assign(snapshotInput("Router"), { includeDesklets: true }));
+    check("desklet router profile created", deskletMade !== null);
+    const panelMade = PS.createFromSnapshot(
+        Object.assign(snapshotInput("RouterPanel"), { includeDesklets: false }));
+    check("panel router profile created", panelMade !== null);
+    const panelId = panelMade.id;
+
+    /* Active id points at the desklet profile: routed to the desklet slot. */
+    resetState({
+        schemaVersion: 1,
+        activeProfileId: deskletMade.id,
+        startupProfileId: "dropped",
+        pendingApply: null,
+        lastSuccessfulApply: null,
+        lastFailure: null,
+        warnedPrimaryPlacement: true
+    });
+    let st = PS.init().state;
+    eq("v1 desklet profile remains active",
+        st.activeProfileId, deskletMade.id);
+    check("startup designation dropped", st.startupProfileId === undefined);
+    check("placement warning flag dropped",
+        st.warnedPrimaryPlacement === undefined);
+
+    /* Active id points at the panel profile: routed to the panel slot. */
+    resetState({
+        schemaVersion: 1,
+        activeProfileId: panelId,
+        pendingApply: null
+    });
+    st = PS.init().state;
+    eq("v1 panel profile remains active", st.activeProfileId, panelId);
+
+    /* A removal marker is voided; a user marker survives. */
+    resetState({
+        schemaVersion: 1,
+        activeProfileId: null,
+        pendingApply: { profileId: "x", reason: "removal",
+            startedAt: "2026-01-01T00:00:00+00:00" }
+    });
+    st = PS.init().state;
+    eq("removal marker voided", st.pendingApply, null);
+    resetState({
+        schemaVersion: 1,
+        activeProfileId: null,
+        pendingApply: { profileId: "x", reason: "user",
+            startedAt: "2026-01-01T00:00:00+00:00" }
+    });
+    st = PS.getState();
+    eq("user marker survives the migration",
+        st.pendingApply && st.pendingApply.reason, "user");
+
+    resetState({
+        schemaVersion: 2,
+        activePanelProfileId: panelId,
+        activeDeskletProfileId: deskletMade.id,
+        pendingApply: null
+    });
+    st = PS.init().state;
+    eq("v2 migration prefers active panel profile",
+        st.activeProfileId, panelId);
+
+    resetState({
+        schemaVersion: 2,
+        activePanelProfileId: null,
+        activeDeskletProfileId: deskletMade.id,
+        pendingApply: null
+    });
+    st = PS.init().state;
+    eq("v2 migration falls back to active desklet profile",
+        st.activeProfileId, deskletMade.id);
+})();
 
 /* ------------------------------------------------------------------ *
  * updateFromSnapshot
@@ -344,10 +588,16 @@ const stale = "2020-01-01T00:00:00+00:00";
 before.updatedAt = stale;
 PS.saveProfile(before);
 const newConfigs = [{ uuid: "y@y", instanceId: "2",
-    relativePath: "y@y/2.json", sha256: "ab", content: "{}" }];
+    relativePath: "y@y/2.json", sha256: ATOMIC.sha256Hex("{}"), content: "{}" }];
+const newDeskletConfigs = [{ uuid: "notes@x", instanceId: "2",
+    relativePath: "notes@x/2.json", sha256: ATOMIC.sha256Hex("{}"), content: "{}" }];
 const updated = PS.updateFromSnapshot(before, {
-    snapshot: { "panels-enabled": { type: "as", value: "['2:1:bottom']" } },
+    snapshot: {
+        "panels-enabled": { type: "as", value: "['2:1:bottom']" },
+        "enabled-applets": { type: "as", value: "['panel1:right:0:x@x:1']" }
+    },
     configs: newConfigs,
+    deskletConfigs: newDeskletConfigs,
     topology: { expectedCount: 1, monitors: [] },
     fingerprint: "fp-changed"
 });
@@ -359,8 +609,14 @@ check("description preserved", updated.description === "made by test");
 check("updatedAt refreshed", updated.updatedAt !== stale, updated.updatedAt);
 check("updatedAt parses as ISO 8601", isoParses(updated.updatedAt));
 eq("cinnamonSettings replaced", updated.cinnamonSettings,
-    { "panels-enabled": { type: "as", value: "['2:1:bottom']" } });
+    {
+        "panels-enabled": { type: "as", value: "['2:1:bottom']" },
+        "enabled-applets": { type: "as", value: "['panel1:right:0:x@x:1']" }
+    });
 eq("appletConfigs replaced", updated.appletConfigs, newConfigs);
+eq("deskletConfigs replaced", updated.deskletConfigs, newDeskletConfigs);
+eq("desklet option preserved when input carries none",
+    updated.includeDesklets, true);
 eq("monitorTopology replaced", updated.monitorTopology,
     { expectedCount: 1, monitors: [] });
 eq("fingerprint replaced", updated.fingerprint, "fp-changed");
@@ -368,75 +624,11 @@ check("update persisted to disk",
     PS.loadProfile(created.id).profile.fingerprint === "fp-changed");
 const emptied = PS.updateFromSnapshot(updated, { configs: [] });
 eq("explicit empty configs clears the list", emptied.appletConfigs, []);
-
-/* ------------------------------------------------------------------ *
- * duplicateProfile
- * ------------------------------------------------------------------ */
-
-suite("duplicateProfile");
-PS.mutateState(function (s) {
-    s.activeProfileId = created.id;
-    s.startupProfileId = created.id;
-});
-/* Force a stale createdAt so the restamp assertion is deterministic
- * (second-resolution timestamps can otherwise collide within a test run). */
-const staleCreated = "2019-01-01T00:00:00+00:00";
-created.createdAt = staleCreated;
-PS.saveProfile(created);
-const dup1 = PS.duplicateProfile(created.id);
-check("duplicate returned", dup1 !== null);
-check("new id", dup1.id !== created.id && /^[0-9a-f-]{36}$/.test(dup1.id));
-eq("copy name", dup1.name, "Work Copy");
-check("duplicate persisted", PS.loadProfile(dup1.id).error === null);
-check("createdAt restamped", dup1.createdAt !== staleCreated, dup1.createdAt);
-const dup2 = PS.duplicateProfile(created.id);
-eq("collision gets suffix 2", dup2.name, "Work Copy 2");
-const dup3 = PS.duplicateProfile(created.id);
-eq("second collision gets suffix 3", dup3.name, "Work Copy 3");
-eq("active designation NOT copied",
-    PS.getState().activeProfileId, created.id);
-eq("startup designation NOT copied",
-    PS.getState().startupProfileId, created.id);
-check("duplicate of unknown profile fails", PS.duplicateProfile("nope") === null);
-
-/* ------------------------------------------------------------------ *
- * renameProfile
- * ------------------------------------------------------------------ */
-
-suite("renameProfile");
-check("rename works", PS.renameProfile(dup2.id, "Renamed") === true);
-eq("name changed on disk", PS.loadProfile(dup2.id).profile.name, "Renamed");
-check("rename to empty fails", PS.renameProfile(dup2.id, "") === false);
-check("rename of unknown profile fails", PS.renameProfile("nope", "X") === false);
-
-/* ------------------------------------------------------------------ *
- * deleteProfile fixes state.json
- * ------------------------------------------------------------------ */
-
-suite("deleteProfile");
-const other = PS.createFromSnapshot(snapshotInput("Other"));
-PS.mutateState(function (s) {
-    s.activeProfileId = created.id;
-    s.startupProfileId = other.id;
-    s.lastSuccessfulApply = "keep-this";
-});
-check("delete returns true", PS.deleteProfile(created.id) === true);
-check("profile file gone", !exists(PROFILES_DIR + "/" + created.id + ".json"));
-eq("activeProfileId cleared", PS.getState().activeProfileId, null);
-eq("startupProfileId left alone", PS.getState().startupProfileId, other.id);
-eq("unrelated state keys untouched",
-    PS.getState().lastSuccessfulApply, "keep-this");
-check("deleting the startup profile clears it too",
-    PS.deleteProfile(other.id) === true);
-eq("startupProfileId now null", PS.getState().startupProfileId, null);
-check("deleting a missing profile returns false",
-    PS.deleteProfile("no-such-profile") === false);
-check("deleting a traversal id returns false",
-    PS.deleteProfile("../../etc") === false);
-
-/* ------------------------------------------------------------------ *
- * Rollback rotation
- * ------------------------------------------------------------------ */
+eq("explicit empty deskletConfigs clears the list too",
+    PS.updateFromSnapshot(updated, { deskletConfigs: [] }).deskletConfigs, []);
+eq("desklet option replaced only when carried",
+    PS.updateFromSnapshot(updated, { includeDesklets: false }).includeDesklets,
+    false);
 
 suite("writeRollback / readRollback");
 function rollbackBundle(i) {
@@ -458,25 +650,17 @@ function rollbackBundle(i) {
 for (let i = 1; i <= 5; i++)
     check("rollback write " + i + " succeeds", PS.writeRollback(rollbackBundle(i)) === true);
 check("last-good exists", exists(BACKUPS_DIR + "/last-good.json"));
-check("last-good-2 exists", exists(BACKUPS_DIR + "/last-good-2.json"));
-check("last-good-3 exists", exists(BACKUPS_DIR + "/last-good-3.json"));
-check("last-good-4 pruned (keep 3 total)", !exists(BACKUPS_DIR + "/last-good-4.json"));
+check("no inaccessible numbered history is created",
+    !exists(BACKUPS_DIR + "/last-good-2.json") &&
+    !exists(BACKUPS_DIR + "/last-good-3.json"));
 eq("newest bundle in last-good",
     JSON.parse(readRaw(BACKUPS_DIR + "/last-good.json")).fingerprint, "rb5");
-eq("second newest in last-good-2",
-    JSON.parse(readRaw(BACKUPS_DIR + "/last-good-2.json")).fingerprint, "rb4");
-eq("third newest in last-good-3",
-    JSON.parse(readRaw(BACKUPS_DIR + "/last-good-3.json")).fingerprint, "rb3");
 eq("readRollback returns the newest", PS.readRollback(), rollbackBundle(5));
 check("rollback file mode 0600", fileMode(BACKUPS_DIR + "/last-good.json") === 0o600);
-check("one more write rotates again", PS.writeRollback(rollbackBundle(6)) === true);
-eq("rotation after overwrite",
+check("one more write replaces the accessible snapshot",
+    PS.writeRollback(rollbackBundle(6)) === true);
+eq("replacement is newest",
     JSON.parse(readRaw(BACKUPS_DIR + "/last-good.json")).fingerprint, "rb6");
-eq("shifted -2",
-    JSON.parse(readRaw(BACKUPS_DIR + "/last-good-2.json")).fingerprint, "rb5");
-eq("shifted -3",
-    JSON.parse(readRaw(BACKUPS_DIR + "/last-good-3.json")).fingerprint, "rb4");
-check("still only three total", !exists(BACKUPS_DIR + "/last-good-4.json"));
 check("writeRollback rejects garbage", PS.writeRollback(null) === false);
 
 /* ------------------------------------------------------------------ *
@@ -485,6 +669,26 @@ check("writeRollback rejects garbage", PS.writeRollback(null) === false);
 
 suite("mutateState");
 PS.init();
+const quarantineCountBeforeMutation = listDirNames(STATE_DIR).filter(function (n) {
+    return n.indexOf("state.json.corrupt-") === 0;
+}).length;
+writeRaw(STATE_FILE, "garbage before removal cleanup");
+const recoveredMutation = PS.mutateState(function (s) {
+    s.lastFailure = "cleanup survived corrupt state";
+});
+check("mutation quarantines corrupt state before writing",
+    recoveredMutation !== null &&
+    recoveredMutation.lastFailure === "cleanup survived corrupt state");
+const mutationQuarantines = listDirNames(STATE_DIR).filter(function (n) {
+    return n.indexOf("state.json.corrupt-") === 0;
+});
+eq("mutation creates one corrupt-state quarantine",
+    mutationQuarantines.length, quarantineCountBeforeMutation + 1);
+check("mutation quarantine preserves unreadable bytes",
+    mutationQuarantines.some(function (name) {
+        return readRaw(STATE_DIR + "/" + name) ===
+            "garbage before removal cleanup";
+    }));
 check("mutate in place persists",
     PS.mutateState(function (s) {
         s.pendingApply = { profileId: "p1", reason: "user" };
@@ -506,6 +710,79 @@ const replaced = PS.mutateState(function () {
 check("fn returning a new state object persists it",
     replaced !== null && PS.getState().lastFailure === "replaced");
 check("mutateState rejects non-functions", PS.mutateState(null) === null);
+
+suite("cross-process profile store lock");
+const nestedLock = PS.withStoreLock(function () {
+    return PS.withStoreLock(function () { return "nested ran"; });
+});
+check("outer store lock acquired", nestedLock.ok === true);
+check("same-process nested lock is reentrant",
+    nestedLock.value && nestedLock.value.ok === true &&
+    nestedLock.value.value === "nested ran");
+check("lock file released after callback",
+    !exists(STATE_DIR + "/store.lock"));
+const thrownLock = PS.withStoreLock(function () {
+    throw new Error("lock callback failed");
+});
+check("throwing lock callback reports failure", thrownLock.ok === false);
+check("throwing callback still releases lock",
+    !exists(STATE_DIR + "/store.lock"));
+
+suite("two-process store serialization");
+const raceVictim = PS.createFromSnapshot(snapshotInput("Race Victim"));
+const staleVictim = PS.loadProfile(raceVictim.id).profile;
+const deleteWorker = startWidgetLockWorker(
+    "delete", raceVictim.id, "delete-save-race");
+check("Python delete holds the shared lock", deleteWorker.ready);
+const blockedUpdate = PS.updateFromSnapshot(staleVictim, {
+    fingerprint: "must-not-resurrect"
+});
+eq("save-update refuses contention instead of recreating a deleted profile",
+    blockedUpdate, null);
+check("Python delete worker exits cleanly", deleteWorker.release());
+check("deleted profile remains absent after lock release",
+    !exists(PROFILES_DIR + "/" + raceVictim.id + ".json"));
+eq("stale save-update is rejected after the delete commits",
+    PS.updateFromSnapshot(staleVictim, { fingerprint: "still-stale" }), null);
+check("stale update never resurrects the profile",
+    !exists(PROFILES_DIR + "/" + raceVictim.id + ".json"));
+
+const oldActive = PS.createFromSnapshot(snapshotInput("Old Active"));
+const verifiedActive = PS.createFromSnapshot(snapshotInput("Verified Active"));
+PS.mutateState(function (state) {
+    state.activeProfileId = oldActive.id;
+    state.pendingApply = { profileId: verifiedActive.id, reason: "user",
+        phase: "verifying" };
+});
+const repairWorker = startWidgetLockWorker(
+    "repair", oldActive.id, "repair-verify-race");
+check("Python state repair holds the shared lock", repairWorker.ready);
+const busyStartup = PS.init();
+check("startup reports lock contention explicitly",
+    busyStartup.busy === true && busyStartup.state === null);
+eq("contended state read never fabricates defaults", PS.getState(), null);
+eq("JS verification state commit refuses contention",
+    PS.mutateState(function (state) {
+        state.activeProfileId = verifiedActive.id;
+        state.pendingApply = null;
+    }), null);
+check("Python repair worker exits cleanly", repairWorker.release());
+check("startup retry sees the durable pending transaction",
+    PS.init().state.pendingApply.profileId === verifiedActive.id);
+const verified = PS.mutateState(function (state) {
+    state.activeProfileId = verifiedActive.id;
+    state.pendingApply = null;
+});
+check("JS verification retry commits from repaired state", verified !== null);
+const lateRepair = startWidgetLockWorker(
+    "repair", oldActive.id, "late-repair");
+check("late Python repair acquires the shared lock", lateRepair.ready);
+check("late Python repair exits cleanly", lateRepair.release());
+const serializedState = PS.getState();
+eq("state repair cannot erase the verified active profile",
+    serializedState.activeProfileId, verifiedActive.id);
+eq("state repair cannot resurrect stale pendingApply",
+    serializedState.pendingApply, null);
 
 /* ------------------------------------------------------------------ *
  * appletConfigStore: sanitizeRelativePath
@@ -605,22 +882,25 @@ suite("restoreConfigs");
 const goodContent = "{\"restored\":true}";
 const goodSha = ATOMIC.sha256Hex(goodContent);
 const restoreBatch = [
-    { uuid: "evil@x", relativePath: "/abs/7.json", content: "{}", sha256: "" },
-    { uuid: "evil@x", relativePath: "../7.json", content: "{}", sha256: "" },
-    { uuid: "evil@x", relativePath: "a\\7.json", content: "{}", sha256: "" },
-    { uuid: "evil@x", relativePath: "a/b/7.json", content: "{}", sha256: "" },
-    { uuid: "evil@x", relativePath: "a/7.txt", content: "{}", sha256: "" },
-    { uuid: "evil@x", relativePath: "a//7.json", content: "{}", sha256: "" },
-    { uuid: "self@me", relativePath: "self@me/9.json", content: "{}", sha256: "" },
-    { uuid: "good@x", relativePath: "good@x/7.json",
+    { uuid: "evil@x", instanceId: "7", relativePath: "/abs/7.json", content: "{}", sha256: "" },
+    { uuid: "evil@x", instanceId: "7", relativePath: "../7.json", content: "{}", sha256: "" },
+    { uuid: "evil@x", instanceId: "7", relativePath: "a\\7.json", content: "{}", sha256: "" },
+    { uuid: "evil@x", instanceId: "7", relativePath: "a/b/7.json", content: "{}", sha256: "" },
+    { uuid: "evil@x", instanceId: "7", relativePath: "a/7.txt", content: "{}", sha256: "" },
+    { uuid: "evil@x", instanceId: "7", relativePath: "a//7.json", content: "{}", sha256: "" },
+    { uuid: "self@me", instanceId: "9", relativePath: "self@me/9.json", content: "{}", sha256: "" },
+    { uuid: "good@x", instanceId: "7", relativePath: "good@x/7.json",
         content: goodContent, sha256: goodSha }
 ];
 const restoreResult = ACS.restoreConfigs(restoreBatch);
-eq("one written", restoreResult.written, 1);
+eq("invalid batch writes nothing", restoreResult.written, 0);
 eq("seven skipped", restoreResult.skipped, 7);
 eq("six warnings (self skip is silent)",
     restoreResult.warnings.length, 6,
     JSON.stringify(restoreResult.warnings));
+check("invalid batch reports failure", restoreResult.ok === false);
+const goodRestore = ACS.restoreConfigs([restoreBatch[7]]);
+check("valid batch succeeds", goodRestore.ok && goodRestore.written === 1);
 check("good file written verbatim",
     readRaw(SPICES + "/good@x/7.json") === goodContent);
 check("created uuid dir mode 0700", fileMode(SPICES + "/good@x") === 0o700);
@@ -631,21 +911,99 @@ check("self file never written", !exists(SPICES + "/self@me/9.json"));
 
 suite("restoreConfigs hash verification");
 const badSha = ACS.restoreConfigs([{
-    uuid: "good@x", relativePath: "good@x/8.json",
+    uuid: "good@x", instanceId: "8", relativePath: "good@x/8.json",
     content: goodContent, sha256: "0000"
 }]);
-eq("written despite mismatch", badSha.written, 1);
+eq("hash mismatch prevents write", badSha.written, 0);
 eq("mismatch warned", badSha.warnings.length, 1);
-check("content still written", readRaw(SPICES + "/good@x/8.json") === goodContent);
-const noSha = ACS.restoreConfigs([{
-    uuid: "good@x", relativePath: "good@x/9.json", content: goodContent
+check("mismatched content not written", !exists(SPICES + "/good@x/8.json"));
+const wrongContentSha = ACS.restoreConfigs([{
+    uuid: "good@x", instanceId: "8b", relativePath: "good@x/8b.json",
+    content: goodContent, sha256: ATOMIC.sha256Hex("different content")
 }]);
-eq("no sha256 means no verify warning", noSha.warnings.length, 0);
+check("well-formed digest must match saved content",
+    wrongContentSha.ok === false && wrongContentSha.written === 0);
+check("content digest mismatch does not write a file",
+    !exists(SPICES + "/good@x/8b.json"));
+const noSha = ACS.restoreConfigs([{
+    uuid: "good@x", instanceId: "9", relativePath: "good@x/9.json", content: goodContent
+}]);
+check("missing sha256 rejects restore", noSha.ok === false &&
+    noSha.written === 0 && noSha.warnings.length === 1);
 const badContent = ACS.restoreConfigs([{
-    uuid: "good@x", relativePath: "good@x/10.json", content: 42, sha256: ""
+    uuid: "good@x", instanceId: "10", relativePath: "good@x/10.json", content: 42, sha256: ""
 }]);
 eq("non-string content skipped", badContent.written, 0);
 eq("non-string content warned", badContent.warnings.length, 1);
+
+suite("config ownership and rollback state");
+const spoofSelf = ACS.restoreConfigs([{
+    uuid: "other@x", instanceId: "9", relativePath: "self@me/9.json",
+    content: "{}", sha256: ATOMIC.sha256Hex("{}")
+}]);
+check("spoofed self path fails the whole batch", spoofSelf.ok === false);
+check("spoofed self path is never written",
+    !exists(SPICES + "/self@me/9.json"));
+const wrongOwner = ACS.restoreConfigs([{
+    uuid: "owner@x", instanceId: "2", relativePath: "other@x/2.json",
+    content: "{}", sha256: ATOMIC.sha256Hex("{}")
+}]);
+check("uuid directory mismatch rejected", wrongOwner.ok === false);
+
+const outside = CONFIG_DIR + "/outside-config";
+ATOMIC.ensurePrivateDir(outside);
+try {
+    Gio.File.new_for_path(SPICES + "/linked@x").make_symbolic_link(outside, null);
+} catch (ignored) {
+}
+const linked = ACS.restoreConfigs([{
+    uuid: "linked@x", instanceId: "1", relativePath: "linked@x/1.json",
+    content: "{}", sha256: ATOMIC.sha256Hex("{}")
+}]);
+check("symlinked uuid directory rejected", linked.ok === false);
+check("symlink target remains untouched", !exists(outside + "/1.json"));
+
+const batchGood = {
+    uuid: "batch@x", instanceId: "1", relativePath: "batch@x/1.json",
+    content: "{\"good\":true}",
+    sha256: ATOMIC.sha256Hex("{\"good\":true}")
+};
+const batchBadRemoval = {
+    uuid: "wrong@x", instanceId: "2", relativePath: "batch@x/2.json"
+};
+const allOrNothing = ACS.restoreConfigState([batchGood], [batchBadRemoval]);
+check("write and removal batches preflight together", allOrNothing.ok === false);
+check("invalid removal prevents the valid write",
+    !exists(SPICES + "/batch@x/1.json"));
+
+ATOMIC.ensurePrivateDir(SPICES + "/dormant@x");
+writeRaw(SPICES + "/dormant@x/4.json", "{\"before\":true}");
+const targetConfigs = [{
+    uuid: "dormant@x", instanceId: "4", relativePath: "dormant@x/4.json",
+    content: "{\"after\":true}",
+    sha256: ATOMIC.sha256Hex("{\"after\":true}")
+}, {
+    uuid: "new@x", instanceId: "5", relativePath: "new@x/5.json",
+    content: "{\"new\":true}", sha256: ATOMIC.sha256Hex("{\"new\":true}")
+}];
+const rollbackState = ACS.captureRollbackState([], targetConfigs);
+check("rollback capture succeeds", rollbackState.ok === true,
+    JSON.stringify(rollbackState.warnings));
+eq("dormant target content captured", rollbackState.configs.length, 1);
+eq("missing target becomes one tombstone", rollbackState.tombstones.length, 1);
+check("target config state writes both files",
+    ACS.restoreConfigState(targetConfigs, []).ok === true);
+eq("dormant target overwritten", readRaw(SPICES + "/dormant@x/4.json"),
+    "{\"after\":true}");
+check("new target created", exists(SPICES + "/new@x/5.json"));
+const rolledBack = ACS.restoreConfigState(
+    rollbackState.configs, rollbackState.tombstones);
+check("rollback config state succeeds", rolledBack.ok === true,
+    JSON.stringify(rolledBack.warnings));
+eq("dormant target restored", readRaw(SPICES + "/dormant@x/4.json"),
+    "{\"before\":true}");
+check("tombstone removes newly created target",
+    !exists(SPICES + "/new@x/5.json"));
 
 /* ------------------------------------------------------------------ *
  * appletConfigStore: watchConfigs (mainloop, never hangs)
@@ -735,7 +1093,7 @@ check("loadProfile survives a throwing validator",
     PS.loadProfile("zz-broken").error !== null);
 check("saveProfile survives a throwing logger",
     PS.saveProfile({ id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", name: "x" }) === true);
-check("getState survives", PS.getState().schemaVersion === 1);
+check("getState survives", PS.getState().schemaVersion === 3);
 check("mutateState survives", PS.mutateState(function () { return null; }) === null);
 
 ACS.setDependencies({
@@ -748,7 +1106,8 @@ check("captureConfigs survives a throwing selfUuid (falls back to default uuid)"
     hostileCapture.length === 1 && hostileCapture[0].relativePath === "multi@x/17.json",
     JSON.stringify(hostileCapture));
 const hostileRestore = ACS.restoreConfigs([{
-    uuid: "a@x", relativePath: "a@x/1.json", content: "{}", sha256: ""
+    uuid: "a@x", instanceId: "1", relativePath: "a@x/1.json", content: "{}",
+    sha256: ATOMIC.sha256Hex("{}")
 }]);
 check("restoreConfigs survives a throwing selfUuid",
     hostileRestore.written === 1, JSON.stringify(hostileRestore));

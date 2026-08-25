@@ -38,6 +38,8 @@ const APPLET_DIR = REPO_ROOT + "/cinnamon-workspace-name-applet@curbsoftware";
 
 imports.searchPath.unshift(DESKLET_DIR);
 const WA = imports.workspaceActions;
+const Geometry = imports.previewGeometry;
+const Grid = imports.gridModel;
 
 /* ------------------------------------------------------------------ *
  * Tiny assertion framework
@@ -49,16 +51,16 @@ let currentSuite = "";
 
 function suite(name) {
     currentSuite = name;
-    print("\n• " + name);
+    print("\n" + name);
 }
 
 function check(label, condition, detail) {
     if (condition) {
         passed++;
-        print("  ✓ " + label);
+        print("  PASS " + label);
     } else {
         failures.push(currentSuite + " / " + label + (detail ? " -- " + detail : ""));
-        print("  ✗ " + label + (detail ? " -- " + detail : ""));
+        print("  FAIL " + label + (detail ? " -- " + detail : ""));
     }
 }
 
@@ -173,10 +175,10 @@ eq("undefined clamps to 1",    WA.computeGridDims(undefined, "auto"), { rows: 1,
 eq("NaN clamps to 1",          WA.computeGridDims(NaN, "auto"), { rows: 1, cols: 1 });
 
 suite("computeGridDims (fixed)");
-eq("2x3 honoured",             WA.computeGridDims(10, "fixed", 2, 3), { rows: 2, cols: 3 });
-eq("rows 0 clamps to 1",       WA.computeGridDims(10, "fixed", 0, 3), { rows: 1, cols: 3 });
-eq("undefined dims clamp to 1", WA.computeGridDims(10, "fixed"),      { rows: 1, cols: 1 });
-eq("string dims parsed",       WA.computeGridDims(10, "fixed", "3", "4"), { rows: 3, cols: 4 });
+eq("2x3 grows to fit",          WA.computeGridDims(10, "fixed", 2, 3), { rows: 4, cols: 3 });
+eq("rows 0 grows to fit",       WA.computeGridDims(10, "fixed", 0, 3), { rows: 4, cols: 3 });
+eq("undefined dims use one column", WA.computeGridDims(10, "fixed"),  { rows: 10, cols: 1 });
+eq("larger requested rows stay", WA.computeGridDims(10, "fixed", "4", "4"), { rows: 4, cols: 4 });
 
 /* ------------------------------------------------------------------ *
  * planCells - pure
@@ -189,16 +191,53 @@ function kinds(cells) {
 suite("planCells (no add tile)");
 eq("exact fit",        kinds(WA.planCells(4, false, 2, 2)), "0,1,2,3");
 eq("under capacity",   kinds(WA.planCells(2, false, 2, 2)), "0,1");
-eq("truncates",        kinds(WA.planCells(10, false, 2, 2)), "0,1,2,3");
+eq("overflow expands", kinds(WA.planCells(10, false, 2, 2)), "0,1,2,3,4,5,6,7,8,9");
 eq("zero workspaces",  kinds(WA.planCells(0, false, 2, 2)), "");
 
 suite("planCells (with add tile)");
 eq("exact fit keeps +",   kinds(WA.planCells(3, true, 2, 2)), "0,1,2,+");
 eq("under capacity",      kinds(WA.planCells(2, true, 2, 2)), "0,1,+");
-eq("truncates, + last",   kinds(WA.planCells(10, true, 2, 2)), "0,1,2,+");
-eq("1x1 grid is + only",  kinds(WA.planCells(10, true, 1, 1)), "+");
+eq("overflow keeps all and + last", kinds(WA.planCells(10, true, 2, 2)), "0,1,2,3,4,5,6,7,8,9,+");
+eq("1x1 request still keeps all", kinds(WA.planCells(3, true, 1, 1)), "0,1,2,+");
 eq("zero workspaces",     kinds(WA.planCells(0, true, 2, 2)), "+");
-eq("bad dims clamp",      kinds(WA.planCells(5, true, 0, 0)), "+");
+eq("bad dims never truncate", kinds(WA.planCells(5, true, 0, 0)), "0,1,2,3,4,+");
+
+suite("computeScrollTarget");
+eq("cell mode moves backward", WA.computeScrollTarget(2, 6, 3, "col", -1), 1);
+eq("cell mode moves forward", WA.computeScrollTarget(2, 6, 3, "col", 1), 3);
+eq("cell mode stops at first", WA.computeScrollTarget(0, 6, 3, "col", -1), 0);
+eq("row mode moves by columns", WA.computeScrollTarget(1, 8, 3, "row", 1), 4);
+eq("partial row remains reachable", WA.computeScrollTarget(4, 8, 3, "row", 1), 7);
+eq("row mode stops on final row", WA.computeScrollTarget(7, 8, 3, "row", 1), 7);
+
+suite("workspace preview geometry");
+eq("full desktop fills preview",
+    Geometry.projectRect({ x: 0, y: 0, width: 1920, height: 1080 },
+        { x: 0, y: 0, width: 1920, height: 1080 }, 192, 108),
+    { x: 0, y: 0, width: 192, height: 108 });
+eq("window scales into preview",
+    Geometry.projectRect({ x: 960, y: 540, width: 960, height: 540 },
+        { x: 0, y: 0, width: 1920, height: 1080 }, 192, 108),
+    { x: 96, y: 54, width: 96, height: 54 });
+eq("window clips at desktop edge",
+    Geometry.projectRect({ x: -100, y: -50, width: 200, height: 100 },
+        { x: 0, y: 0, width: 1000, height: 500 }, 100, 50),
+    { x: 0, y: 0, width: 10, height: 5 });
+eq("offscreen window omitted",
+    Geometry.projectRect({ x: 2000, y: 0, width: 100, height: 100 },
+        { x: 0, y: 0, width: 1920, height: 1080 }, 192, 108), null);
+eq("icon centered when it fits",
+    Geometry.iconRect({ x: 10, y: 10, width: 40, height: 20 }, 12),
+    { x: 24, y: 14, width: 12, height: 12 });
+eq("icon omitted when too large",
+    Geometry.iconRect({ x: 10, y: 10, width: 8, height: 20 }, 12), null);
+
+suite("desklet grid model matches shared compatibility helpers");
+eq("fixed dimensions match", Grid.computeGridDims(10, "fixed", 2, 3),
+    WA.computeGridDims(10, "fixed", 2, 3));
+eq("cell plan matches", Grid.planCells(5, true), WA.planCells(5, true, 1, 1));
+eq("scroll target matches", Grid.computeScrollTarget(4, 8, 3, "row", 1),
+    WA.computeScrollTarget(4, 8, 3, "row", 1));
 
 /* ------------------------------------------------------------------ *
  * Query guards

@@ -1,11 +1,16 @@
 /* global imports, global, require */
 /* Panel Profiles applet: composition root.
  *
- * Owns lifecycle, the panel menu, settings bindings, dirty-state wiring,
- * notifications, and the dependency injection that feeds the lib/ modules
- * (headless-loadable, no St/Clutter) and dialogs.js. Everything heavy
- * lives in those modules; this file only wires them together and renders
- * their state into a native popup menu.
+ * Owns lifecycle, the panel menu, settings bindings, dirty-state
+ * wiring, notifications, and the dependency injection that feeds the lib/
+ * modules (headless-loadable, no St/Clutter) and dialogs.js. Everything
+ * heavy lives in those modules; this file only wires them together and
+ * renders their state into a native popup menu.
+ *
+ * Profiles always contain panels, applets and applet configs. Saving can
+ * also include desklets. The settings window manages profile data through
+ * profilesManagerWidget.py. Profiles apply only when the user clicks them:
+ * nothing restores automatically at boot.
  *
  * Copyright (C) 2026 curbsoftware
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -63,10 +68,11 @@ function _loadLib() {
     return _lib;
 }
 
-/* Dirty status of the live panel state versus the active profile. */
+/* Dirty status of the live state versus the active profile. */
 const DIRTY_ACTIVE = "ACTIVE";
 const DIRTY_MODIFIED = "MODIFIED";
 const DIRTY_UNKNOWN = "UNKNOWN";
+const KINDS = ["panel"];
 
 function PanelProfilesApplet(metadata, orientation, panel_height, instanceId) {
     this._init(metadata, orientation, panel_height, instanceId);
@@ -90,27 +96,29 @@ PanelProfilesApplet.prototype = {
          * alone; see on_applet_reloaded. */
         this._reloadPending = false;
 
-        /* Dirty tracking state: debounce source, GSettings watch ids, the
-         * config-file watch handle, and the cached status + active name. */
+        /* Dirty tracking: debounce source, GSettings watch ids,
+         * config-file watch handles, and the cached statuses
+         * plus active names. */
         this._dirtyDebounceId = null;
-        this._dirtyStatus = DIRTY_UNKNOWN;
         this._settingWatchIds = [];
-        this._configWatchHandle = null;
-        this._activeProfileName = null;
+        this._dirtyStatus = {
+            panel: DIRTY_UNKNOWN,
+            desklet: DIRTY_UNKNOWN
+        };
+        this._configWatchHandle = {
+            panel: null,
+            desklet: null
+        };
+        this._activeProfileName = {
+            panel: null,
+            desklet: null
+        };
 
         /* The monitor-wait state pushed by the apply controller. */
         this._waitState = null;
 
         /* Notification wrapper shared with the apply controller. */
         this._notifier = null;
-
-        /* Startup-recovery state: the stabilization timer (sufficient-monitor
-         * path) and the monitors-changed watch shared by the stabilization
-         * restart and the primary-placement nag. */
-        this._startupStabilizeId = null;
-        this._startupApplyProfileId = null;
-        this._startupApplyRequiredCount = 0;
-        this._monitorsChangedId = null;
 
         /* lib modules resolve their siblings through the plain importer
          * (imports.constants and friends), so the lib directory must sit on
@@ -122,15 +130,10 @@ PanelProfilesApplet.prototype = {
         this._modules = _loadLib();
 
         // Initialize settings first: the wiring closures below read the
-        // bound values (capture-applet-settings, notify-*).
+        // bound values (stabilization-delay, notify-*).
         this.settings = new Settings.AppletSettings(this, metadata.uuid, instanceId);
-        this.settings.bind("startup-auto-restore", "startupAutoRestore");
-        this.settings.bind("startup-wait-displays", "startupWaitDisplays");
-        this.settings.bind("startup-wait-timeout", "startupWaitTimeout");
         this.settings.bind("stabilization-delay", "stabilizationDelay");
-        this.settings.bind("capture-applet-settings", "captureAppletSettings");
-        this.settings.bind("keep-rollback-history", "keepRollbackHistory");
-        this.settings.bind("rollback-history-count", "rollbackHistoryCount");
+        this.settings.bind("wait-timeout", "waitTimeout");
         this.settings.bind("notify-success", "notifySuccess");
         this.settings.bind("notify-warnings", "notifyWarnings");
         this.settings.bind("debug-logging", "debugLogging", (value) => {
@@ -153,9 +156,7 @@ PanelProfilesApplet.prototype = {
 
         if (this._modules) {
             this._initDirtyTracking();
-            this._startupCheck();
-            this._runPrimaryPlacementCheck();
-            this._connectMonitorsChanged();
+            this._recomputeDirty();
         }
     },
 
@@ -213,9 +214,9 @@ PanelProfilesApplet.prototype = {
                 monitorTopology: M.MonitorTopology,
                 scheduler: this._makeScheduler(),
                 notify: this._makeNotifier(),
-                captureConfigsEnabled: () => this.captureAppletSettings,
                 notifySuccessEnabled: () => this.notifySuccess,
                 isAppletInstalled: (candidate) => this._isAppletInstalled(candidate),
+                isDeskletInstalled: (candidate) => this._isDeskletInstalled(candidate),
                 environment: () => ({
                     cinnamonVersion: Config.PACKAGE_VERSION || "",
                     sessionType: GLib.getenv("XDG_SESSION_TYPE") || ""
@@ -225,7 +226,7 @@ PanelProfilesApplet.prototype = {
                     this._onWaitState(show, current, required),
                 onProfileSaved: (profile) => this._onProfileSaved(profile),
                 waitStabilizeMs: this.stabilizationDelay * 1000,
-                waitTimeoutMs: this.startupWaitTimeout * 1000
+                waitTimeoutMs: this.waitTimeout * 1000
             });
             this._notifier = this._makeNotifier();
 
@@ -238,7 +239,8 @@ PanelProfilesApplet.prototype = {
 
             /* A previous instance may have died around its enabled-applets
              * write; if state.json carries a pendingApply, resume it. */
-            if (init && init.state && init.state.pendingApply) {
+            if (init && (init.busy === true ||
+                    (init.state && init.state.pendingApply))) {
                 try {
                     M.ApplyController.resumePendingApply();
                 } catch (e) {
@@ -298,6 +300,17 @@ PanelProfilesApplet.prototype = {
             GLib.file_test(system, GLib.FileTest.EXISTS);
     },
 
+    _isDeskletInstalled: function(candidate) {
+        if (typeof candidate !== "string" || candidate.length === 0)
+            return false;
+        const user = GLib.build_filenamev(
+            [GLib.get_home_dir(), ".local", "share", "cinnamon", "desklets", candidate]);
+        const system = GLib.build_filenamev(
+            ["/usr", "share", "cinnamon", "desklets", candidate]);
+        return GLib.file_test(user, GLib.FileTest.EXISTS) ||
+            GLib.file_test(system, GLib.FileTest.EXISTS);
+    },
+
     /* ---------------------------------------------------------------- *
      * Dirty tracking
      * ---------------------------------------------------------------- */
@@ -319,36 +332,44 @@ PanelProfilesApplet.prototype = {
         this._rebuildDirtyTracking();
     },
 
-    /* (Re)attach the config-file watch to the active profile and recompute
-     * the status. Called whenever the active profile changes: after an
-     * apply completes, after a save, after a manage operation. */
+    /* (Re)attach config-file watches to the active profile
+     * and recompute both statuses. Called whenever an active profile
+     * changes: after an apply completes, after a save, after the settings
+     * window edits profile files. */
     _rebuildDirtyTracking: function() {
         if (this._destroyed || !this._modules)
             return;
+        KINDS.forEach((kind) => this._rebuildDirtyTrackingKind(kind));
+        this._recomputeDirty();
+    },
+
+    _rebuildDirtyTrackingKind: function(kind) {
         const M = this._modules;
 
-        if (this._configWatchHandle) {
-            M.AppletConfigStore.unwatchConfigs(this._configWatchHandle);
-            this._configWatchHandle = null;
+        if (this._configWatchHandle[kind]) {
+            M.AppletConfigStore.unwatchConfigs(this._configWatchHandle[kind]);
+            this._configWatchHandle[kind] = null;
         }
-        this._activeProfileName = null;
+        this._activeProfileName[kind] = null;
 
         try {
             const state = M.ProfileStore.getState();
-            if (state.activeProfileId) {
-                const loaded = M.ProfileStore.loadProfile(state.activeProfileId);
+            const id = state.activeProfileId;
+            if (id) {
+                const loaded = M.ProfileStore.loadProfile(id);
                 if (loaded && !loaded.error && loaded.profile) {
-                    this._activeProfileName = loaded.profile.name;
-                    this._configWatchHandle =
+                    this._activeProfileName[kind] = loaded.profile.name;
+                    const configs = (loaded.profile.appletConfigs || []).concat(
+                        loaded.profile.includeDesklets === true
+                            ? (loaded.profile.deskletConfigs || []) : []);
+                    this._configWatchHandle[kind] =
                         M.AppletConfigStore.watchConfigs(
-                            loaded.profile.appletConfigs || [],
-                            () => this._onTrackedChange());
+                            configs, () => this._onTrackedChange());
                 }
             }
         } catch (e) {
-            M.Logger.error("dirty tracking rebuild failed", e);
+            M.Logger.error("dirty tracking rebuild failed for " + kind, e);
         }
-        this._recomputeDirty();
     },
 
     _onTrackedChange: function() {
@@ -371,43 +392,53 @@ PanelProfilesApplet.prototype = {
     _recomputeDirty: function() {
         if (this._destroyed || !this._modules)
             return;
+        KINDS.forEach((kind) => this._recomputeDirtyKind(kind));
+        this._onDirtyChanged();
+    },
+
+    _recomputeDirtyKind: function(kind) {
         const M = this._modules;
         try {
             const state = M.ProfileStore.getState();
-            if (!state.activeProfileId) {
-                this._dirtyStatus = DIRTY_UNKNOWN;
+            const id = state.activeProfileId;
+            if (!id) {
+                this._dirtyStatus[kind] = DIRTY_UNKNOWN;
+                return;
+            }
+            const loaded = M.ProfileStore.loadProfile(id);
+            if (!loaded || loaded.error || !loaded.profile) {
+                this._dirtyStatus[kind] = DIRTY_UNKNOWN;
+                return;
+            }
+            const configs = (loaded.profile.appletConfigs || []).concat(
+                loaded.profile.includeDesklets === true
+                    ? (loaded.profile.deskletConfigs || []) : []);
+            const root = M.Constants.SPICES_CONFIG_ROOT;
+            /* A config file the profile captured but that no longer
+             * exists is a modification, full stop: no need to hash. */
+            const missing = configs.some((config) => !GLib.file_test(
+                GLib.build_filenamev([root, config.relativePath]),
+                GLib.FileTest.EXISTS));
+            if (missing) {
+                this._dirtyStatus[kind] = DIRTY_MODIFIED;
+                return;
+            }
+            /* Compare digests recomputed on both sides under this profile's
+             * semantics: the stored fingerprint string can predate a schema
+             * migration, so it is never the comparison target. */
+            const live = M.ApplyController.computeCurrentFingerprint(
+                loaded.profile.includeDesklets === true);
+            const stored = M.ApplyController.profileFingerprintOf(loaded.profile);
+            if (live === null || stored === "") {
+                /* Either side unevaluable: no verdict. */
+                this._dirtyStatus[kind] = DIRTY_UNKNOWN;
             } else {
-                const loaded = M.ProfileStore.loadProfile(state.activeProfileId);
-                if (!loaded || loaded.error || !loaded.profile) {
-                    this._dirtyStatus = DIRTY_UNKNOWN;
-                } else {
-                    const configs = loaded.profile.appletConfigs || [];
-                    const root = M.Constants.SPICES_CONFIG_ROOT;
-                    /* A config file the profile captured but that no longer
-                     * exists is a modification, full stop: no need to hash. */
-                    const missing = configs.some((config) => !GLib.file_test(
-                        GLib.build_filenamev([root, config.relativePath]),
-                        GLib.FileTest.EXISTS));
-                    if (missing) {
-                        this._dirtyStatus = DIRTY_MODIFIED;
-                    } else {
-                        const live = M.ApplyController.computeCurrentFingerprint();
-                        const stored = loaded.profile.fingerprint;
-                        if (live === null || typeof stored !== "string" ||
-                                stored.length === 0) {
-                            /* Either side unevaluable: no verdict. */
-                            this._dirtyStatus = DIRTY_UNKNOWN;
-                        } else {
-                            this._dirtyStatus = live === stored
-                                ? DIRTY_ACTIVE : DIRTY_MODIFIED;
-                        }
-                    }
-                }
+                this._dirtyStatus[kind] = live === stored
+                    ? DIRTY_ACTIVE : DIRTY_MODIFIED;
             }
         } catch (e) {
-            this._dirtyStatus = DIRTY_UNKNOWN;
+            this._dirtyStatus[kind] = DIRTY_UNKNOWN;
         }
-        this._onDirtyChanged();
     },
 
     _onDirtyChanged: function() {
@@ -421,17 +452,8 @@ PanelProfilesApplet.prototype = {
     _onProfileSaved: function(profile) {
         if (this._destroyed || !this._modules || !profile)
             return;
-        const M = this._modules;
-        /* The live state now IS the saved profile: make it active so the
-         * menu check, tooltip and dirty baseline all agree. Saves are
-         * capture-only, so this cannot fight an in-flight apply. */
-        try {
-            M.ProfileStore.mutateState((state) => {
-                state.activeProfileId = profile.id;
-            });
-        } catch (e) {
-            M.Logger.error("could not mark saved profile active", e);
-        }
+        /* The controller calls this only after activeProfileId is durable,
+         * so the menu cannot display a false active row. */
         this._rebuildDirtyTracking();
     },
 
@@ -468,14 +490,21 @@ PanelProfilesApplet.prototype = {
         try {
             const controllerState = M.ApplyController.getState();
             const applying = M.ApplyController.isBusy() &&
-                controllerState !== M.ApplyController.STATE_SAVING &&
-                controllerState !== M.ApplyController.STATE_MANAGING;
+                controllerState !== M.ApplyController.STATE_SAVING;
             if (applying) {
                 text = _("Restoring profile…");
-            } else if (this._activeProfileName) {
-                text = this._dirtyStatus === DIRTY_MODIFIED
-                    ? this._activeProfileName + " (" + _("modified") + ")"
-                    : this._activeProfileName;
+            } else {
+                const parts = [];
+                KINDS.forEach((kind) => {
+                    const name = this._activeProfileName[kind];
+                    if (!name)
+                        return;
+                    parts.push(_("Profile: %s").format(name) +
+                        (this._dirtyStatus[kind] === DIRTY_MODIFIED
+                            ? " (" + _("modified") + ")" : ""));
+                });
+                if (parts.length)
+                    text = parts.join(" · ");
             }
         } catch (e) {
             text = _("Panel Profiles");
@@ -484,221 +513,6 @@ PanelProfilesApplet.prototype = {
             this.set_applet_tooltip(text);
         } catch (e) {
             /* actor already gone; nothing left to label */
-        }
-    },
-
-    /* ---------------------------------------------------------------- *
-     * Startup recovery
-     * ---------------------------------------------------------------- */
-
-    /* Runs once per instance, after module wiring and dirty tracking. A
-     * pendingApply was already resumed in _wireModules and always outranks
-     * the startup path, so this returns early when one is on disk. */
-    _startupCheck: function() {
-        if (this._destroyed || !this._modules)
-            return;
-        const M = this._modules;
-
-        let state;
-        try {
-            state = M.ProfileStore.getState();
-        } catch (e) {
-            M.Logger.error("startup check could not read state", e);
-            return;
-        }
-        if (state.pendingApply)
-            return;
-        if (!this.startupAutoRestore || !state.startupProfileId)
-            return;
-
-        let loaded;
-        try {
-            loaded = M.ProfileStore.loadProfile(state.startupProfileId);
-        } catch (e) {
-            loaded = null;
-        }
-        if (!loaded || loaded.error || !loaded.profile) {
-            M.Logger.warn("startup profile is unreadable; skipping startup " +
-                "restore");
-            return;
-        }
-        const profile = loaded.profile;
-
-        /* a. Fingerprint short-circuit: live state already equals the
-         * startup profile, so mark it active and stop. No rollback, no
-         * profile writes, no churn. */
-        let live = null;
-        try {
-            live = M.ApplyController.computeCurrentFingerprint();
-        } catch (e) {
-            live = null;
-        }
-        if (live !== null && typeof profile.fingerprint === "string" &&
-                profile.fingerprint.length > 0 && live === profile.fingerprint) {
-            try {
-                M.ProfileStore.mutateState((s) => {
-                    s.activeProfileId = profile.id;
-                });
-            } catch (e) {
-                M.Logger.error("could not mark startup profile active", e);
-            }
-            this._dirtyStatus = DIRTY_ACTIVE;
-            M.Logger.log("startup profile already matches the live layout; " +
-                "no restore needed");
-            this._rebuildDirtyTracking();
-            return;
-        }
-
-        let required = 1;
-        try {
-            const t = profile.monitorTopology;
-            if (t && Number.isFinite(Number(t.expectedCount)))
-                required = Math.max(1, Math.floor(Number(t.expectedCount)));
-        } catch (ignored) {
-            /* profile without a readable topology defaults to one monitor */
-        }
-        const currentCount = M.MonitorTopology.getMonitorCount();
-
-        if (M.MonitorTopology.topologySatisfies(currentCount, required)) {
-            /* b. Enough monitors now: settle briefly (restarting on any
-             * churn), re-check, then apply. */
-            this._startStabilize(profile.id, required);
-        } else if (this.startupWaitDisplays) {
-            /* c. Not enough monitors: the apply controller owns the wait
-             * internally (stabilization, single timeout warning, menu wait
-             * display). beginApply returns {started:true} for the startup
-             * reason and carries on. */
-            M.ApplyController.beginApply(profile.id, { reason: "startup" });
-        } else {
-            /* d. Not enough monitors and waiting is off: leave the desktop
-             * untouched. Log once, never retry. */
-            M.Logger.log("startup profile needs " + required +
-                " displays but only " + currentCount +
-                " are available and display waiting is disabled");
-        }
-    },
-
-    /* Arm (or re-arm on churn) the short stabilization timer used when the
-     * required monitor count is already present at startup. */
-    _startStabilize: function(profileId, required) {
-        if (this._startupStabilizeId !== null) {
-            Mainloop.source_remove(this._startupStabilizeId);
-            this._startupStabilizeId = null;
-        }
-        this._startupApplyProfileId = profileId;
-        this._startupApplyRequiredCount = required;
-        const delayMs = Math.max(0, Number(this.stabilizationDelay) || 0) * 1000;
-        this._startupStabilizeId = Mainloop.timeout_add(delayMs, () => {
-            this._startupStabilizeId = null;
-            if (this._destroyed || !this._modules) {
-                this._startupApplyProfileId = null;
-                return false;
-            }
-            const M = this._modules;
-            const id = this._startupApplyProfileId;
-            const req = this._startupApplyRequiredCount;
-            this._startupApplyProfileId = null;
-            const count = M.MonitorTopology.getMonitorCount();
-            if (count >= req || this.startupWaitDisplays) {
-                /* Sufficient, or dropped below but waiting is on: the
-                 * controller either applies now or waits internally. */
-                M.ApplyController.beginApply(id, { reason: "startup" });
-            } else {
-                M.Logger.log("startup profile needs " + req +
-                    " displays but only " + count +
-                    " are available and display waiting is disabled");
-            }
-            return false;
-        });
-    },
-
-    _connectMonitorsChanged: function() {
-        if (this._monitorsChangedId !== null)
-            return;
-        try {
-            this._monitorsChangedId = Main.layoutManager.connect(
-                "monitors-changed", () => this._onMonitorsChanged());
-        } catch (e) {
-            if (this._modules)
-                this._modules.Logger.error("could not watch monitors-changed", e);
-        }
-    },
-
-    _onMonitorsChanged: function() {
-        if (this._destroyed || !this._modules)
-            return;
-        if (this._startupApplyProfileId !== null)
-            this._startStabilize(this._startupApplyProfileId,
-                this._startupApplyRequiredCount);
-        this._runPrimaryPlacementCheck();
-    },
-
-    /* One-time info notice when startup recovery is on but the applet sits
-     * on a non-primary monitor. The flag resets once the applet is back on
-     * the primary, so a later regression warns again. Never repeats while
-     * the flag is set. */
-    _runPrimaryPlacementCheck: function() {
-        if (this._destroyed || !this._modules || !this.startupAutoRestore)
-            return;
-        const M = this._modules;
-        let eaStrv = null;
-        let peStrv = null;
-        try {
-            if (!this._cinnamonSettings)
-                return;
-            eaStrv = this._cinnamonSettings.get_strv("enabled-applets");
-            peStrv = this._cinnamonSettings.get_strv("panels-enabled");
-        } catch (e) {
-            return;
-        }
-        const parsedEa = M.CinnamonState.parseEnabledApplets(eaStrv);
-        const selfEntry = (parsedEa.entries || []).find(
-            (entry) => entry.uuid === this.metadata.uuid);
-        if (!selfEntry)
-            return; /* not installed yet; nothing to judge */
-        const parsedPe = M.CinnamonState.parsePanelsEnabled(peStrv);
-        const panel = (parsedPe.panels || []).find(
-            (p) => p.id === selfEntry.panelId);
-        if (!panel)
-            return; /* own panel is not in panels-enabled; cannot place it */
-        let primaryIndex = -1;
-        try {
-            primaryIndex = Main.layoutManager.primaryIndex;
-        } catch (e) {
-            return;
-        }
-        const onPrimary = panel.monitor === primaryIndex;
-        let state;
-        try {
-            state = M.ProfileStore.getState();
-        } catch (e) {
-            return;
-        }
-        if (!onPrimary) {
-            if (!state.warnedPrimaryPlacement) {
-                try {
-                    Main.notify(_("Panel Profiles"),
-                        _("Move Panel Profiles to a panel on the primary " +
-                            "monitor for reliable startup recovery."));
-                } catch (e) {
-                    /* notification is best-effort */
-                }
-                try {
-                    M.ProfileStore.mutateState((s) => {
-                        s.warnedPrimaryPlacement = true;
-                    });
-                } catch (e) {
-                    M.Logger.error("could not record placement warning", e);
-                }
-            }
-        } else if (state.warnedPrimaryPlacement) {
-            try {
-                M.ProfileStore.mutateState((s) => {
-                    s.warnedPrimaryPlacement = false;
-                });
-            } catch (e) {
-                M.Logger.error("could not clear placement warning", e);
-            }
         }
     },
 
@@ -712,16 +526,14 @@ PanelProfilesApplet.prototype = {
     },
 
     /* Rebuilt from live data on every open. Guarded: state callbacks and
-     * deferred actions can land here after the actor is gone. */
+     * deferred actions can land here after the actor is gone. The menu is
+     * profile list followed by the actions. */
     updateMenu: function() {
         if (this._destroyed || !this.menu)
             return;
         const M = this._modules;
         try {
             this.menu.removeAll();
-
-            this._addDimMenuItem(_("Panel Profiles"), null, true);
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
             if (!M) {
                 this._addDimMenuItem(_("Panel Profiles could not load."));
@@ -739,89 +551,46 @@ PanelProfilesApplet.prototype = {
                 M.ApplyController.STATE_WAITING_FOR_MONITORS;
 
             if (profiles.length === 0) {
-                /* First run: nothing saved yet, only save and manage. */
-                this._addDimMenuItem(_("No panel profiles saved yet."));
+                /* First run: nothing saved yet. */
+                this._addDimMenuItem(_("No profiles saved yet."));
                 this._addDimMenuItem(_("Save your current panel layout to create one."));
                 this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
                 this._addActionMenuItem(_("Save current layout…"), !busy,
                     () => this._openSaveDialog());
-                this._addActionMenuItem(_("Manage profiles…"), !busy,
-                    () => this._openManageDialog());
+                this._addActionMenuItem(_("Restore previous layout"),
+                    !busy && !!M.ProfileStore.readRollback(),
+                    () => M.ApplyController.beginRollback());
+                this._addActionMenuItem(_("Configure…"), true,
+                    () => this._openSettings());
+                this._addActionMenuItem(_("Restart Cinnamon"), true,
+                    () => Main.restartCinnamon(true));
                 return;
             }
 
-            /* Profile rows: valid profiles only (a broken file must never
-             * be loadable from here; the manage dialog can delete it).
-             * The active profile leads, the rest stay alphabetical. */
-            const rows = profiles.filter((p) => p.valid);
-            const activeId = state.activeProfileId;
-            const activeRow = rows.find((p) => p.id === activeId) || null;
-            this._activeProfileName = activeRow ? activeRow.name : null;
-            const ordered = activeRow
-                ? [activeRow].concat(rows.filter((p) => p !== activeRow))
-                : rows;
-
-            const section = new PopupMenu.PopupMenuSection();
-            const self = this;
-            ordered.forEach((profile) => {
-                const item = new PopupMenu.PopupMenuItem(profile.name);
-                if (profile === activeRow) {
-                    item.setOrnament(PopupMenu.OrnamentType.CHECK, true);
-                    if (this._dirtyStatus === DIRTY_MODIFIED) {
-                        const tag = new St.Label({
-                            text: _("Modified"),
-                            style_class: "panel-profiles-tag"
-                        });
-                        item.addActor(tag, { expand: true, span: -1, align: St.Align.END });
-                    }
-                }
-                if (busy && !waiting)
-                    item.setSensitive(false);
-                item.connect("activate", () => {
-                    self._deferAction(() => self._applyProfile(profile.id));
-                });
-                section.addMenuItem(item);
-            });
-            this.menu.addMenuItem(section);
-            /* Long lists scroll. The section's signal wiring happened in
-             * addMenuItem above; reparenting its actor into a scroll view
-             * keeps activation and key navigation intact. */
-            if (ordered.length > 12) {
-                const scroll = new St.ScrollView({
-                    x_fill: true,
-                    y_fill: false,
-                    y_align: St.Align.START,
-                    overlay_scrollbars: true,
-                    hscrollbar_policy: St.PolicyType.NEVER,
-                    vscrollbar_policy: St.PolicyType.AUTOMATIC
-                });
-                scroll.add_actor(section.actor);
-                this.menu.addActor(scroll);
-            }
-
+            this._addProfileSection(M, profiles, state, busy, waiting);
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-            /* Status block. */
-            this._addStatusRows(M, state, activeRow);
-
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-            /* Actions, all gated by the operation lock. */
+            /* Actions, gated by the operation lock where they touch the
+             * profile world; Configure and Restart are read-only/orthogonal
+             * and stay live. */
             if (busy)
                 this._addDimMenuItem(this._busyLabel(controllerState));
 
-            if (activeRow && this._dirtyStatus === DIRTY_MODIFIED) {
-                this._addActionMenuItem(_("Update \"%s\"").format(activeRow.name),
-                    !busy, () => this._confirmUpdate(activeRow.id, activeRow.name));
+            const activePanelRow = this._activeRowOf(M, profiles, state);
+            if (activePanelRow && this._dirtyStatus.panel === DIRTY_MODIFIED) {
+                this._addActionMenuItem(
+                    _("Update profile \"%s\"").format(activePanelRow.name),
+                    !busy, () => this._confirmUpdate(activePanelRow.id, activePanelRow.name));
             }
             this._addActionMenuItem(_("Save current layout…"), !busy,
                 () => this._openSaveDialog());
-            if (M.ProfileStore.readRollback() !== null) {
-                this._addActionMenuItem(_("Restore previous layout"), !busy,
-                    () => this._modules.ApplyController.beginRollback());
-            }
-            this._addActionMenuItem(_("Manage profiles…"), !busy,
-                () => this._openManageDialog());
+            this._addActionMenuItem(_("Restore previous layout"),
+                !busy && !!M.ProfileStore.readRollback(),
+                () => M.ApplyController.beginRollback());
+            this._addActionMenuItem(_("Configure…"), true,
+                () => this._openSettings());
+            this._addActionMenuItem(_("Restart Cinnamon"), true,
+                () => Main.restartCinnamon(true));
         } catch (e) {
             if (M)
                 M.Logger.error("menu build failed", e);
@@ -830,60 +599,73 @@ PanelProfilesApplet.prototype = {
         }
     },
 
-    /* Dim, non-reactive informational row. Defaults to the theme's inactive
-     * item look (normal weight, dimmed); pass bold=true for a section title.
-     * The subtitle class forces font-weight: bold under Numix, which reads as
-     * a header, not as secondary text, so it is opt-in only. */
-    _addDimMenuItem: function(text, extraStyle, bold) {
+    /* Valid rows with the active profile first and bold, then the rest
+     * alphabetically. */
+    _addProfileSection: function(M, profiles, state, busy, waiting) {
+        const rows = profiles.filter((p) => p.valid);
+        if (rows.length === 0) {
+            this._addDimMenuItem(_("No profiles yet."));
+            return;
+        }
+        const activeRow = this._activeRowOf(M, profiles, state);
+        this._activeProfileName.panel = activeRow ? activeRow.name : null;
+        const ordered = activeRow
+            ? [activeRow].concat(rows.filter((p) => p !== activeRow))
+            : rows;
+
+        const section = new PopupMenu.PopupMenuSection();
+        const self = this;
+        ordered.forEach((profile) => {
+            const item = new PopupMenu.PopupMenuItem(profile.name);
+            if (profile === activeRow) {
+                item.setOrnament(PopupMenu.OrnamentType.CHECK, true);
+                item.label.add_style_class_name(
+                    "panel-profiles-active-row");
+                if (this._dirtyStatus.panel === DIRTY_MODIFIED) {
+                    const tag = new St.Label({
+                        text: _("Modified"),
+                        style_class: "panel-profiles-tag"
+                    });
+                    item.addActor(tag, { expand: true, span: -1, align: St.Align.END });
+                }
+            }
+            if (busy && !waiting)
+                item.setSensitive(false);
+            item.connect("activate", () => {
+                self._deferAction(() => self._applyProfile(profile.id));
+            });
+            section.addMenuItem(item);
+        });
+        this.menu.addMenuItem(section);
+        /* Long lists scroll. The section's signal wiring happened in
+         * addMenuItem above; reparenting its actor into a scroll view
+         * keeps activation and key navigation intact. */
+        if (ordered.length > 12) {
+            const scroll = new St.ScrollView({
+                x_fill: true,
+                y_fill: false,
+                y_align: St.Align.START,
+                overlay_scrollbars: true,
+                hscrollbar_policy: St.PolicyType.NEVER,
+                vscrollbar_policy: St.PolicyType.AUTOMATIC
+            });
+            scroll.add_actor(section.actor);
+            this.menu.addActor(scroll);
+        }
+    },
+
+    _activeRowOf: function(M, profiles, state) {
+        return profiles.find((p) => p.valid && p.id === state.activeProfileId) || null;
+    },
+
+    /* Dim, non-reactive informational row. */
+    _addDimMenuItem: function(text) {
         const item = new PopupMenu.PopupMenuItem(text);
         item.actor.reactive = false;
         item.actor.can_focus = false;
-        item.label.add_style_class_name(bold
-            ? "popup-subtitle-menu-item"
-            : "popup-inactive-menu-item");
-        if (extraStyle)
-            item.label.add_style_class_name(extraStyle);
+        item.label.add_style_class_name("popup-inactive-menu-item");
         this.menu.addMenuItem(item);
         return item;
-    },
-
-    _addStatusRows: function(M, state, activeRow) {
-        /* The wait block carries its own required count; otherwise the
-         * active profile's expected count is the informative one. */
-        if (this._waitState) {
-            let startupName = null;
-            try {
-                if (state.startupProfileId) {
-                    const rows = M.ProfileStore.listProfiles();
-                    const row = rows.find((p) =>
-                        p.id === state.startupProfileId && p.valid);
-                    startupName = row ? row.name : null;
-                }
-            } catch (e) {
-                startupName = null;
-            }
-            if (startupName)
-                this._addDimMenuItem(_("Startup profile: %s").format(startupName),
-                    "panel-profiles-status");
-            this._addDimMenuItem(
-                _("Displays: %d / %d").format(
-                    this._waitState.current, this._waitState.required),
-                "panel-profiles-status");
-            this._addDimMenuItem(
-                _("Waiting for display %d…").format(this._waitState.required),
-                "panel-profiles-status");
-            return;
-        }
-        if (activeRow) {
-            this._addDimMenuItem(_("Current: %s").format(activeRow.name),
-                "panel-profiles-status");
-            if (Number.isFinite(activeRow.expectedCount)) {
-                this._addDimMenuItem(
-                    _("Displays: %d / %d").format(
-                        M.MonitorTopology.getMonitorCount(), activeRow.expectedCount),
-                    "panel-profiles-status");
-            }
-        }
     },
 
     _addActionMenuItem: function(text, sensitive, handler) {
@@ -898,10 +680,10 @@ PanelProfilesApplet.prototype = {
     },
 
     _busyLabel: function(controllerState) {
-        if (controllerState === "SAVING" || controllerState === "MANAGING")
+        if (controllerState === "SAVING")
             return _("Saving…");
         if (controllerState === "WAITING_FOR_MONITORS")
-            return _("Waiting…");
+            return _("Waiting for displays…");
         return _("Loading…");
     },
 
@@ -913,7 +695,7 @@ PanelProfilesApplet.prototype = {
         if (this._destroyed || !this._modules)
             return;
         const M = this._modules;
-        /* A manual load while the startup wait is pending must win over the
+        /* A manual load while a monitor wait is pending must win over the
          * wait: cancel it (this releases the lock and clears the menu wait
          * display), then start the user's apply normally. */
         if (M.ApplyController.getState() ===
@@ -940,7 +722,7 @@ PanelProfilesApplet.prototype = {
         try {
             const dialog = new M.Dialogs.PanelProfilesConfirmDialog(
                 _("Update \"%s\"?").format(name),
-                _("The saved version of this profile will be replaced by your current panel configuration."),
+                _("The saved version of this profile will be replaced by your current configuration."),
                 _("Update"),
                 () => {
                     try {
@@ -962,127 +744,45 @@ PanelProfilesApplet.prototype = {
         const M = this._modules;
         const profiles = M.ProfileStore.listProfiles();
         const state = M.ProfileStore.getState();
-        const activeRow = profiles.find((p) =>
-            p.id === state.activeProfileId && p.valid) || null;
+        const activeRow = this._activeRowOf(M, profiles, state);
         const self = this;
 
         M.Dialogs.promptSaveProfile({
             existingProfiles: profiles
                 .filter((p) => p.valid)
-                .map((p) => ({ id: p.id, name: p.name })),
-            activeProfileName: activeRow ? activeRow.name : null
+                .map((p) => ({ id: p.id, name: p.name,
+                    includeDesklets: p.includeDesklets === true })),
+            activeProfileName: activeRow ? activeRow.name : null,
+            includeDesklets: activeRow ? activeRow.includeDesklets === true : false
         }, (result) => {
             if (self._destroyed || !result)
                 return;
             if (result.mode === "new") {
-                const saved = M.ApplyController.beginSaveNew(result.name);
-                if (saved.ok) {
-                    if (result.useAtStartup)
-                        M.ApplyController.setStartupProfile(saved.profile.id);
-                    else
-                        self._maybeOfferStartup(saved.profile);
-                }
+                M.ApplyController.beginSaveNew(result.name,
+                    result.includeDesklets === true);
             } else if (result.mode === "replace" && result.targetId) {
                 /* The replace confirmation already happened inside the
                  * dialog; the overwrite is consented to. */
-                const saved = M.ApplyController.beginSaveUpdate(result.targetId);
-                if (saved.ok && result.useAtStartup)
-                    M.ApplyController.setStartupProfile(result.targetId);
+                M.ApplyController.beginSaveUpdate(result.targetId,
+                    result.includeDesklets === true);
             }
             self._onDirtyChanged();
         });
     },
 
-    /* After a very first save, offer to designate it as the startup
-     * profile. Silent when it does not apply or the dialog cannot open. */
-    _maybeOfferStartup: function(profile) {
-        if (this._destroyed || !this._modules || !profile)
-            return;
-        const M = this._modules;
-        const state = M.ProfileStore.getState();
-        if (state.startupProfileId !== null)
-            return;
-        const validCount = M.ProfileStore.listProfiles()
-            .filter((p) => p.valid).length;
-        if (validCount !== 1)
-            return;
-        const self = this;
-        this._deferAction(() => {
-            try {
-                M.Dialogs.promptStartupOffer(profile.name, (useIt) => {
-                    if (useIt && !self._destroyed)
-                        M.ApplyController.setStartupProfile(profile.id);
-                });
-            } catch (e) {
-                /* the offer is optional; stay silent */
-            }
-        });
-    },
-
-    _openManageDialog: function() {
-        if (this._destroyed || !this._modules)
-            return;
-        const M = this._modules;
-        const self = this;
-        M.Dialogs.openManageProfiles({
-            profiles: this._manageRows(),
-            operations: {
-                load: (id) => {
-                    self._deferAction(() => self._applyProfile(id));
-                },
-                rename: (id, newName, done) => {
-                    M.ApplyController.beginRename(id, newName);
-                    self._afterManageOp(done);
-                },
-                duplicate: (id, done) => {
-                    M.ApplyController.beginDuplicate(id);
-                    self._afterManageOp(done);
-                },
-                setStartup: (id, done) => {
-                    M.ApplyController.setStartupProfile(id);
-                    self._afterManageOp(done);
-                },
-                removeStartup: (id, done) => {
-                    M.ApplyController.setStartupProfile(null);
-                    self._afterManageOp(done);
-                },
-                delete: (id, done) => {
-                    M.ApplyController.beginDelete(id);
-                    self._afterManageOp(done);
-                }
-            }
-        });
-    },
-
-    _afterManageOp: function(done) {
+    /* The schema-driven settings window (profile data management lives in
+     * its custom widget). Cinnamon's own configureApplet launches
+     * xlet-settings with the right uuid/instance arguments; calling it
+     * inherited-style keeps us on the supported path. */
+    _openSettings: function() {
         if (this._destroyed)
             return;
-        /* The active profile may have changed (delete); re-attach the
-         * dirty watches before the dialog re-renders from fresh rows. */
-        this._rebuildDirtyTracking();
         try {
-            if (typeof done === "function")
-                done(this._manageRows());
+            this.configureApplet();
         } catch (e) {
             if (this._modules)
-                this._modules.Logger.error("manage refresh failed", e);
+                this._modules.Logger.error("could not open settings", e);
         }
-    },
-
-    _manageRows: function() {
-        if (!this._modules)
-            return [];
-        const M = this._modules;
-        const state = M.ProfileStore.getState();
-        return M.ProfileStore.listProfiles().map((p) => ({
-            id: p.id,
-            name: p.name,
-            updatedAt: p.updatedAt,
-            expectedCount: p.expectedCount,
-            valid: p.valid,
-            isActive: p.id === state.activeProfileId,
-            isStartup: p.id === state.startupProfileId
-        }));
     },
 
     /* Menu items must not act synchronously: PopupMenuBase closes the menu
@@ -1123,7 +823,14 @@ PanelProfilesApplet.prototype = {
     },
 
     on_applet_removed_from_panel: function() {
-        this._teardown(!this._reloadPending);
+        let preserve = this._reloadPending;
+        try {
+            preserve = preserve || (this._modules &&
+                this._modules.ApplyController.shouldPreserveTransactionOnRemoval());
+        } catch (e) {
+            preserve = this._reloadPending;
+        }
+        this._teardown(!preserve);
     },
 
     /* Full teardown when @full (real removal): cancels controller
@@ -1145,20 +852,6 @@ PanelProfilesApplet.prototype = {
             Mainloop.source_remove(this._dirtyDebounceId);
             this._dirtyDebounceId = null;
         }
-        if (this._startupStabilizeId !== null) {
-            Mainloop.source_remove(this._startupStabilizeId);
-            this._startupStabilizeId = null;
-        }
-        this._startupApplyProfileId = null;
-        this._startupApplyRequiredCount = 0;
-        if (this._monitorsChangedId !== null) {
-            try {
-                Main.layoutManager.disconnect(this._monitorsChangedId);
-            } catch (e) {
-                /* layout manager already finalized */
-            }
-            this._monitorsChangedId = null;
-        }
         if (this._settingWatchIds.length && this._cinnamonSettings) {
             this._settingWatchIds.forEach((id) => {
                 try {
@@ -1169,13 +862,15 @@ PanelProfilesApplet.prototype = {
             });
             this._settingWatchIds = [];
         }
-        if (this._configWatchHandle && M) {
-            M.AppletConfigStore.unwatchConfigs(this._configWatchHandle);
-            this._configWatchHandle = null;
-        }
+        KINDS.forEach((kind) => {
+            if (this._configWatchHandle[kind] && M) {
+                M.AppletConfigStore.unwatchConfigs(this._configWatchHandle[kind]);
+                this._configWatchHandle[kind] = null;
+            }
+        });
         if (full && M) {
             try {
-                M.ApplyController.cancelAll();
+                M.ApplyController.cancelAll(true);
             } catch (e) {
                 M.Logger.warn("cancelAll failed: " + e);
             }

@@ -17,7 +17,7 @@ For most development, you don't need isolation. Just reload your code:
 1. Edit your extension files
 2. Press `Win+L` to open Looking Glass (Melange debugger)
 3. Go to "Extensions" tab
-4. Right-click your extension → "Reload Code"
+4. Right-click your extension, then choose "Reload Code"
 
 This is fast and works for 90% of changes.
 
@@ -28,7 +28,7 @@ This is fast and works for 90% of changes.
 #### VM
 - **Domain name**: host-specific. `vm-config.sh` defaults to `cinnamon-cinnanom`
   and exits with the list of available domains if it does not exist. Override with
-  `export CINNAMON_VM=<name>` — run `virsh list --all` to see what you have.
+  `export CINNAMON_VM=<name>`, then run `virsh list --all` to see what you have.
 - **Credentials**: `cinnamon` / `cinnamon`
 - **Network**: Bridged (br0) for direct SSH access
 
@@ -86,7 +86,7 @@ done
 
 A specialized desklet with a JavaScript/CSS sandbox:
 
-1. Open System Settings → Desklets → Download
+1. Open System Settings, then Desklets, then Download
 2. Search "Developer's Tools"
 3. Install and add to desktop
 
@@ -114,7 +114,7 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | `start-sandbox.sh` | Xephyr options (limited, run with --help) |
 | `cinnamon_eval.py` | Run JavaScript inside the live Cinnamon process over DBus |
 | `screenshot.sh` | Capture the host X11 session (whole screen or a crop box) |
-| `vm-screenshot.sh` | Capture the VM display as PNG (`virsh screenshot` + PPM→PNG) |
+| `vm-screenshot.sh` | Capture the VM display as PNG (`virsh screenshot` + PPM to PNG) |
 | `test-workspace-actions.js` | Headless unit tests for the shared workspace logic (`gjs`) |
 | `test-clock-actions.js` | Headless unit tests for the world-clock helpers (`gjs`) |
 | `test-card-actions.js` | Headless unit tests for the color-timer color engine (`gjs`) |
@@ -136,8 +136,8 @@ python3 dev-tools/live-test-applet.py
 python3 dev-tools/live-test-color-desklet.py   # desklet must be installed and enabled
 ```
 
-`St` widgets cannot be instantiated outside the Cinnamon process — `libst.so`
-is not on the loader path — so anything touching actors has to be tested live.
+`St` widgets cannot be instantiated outside the Cinnamon process because `libst.so`
+is not on the loader path, so anything touching actors has to be tested live.
 That is what `cinnamon_eval.py` is for:
 
 ```bash
@@ -205,10 +205,10 @@ reinstalling.
 # Install all extensions (copies into place)
 ./install-extensions.sh
 
-# Add them via System Settings → Desklets/Applets
+# Add them via System Settings, then Desklets/Applets
 
 # Edit files, then reload:
-# Win+L → Extensions → Right-click → Reload Code
+# Win+L, then Extensions, then right-click and choose Reload Code
 ```
 
 ## Debugging
@@ -227,7 +227,7 @@ global.logError("Error message");
 # Real-time log monitoring
 tail -f ~/.xsession-errors | grep -i cinnamon
 
-# Or use Looking Glass → Log tab
+# Or use Looking Glass, then the Log tab
 ```
 
 ### Log Locations

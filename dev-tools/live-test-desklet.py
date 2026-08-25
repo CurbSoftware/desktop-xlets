@@ -29,17 +29,17 @@ suite_name = ""
 def suite(name):
     global suite_name
     suite_name = name
-    print("\n• " + name)
+    print("\n" + name)
 
 
 def check(label, condition, detail=None):
     global passed
     if condition:
         passed += 1
-        print("  ✓ " + label)
+        print("  PASS " + label)
     else:
         failures.append(f"{suite_name} / {label}" + (f" -- {detail}" if detail else ""))
-        print("  ✗ " + label + (f" -- {detail}" if detail else ""))
+        print("  FAIL " + label + (f" -- {detail}" if detail else ""))
 
 
 def eq(label, actual, expected):
@@ -67,12 +67,35 @@ PRE = (
     'let AM=imports.ui.appletManager;'
     f'let D=DM.get_object_for_uuid("{DESKLET}","{DESKLET}");'
     'let WA=D?D._wa():null;'
+    f'let GM=DM.desklets["{DESKLET}"].gridModel;'
 )
 
 
 def d(code):
     """Eval with the desklet preamble bound."""
     return js(PRE + code)
+
+
+def assert_grid_contained(label):
+    """Assert table and tile paint stay inside the rounded content box."""
+    state = d('(function(){let c=D.mainContainer;let t=c.get_children()[0];'
+              'let origin=c.get_transformed_position();let size=c.get_transformed_size();'
+              'let theme=c.get_theme_node();let side=imports.gi.St.Side;'
+              'let left=origin[0]+theme.get_padding(side.LEFT)+'
+              'theme.get_border_width(side.LEFT);'
+              'let right=origin[0]+size[0]-theme.get_padding(side.RIGHT)-'
+              'theme.get_border_width(side.RIGHT);'
+              'let top=origin[1]+theme.get_padding(side.TOP)+'
+              'theme.get_border_width(side.TOP);'
+              'let bottom=origin[1]+size[1]-theme.get_padding(side.BOTTOM)-'
+              'theme.get_border_width(side.BOTTOM);let epsilon=0.5;'
+              'function inside(a){let result=a.get_paint_box();if(!result[0])return false;'
+              'let b=result[1];return b.x1+epsilon>=left&&b.y1+epsilon>=top&&'
+              'b.x2<=right+epsilon&&b.y2<=bottom+epsilon;}'
+              'return {table:inside(t),buttons:t.get_children().every(inside),'
+              'tableBox:[t.x,t.y,t.width,t.height],content:[left,top,right,bottom]};})()')
+    check(label + " table paint stays inside container content", state["table"], state)
+    check(label + " tile paint stays inside container content", state["buttons"], state)
 
 
 def log_size():
@@ -164,6 +187,12 @@ js(f'let DM=imports.ui.deskletManager;'
    f'D._wa = function(){{ return DM.desklets["{DESKLET}"].workspaceActions; }};'
    f'D._rd = function(){{ return DM.desklets["{DESKLET}"].renameDialog; }}; true')
 
+ORIG_DESKLET_SETTINGS = d('({layout: D.settings.getValue("layout-mode"),'
+                          ' rows: D.settings.getValue("fixed-rows"),'
+                          ' cols: D.settings.getValue("fixed-cols"),'
+                          ' display: D.settings.getValue("display-type"),'
+                          ' editing: D.settings.getValue("enable-workspace-editing")})')
+
 import atexit  # noqa: E402
 
 
@@ -178,6 +207,16 @@ def _safety_net():
            f'wa.activateWorkspaceByIndex({ORIG_ACTIVE}); true')
         subprocess.run(["gsettings", "set", "org.cinnamon.desktop.wm.preferences",
                         "workspace-names", ORIG_NAMES], capture_output=True, text=True)
+        js(f'let DM=imports.ui.deskletManager;'
+           f'let D=DM.get_object_for_uuid("{DESKLET}","{DESKLET}");'
+           'if (D && D.settings) {'
+           f'D.settings.setValue("layout-mode", {json.dumps(ORIG_DESKLET_SETTINGS["layout"])});'
+           f'D.settings.setValue("fixed-rows", {ORIG_DESKLET_SETTINGS["rows"]});'
+           f'D.settings.setValue("fixed-cols", {ORIG_DESKLET_SETTINGS["cols"]});'
+           f'D.settings.setValue("display-type", {json.dumps(ORIG_DESKLET_SETTINGS["display"])});'
+           f'D.settings.setValue("enable-workspace-editing", '
+           f'{str(ORIG_DESKLET_SETTINGS["editing"]).lower()});'
+           '} true')
     except Exception as exc:  # noqa: BLE001
         print("safety net failed: " + str(exc), file=sys.stderr)
 
@@ -189,14 +228,14 @@ suite("desklet loaded and wired")
 # ------------------------------------------------------------------ #
 
 state = d('({buttons: D.buttons.length, editing: D.enableEditing, addTile: D.showAddTile,'
-          ' confirm: D.confirmRemove, nameWatcher: !!D.ws_name_id, added: !!D.ws_added_id,'
-          ' removed: !!D.ws_removed_id, idle: D._idleSources.length, tileMenu: !!D._tileMenu})')
+          ' confirm: D.confirmRemove, nameWatcher: !!D.ws_name_id,'
+          ' signals: D._signalManager._storage.length, idle: D._idleSources.length,'
+          ' tileMenu: !!D._tileMenu})')
 eq("one tile per workspace", state["buttons"], ORIG_COUNT)
 check("editing enabled", state["editing"] is True)
 check("add tile enabled", state["addTile"] is True)
 check("workspace-names watcher connected", state["nameWatcher"] is True)
-check("workspace-added watcher connected", state["added"] is True)
-check("workspace-removed watcher connected", state["removed"] is True)
+check("workspace lifecycle signals connected", state["signals"] >= 6, state)
 eq("no leaked idle sources", state["idle"], 0)
 check("no tile menu open", state["tileMenu"] is False)
 
@@ -223,10 +262,11 @@ check(f"grid holds {expected_cells} cells",
       dims["rows"] * dims["cols"] >= expected_cells,
       f"dims={dims}")
 cells = d('let dd=D._computeGridDims();'
-          'WA.planCells(WA.getWorkspaceCount(), true, dd.rows, dd.cols)'
+          'GM.planCells(WA.getWorkspaceCount(), true)'
           '.map(function(c){return c.kind==="add"?"+":String(c.index);}).join(",")')
 check("last cell is the + tile", cells.endswith("+"), cells)
 eq("all workspaces rendered", cells.count(",") + 1, ORIG_COUNT + 1)
+assert_grid_contained("auto layout")
 
 # ------------------------------------------------------------------ #
 suite("add workspace from the + tile")
@@ -238,6 +278,8 @@ eq("count grew by one", ws_count(), ORIG_COUNT + 1)
 settle(0.3)
 eq("tiles rebuilt", d('D.buttons.length'), ORIG_COUNT + 1)
 eq("no idle source leaked", d('D._idleSources.length'), 0)
+wait_for(lambda: num_workspaces_key() == str(ORIG_COUNT + 1),
+         "Cinnamon to persist the workspace count")
 eq("num-workspaces gsetting followed", num_workspaces_key(), str(ORIG_COUNT + 1))
 
 NEW_INDEX = ORIG_COUNT  # the appended workspace, 0-based
@@ -250,7 +292,7 @@ check("rename applied", d(f'WA.renameWorkspace({NEW_INDEX}, "  ClaudeTest  ")') 
 settle()
 eq("trimmed on write", d(f'WA.getWorkspaceName({NEW_INDEX})'), "ClaudeTest")
 eq("desklet label refreshed from the gsettings watcher",
-   d(f'D.buttons[{NEW_INDEX}].get_child().get_text()'), "ClaudeTest")
+   d(f'D.buttons[{NEW_INDEX}].get_child().get_children().slice(-1)[0].get_text()'), "ClaudeTest")
 check("no-op when unchanged", d(f'WA.renameWorkspace({NEW_INDEX}, "ClaudeTest")') is False)
 check("out-of-range rejected", d('WA.renameWorkspace(999, "X")') is False)
 
@@ -279,7 +321,8 @@ d('let s=imports.ui.main.modalActorFocusStack; let dlg=s[s.length-1].actor;'
 settle()
 eq("modal released", open_modals(), modals_before)
 eq("name committed", d(f'WA.getWorkspaceName({NEW_INDEX})'), "Committed")
-eq("tile label follows", d(f'D.buttons[{NEW_INDEX}].get_child().get_text()'), "Committed")
+eq("tile label follows",
+   d(f'D.buttons[{NEW_INDEX}].get_child().get_children().slice(-1)[0].get_text()'), "Committed")
 
 # ------------------------------------------------------------------ #
 suite("rename modal dialog: cancel")
@@ -306,7 +349,7 @@ check("menu created", d('!!D._tileMenu') is True)
 check("menu is open", d('D._tileMenu.isOpen') is True)
 items = d('D._tileMenu._getMenuItems().map(function(i){'
           'return i.label ? i.label.get_text() : "---";})')
-eq("menu items", items, ["Rename…", "Remove", "---", "Add workspace"])
+eq("menu items", items, ["Rename...", "Remove", "---", "Add workspace"])
 check("Remove is sensitive with >1 workspace",
       d('D._tileMenu._getMenuItems()[1].actor.reactive') is True)
 
@@ -373,7 +416,7 @@ eq("workspace kept", ws_count(), ORIG_COUNT + 1)
 suite("remove the ACTIVE workspace")
 # ------------------------------------------------------------------ #
 
-d(f'WA.renameWorkspace({NEW_INDEX}, ""); true')  # back to default -> no prompt
+d(f'WA.renameWorkspace({NEW_INDEX}, ""); true')  # back to default, no prompt
 settle()
 d(f'WA.activateWorkspaceByIndex({NEW_INDEX}); true')
 settle()
@@ -390,6 +433,9 @@ highlighted = d('D.buttons.filter(function(b){'
                 'return b.get_style_pseudo_class() && '
                 'b.get_style_pseudo_class().indexOf("outlined")!==-1;}).length')
 eq("exactly one tile highlighted", highlighted, 1)
+check("active tile has current-workspace accessible name",
+      d('D.buttons.filter(function(b){return b.get_style_pseudo_class().indexOf("outlined")!==-1;})'
+        '[0].get_accessible_name().indexOf("Current workspace")===0') is True)
 
 # ------------------------------------------------------------------ #
 suite("rapid add/remove burst (debounce)")
@@ -418,11 +464,42 @@ check("canAdd false at the ceiling", d('WA.canAdd()') is False)
 check("addWorkspace refuses", d('WA.addWorkspace()') is False)
 eq("still 36", ws_count(), 36)
 check("+ tile hidden at the ceiling",
-      d('let dd=D._computeGridDims();'
-        'WA.planCells(WA.getWorkspaceCount(), '
-        '  !!(D.enableEditing && D.showAddTile && WA.canAdd()), dd.rows, dd.cols)'
+      d('GM.planCells(WA.getWorkspaceCount(), '
+        '  !!(D.enableEditing && D.showAddTile && WA.canAdd()))'
         '.filter(function(c){return c.kind==="add";}).length') == 0)
 eq("all 36 tiles rendered", d('D.buttons.length'), 36)
+
+d('D.displayType="visual"; D._rebuildGrid(); true')
+settle(0.5)
+dense = d('D.buttons.map(function(b){let p=b.get_child().get_children()[0];'
+          'return {width:p.width,height:p.height,preview:'
+          'p.get_style_class_name()==="curb-workspace-grid-preview"};})')
+eq("dense mode keeps one preview per workspace",
+   sum(1 for item in dense if item["preview"]), 36)
+check("dense previews have positive size",
+      all(item["width"] > 0 and item["height"] > 0 for item in dense), dense[:4])
+check("dense previews are not forced to 48 by 32",
+      any(item["width"] < 48 or item["height"] < 32 for item in dense), dense[:4])
+assert_grid_contained("36-workspace layout")
+orig_width = d('D.width')
+orig_height = d('D.height')
+d('D.width=200; D.height=200; D.mainContainer.set_width(200);'
+  'D.mainContainer.set_height(200); D._rebuildGrid(); true')
+settle(0.4)
+eq("tiny dense grid falls back to bounded name buttons",
+   d('D.buttons.map(function(b){return b.get_child().get_children().filter(function(c){'
+     'return c.get_style_class_name&&c.get_style_class_name()==="curb-workspace-grid-preview";'
+     '}).length;}).reduce(function(a,b){return a+b;},0)'), 0)
+check("tiny dense labels stay width-bounded",
+      d('D.buttons.every(function(b){let children=b.get_child().get_children();'
+        'let label=children[children.length-1]; return label.width<=12;})'))
+assert_grid_contained("tiny fallback layout")
+d(f'D.width={orig_width}; D.height={orig_height};'
+  f'D.mainContainer.set_width({orig_width}); D.mainContainer.set_height({orig_height});'
+  'D._rebuildGrid(); true')
+settle(0.4)
+d('D.displayType="buttons"; D._rebuildGrid(); true')
+settle(0.3)
 
 d(f'while (WA.getWorkspaceCount() > {ORIG_COUNT}) '
   f'  WA.removeWorkspaceByIndex(WA.getWorkspaceCount()-1, {{confirm:false}}); true')
@@ -430,27 +507,83 @@ settle(1.0)
 eq("back to baseline count", ws_count(), ORIG_COUNT)
 
 # ------------------------------------------------------------------ #
-suite("fixed layout smaller than the workspace count")
+suite("fixed layout expands to show every workspace")
 # ------------------------------------------------------------------ #
 
 orig_mode = d('D.layoutMode')
 orig_rows = d('D.fixedRows')
 orig_cols = d('D.fixedCols')
 # Pin the count so the expectations below hold whatever the session baseline
-# is: 4 workspaces overflow a 2x2 fixed grid by one.
+# is: 4 workspaces plus add tile need a third row.
 d('while (WA.getWorkspaceCount() < 4) WA.addWorkspace(); true')
 settle(0.5)
+fixed_count = ws_count()
 d('D.layoutMode="fixed"; D.fixedRows=2; D.fixedCols=2; D._rebuildGrid(); true')
 settle(0.3)
-eq("2x2 grid renders 3 workspaces + the add tile", d('D.buttons.length'), 3)
-cells = d('WA.planCells(WA.getWorkspaceCount(), true, 2, 2)'
+eq("2-column grid renders every workspace", d('D.buttons.length'), fixed_count)
+cells = d('GM.planCells(WA.getWorkspaceCount(), true)'
           '.map(function(c){return c.kind==="add"?"+":String(c.index);}).join(",")')
-eq("+ tile keeps the last cell", cells, "0,1,2,+")
+eq("+ tile follows every workspace", cells,
+   ",".join(str(index) for index in range(fixed_count)) + ",+")
 check("no error rendering an overflowing fixed grid", True)
+assert_grid_contained("fixed two-column layout")
 
 d('D.layoutMode="fixed"; D.fixedRows=1; D.fixedCols=1; D._rebuildGrid(); true')
 settle(0.3)
-eq("1x1 grid renders only the add tile", d('D.buttons.length'), 0)
+eq("1-column grid still renders every workspace", d('D.buttons.length'), fixed_count)
+assert_grid_contained("fixed one-column layout")
+
+# ------------------------------------------------------------------ #
+suite("desktop preview mode")
+# ------------------------------------------------------------------ #
+
+d('D.displayType="visual"; D._rebuildGrid(); true')
+settle(0.4)
+eq("one preview per workspace",
+   d('D.buttons.map(function(b){return b.get_child().get_children().filter(function(c){'
+     'return c.get_style_class_name&&c.get_style_class_name()==="curb-workspace-grid-preview";'
+     '}).length;}).reduce(function(a,b){return a+b;},0)'), ws_count())
+check("preview event signals connected", d('D._previewSignals._storage.length') > 0)
+ordered = d('let w=global.workspace_manager.get_workspace_by_index(0);'
+            'D._getPreviewWindows(w).map(function(win){return win.get_user_time();})')
+eq("preview windows sorted from back to front", ordered, sorted(ordered))
+expected_drawings = d('let w=global.workspace_manager.get_workspace_by_index(0);'
+                      'D._getPreviewWindows(w).filter(function(win){return '
+                      'imports.ui.deskletManager.desklets["' + DESKLET + '"]'
+                      '.previewGeometry.projectRect(win.get_buffer_rect(),'
+                      'w.get_work_area_all_monitors(),'
+                      'D.buttons[0].get_child().get_children()[0].width,'
+                      'D.buttons[0].get_child().get_children()[0].height)!==null;}).length')
+rendered_drawings = d('D.buttons[0].get_child().get_children()[0].get_children()'
+                      '.filter(function(c){return c.get_style_class_name&&'
+                      'c.get_style_class_name()&&'
+                      'c.get_style_class_name().indexOf("curb-workspace-grid-window")===0;}).length')
+eq("one bounded layer per unobscured visible window", rendered_drawings, expected_drawings)
+eq("preview uses no unbounded Cairo drawing surfaces",
+   d('D.buttons.map(function(b){let p=b.get_child().get_children()[0];'
+     'return p.get_children().filter(function(c){return c instanceof imports.gi.St.DrawingArea;})'
+     '.length;}).reduce(function(a,b){return a+b;},0)'), 0)
+layer_bounds = d('D.buttons.map(function(b){let p=b.get_child().get_children()[0];'
+                 'if (!p.get_style_class_name || '
+                 'p.get_style_class_name()!=="curb-workspace-grid-preview") return null;'
+                 'let origin=p.get_transformed_position();'
+                 'let epsilon=0.5;'
+                 'return {clip:p.has_clip,local:p.get_children().every(function(c){return '
+                 'c.x>=0&&c.y>=0&&c.x+c.width<=p.width&&c.y+c.height<=p.height;}),'
+                 'transformed:p.get_children().every(function(c){let q=c.get_transformed_position();'
+                 'return q[0]+epsilon>=origin[0]&&q[1]+epsilon>=origin[1]&&'
+                 'q[0]+c.width<=origin[0]+p.width+epsilon&&'
+                 'q[1]+c.height<=origin[1]+p.height+epsilon;})};'
+                 '}).filter(function(v){return v!==null;})')
+check("every preview has an explicit hard clip",
+      all(item["clip"] for item in layer_bounds), layer_bounds)
+check("every window and icon layer stays inside local preview allocation",
+      all(item["local"] for item in layer_bounds), layer_bounds)
+check("every window and icon layer stays inside transformed preview allocation",
+      all(item["transformed"] for item in layer_bounds), layer_bounds)
+d('D.displayType="buttons"; D._rebuildGrid(); true')
+settle(0.3)
+eq("preview signals released in names mode", d('D._previewSignals._storage.length'), 0)
 
 d(f'D.layoutMode={json.dumps(orig_mode)}; D.fixedRows={orig_rows}; D.fixedCols={orig_cols};'
   'D._rebuildGrid(); true')
@@ -509,17 +642,28 @@ check("applet renameDialog module loads",
 suite("teardown releases everything")
 # ------------------------------------------------------------------ #
 
-before = d('({switch: !!D.switch_id, added: !!D.ws_added_id, removed: !!D.ws_removed_id,'
-           ' name: !!D.ws_name_id})')
-check("signals connected before teardown", all(before.values()), before)
+before = d('({signals: D._signalManager._storage.length, name: !!D.ws_name_id})')
+check("signals connected before teardown", before["signals"] > 0 and before["name"], before)
+
+d(f'D.settings.setValue("layout-mode", {json.dumps(ORIG_DESKLET_SETTINGS["layout"])});'
+  f'D.settings.setValue("fixed-rows", {ORIG_DESKLET_SETTINGS["rows"]});'
+  f'D.settings.setValue("fixed-cols", {ORIG_DESKLET_SETTINGS["cols"]});'
+  f'D.settings.setValue("display-type", {json.dumps(ORIG_DESKLET_SETTINGS["display"])});'
+  f'D.settings.setValue("enable-workspace-editing", '
+  f'{str(ORIG_DESKLET_SETTINGS["editing"]).lower()}); true')
+restored_settings = d('({layout: D.settings.getValue("layout-mode"),'
+                      ' rows: D.settings.getValue("fixed-rows"),'
+                      ' cols: D.settings.getValue("fixed-cols"),'
+                      ' display: D.settings.getValue("display-type"),'
+                      ' editing: D.settings.getValue("enable-workspace-editing")})')
+eq("desklet settings restored", restored_settings, ORIG_DESKLET_SETTINGS)
 
 d('D._cleanup(); true')
-after = d('({switch: D.switch_id, added: D.ws_added_id, removed: D.ws_removed_id,'
+after = d('({signals: D._signalManager._storage.length, previews: D._previewSignals._storage.length,'
           ' name: D.ws_name_id, idle: D._idleSources.length, timeout: D._rebuildTimeout,'
           ' menu: !!D._tileMenu, flag: D._cleanedUp})')
-eq("switch-workspace released", after["switch"], None)
-eq("workspace-added released", after["added"], None)
-eq("workspace-removed released", after["removed"], None)
+eq("workspace signals released", after["signals"], 0)
+eq("preview signals released", after["previews"], 0)
 eq("workspace-names released", after["name"], None)
 eq("idle sources cleared", after["idle"], 0)
 eq("rebuild timeout cleared", after["timeout"], None)

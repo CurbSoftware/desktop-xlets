@@ -1,31 +1,37 @@
-# Workspace Name Applet
+# Workspace Names Applet
 
-A Cinnamon panel applet that shows the current workspace name, and lets you
-manage workspaces without leaving the panel.
+Workspace Names puts every workspace directly on a Cinnamon panel. Each named
+button switches to its workspace with one click. The active workspace uses the
+panel theme's outlined state.
 
----
+## Features
 
-## ✨ Features
+- One visible button per workspace
+- Name, number, or number and name labels
+- Horizontal and vertical panel layouts
+- Density-aware label bounds with compact vertical name prefixes
+- Full-name tooltips and accessible button names
+- Optional trailing add button
+- Disabled, normal, or reversed scroll switching
+- Expo, add, rename, and remove actions in the standard applet menu
+- Live updates after workspace add, remove, reorder, rename, or switch
 
-- 🏷️ Shows the current workspace as its **name**, its **number**, or `number: name`.
-- 📋 Click to open a menu listing every workspace; click one to switch to it.
-- ➕ **Add workspace** from the menu (up to 36).
-- ✏️ **Rename current workspace…** opens a dialog; leave it empty to restore the default name.
-- 🗑️ **Remove current workspace**, with a confirmation prompt for named workspaces.
-- 🖱️ Optional scroll-wheel workspace switching.
-- 🔄 The label updates live when a workspace is renamed anywhere — Expo, the
-  grid desklet, or Cinnamon Settings.
+## Settings
 
----
+Open Cinnamon Settings, then Applets, then Workspace Names.
 
-## 🛠️ Configuration
+- Workspace button labels
+- Maximum workspace name width
+- Scroll wheel behavior
+- Workspace editing controls
+- Named workspace removal confirmation
 
-Configure from **Cinnamon Settings → Applets**, defined in
-[`settings-schema.json`](settings-schema.json):
+Existing installations keep the same UUID. The former scroll checkbox is
+migrated once to the new three-state scroll setting.
 
-- **Display mode**: `Name only`, `Number only`, or `Number + Name`.
-- **Show workspace menu on click**.
-- **Use scroll wheel to switch workspaces**.
-- **Allow adding, removing and renaming workspaces from the menu**: master
-  switch for the management block.
-- **Confirm before removing a named workspace**.
+## Testing
+
+```sh
+gjs dev-tools/test-workspace-actions.js
+python3 dev-tools/live-test-applet.py
+```

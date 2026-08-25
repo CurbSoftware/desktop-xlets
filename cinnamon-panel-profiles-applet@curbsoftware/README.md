@@ -1,9 +1,11 @@
 # Panel Profiles
 
-A Cinnamon applet that saves your whole panel environment as a named profile
-and restores it later, exactly. Panels, monitor placement, heights, autohide,
-icon and text sizes, every applet in every zone, their order, and each
-applet's own settings all come back as you saved them.
+A Cinnamon applet that saves named desktop layouts and restores them later,
+exactly. Every profile brings back
+panels, monitor placement, heights, autohide, icon and text sizes, every
+applet in every zone, their order, and each applet's own settings. A profile
+can optionally include the desklet list, desklet settings and each desklet's
+own config.
 
 ## Why it exists
 
@@ -14,23 +16,23 @@ the time the second SPICE head appears the second panel and its applets are
 gone. You recreate it by hand. Every reboot.
 
 Panel Profiles fixes that. You set the panels up once, save the layout as a
-profile, mark it as the startup profile, and the applet restores it after the
-second display arrives. It is also just handy as a general panel-profile
-manager: keep a Minimal profile, a Development profile, a Presentation
-profile, and flip between them.
+profile, and restore it whenever you want with one click. It is also just
+handy as a general layout manager: keep a Minimal profile, a Development
+profile, a Presentation profile, and flip between them.
 
 ## Features
 
-- Named profiles of the full panel state, not just a few settings.
-- Exact restore of panel keys, applet placement, order and per-applet config.
-- Restore previous layout: every load snapshots the current layout first, so
-  you can undo a bad load.
-- Startup recovery that waits for the displays your profile expects, then
-  restores once they settle.
-- Modified detection: the menu tells you when the active profile no longer
-  matches the live panels.
-- Overwrite, duplicate, rename and delete profiles from a native menu.
-- Applet settings captured too, so a profile brings back each applet's config.
+- One clear profile type: panels and applets, with an optional Include
+  desklets checkbox when saving.
+- Exact restore: a profile brings back precisely what it was configured to
+  include.
+- Profiles apply only when you click them. Boot stays Cinnamon's own.
+- Modified detection: the menu tells you when the live layout no longer
+  matches the active profile, with an Update action.
+- Rename, duplicate and delete profiles in the applet's settings window.
+- Every load is transactional: a rollback snapshot is taken first and a
+  failed restore is undone automatically.
+- Restart Cinnamon and Configure entries right in the menu.
 
 ## Install
 
@@ -50,8 +52,7 @@ Or, from the monorepo root, use the installer:
 ```
 
 Then add it to a panel: right-click a panel, choose Applets, find Panel
-Profiles, click the plus. Put it on a panel of your primary monitor if you
-want reliable startup recovery (see below).
+Profiles, click the plus.
 
 ## Use
 
@@ -59,36 +60,31 @@ The short version: save, break it, restore.
 
 1. Set up your panels the way you want them.
 2. Click Panel Profiles, then Save current layout, and give it a name.
+   Select Include desklets if this layout should restore them too.
 3. Change whatever you like: move an applet, resize a panel, add a panel.
 4. Click the profile in the menu. It comes back exactly.
 
-The menu shows the active profile with a check, lists the rest, and reports
-how many displays you have versus how many the active profile expects. When
-you have changed things, the active row gains a Modified tag and the menu
-offers Update and Restore previous layout.
+The menu opens straight into your profiles. The active profile sits at the
+top in bold with a check; the rest follow alphabetically. When the live
+layout drifts from it, its row gains a Modified tag and the menu offers an
+Update action. Below the list: Restore previous layout, Save current layout,
+Configure (the applet's settings window) and Restart Cinnamon.
 
-Manage profiles from Manage profiles. From there you can load, rename,
-duplicate, delete, or set a profile as the startup profile.
+Rename, duplicate and delete profiles from the applet's settings window
+(Configure). The settings also carry a read-only row showing the connected
+display count and what the active profile expects.
 
-## Startup recovery
+## Restore behavior
 
-Mark one profile as the startup profile (Save dialog checkbox, or Manage
-profiles, Set as startup). On the next Cinnamon start the applet checks the
-live layout, waits for the displays the profile expects, and restores it.
-
-Keep the applet on a panel of the primary monitor. Cinnamon starts the
-primary monitor first, so that is where the applet exists early enough to do
-its job. If it sits on a secondary monitor and startup recovery is on, it
-tells you once to move it.
+Nothing restores automatically at boot; Cinnamon starts with whatever it
+last saved. When you click a profile that expects more displays than are
+connected, the applet waits for them (with a timeout) before restoring.
 
 Settings, in the applet's settings dialog:
 
-- Automatically restore startup profile
-- Wait for required displays
-- Display wait timeout
-- Stabilization delay
-- Capture applet settings
-- Keep rollback history, and how many snapshots
+- Manage saved profiles (rename, duplicate, delete)
+- Stabilization delay and display wait timeout for restores
+- One automatic rollback snapshot, also available from the applet menu
 - Success and warning notifications
 - Debug logging
 
@@ -104,8 +100,7 @@ Everything is under:
 ```
 
 - Profiles are the saved snapshots. One JSON file each.
-- state.json tracks the active and startup profiles plus any in-flight
-  restore.
+- state.json tracks the active profile plus any in-flight restore.
 - backups holds the rollback snapshot written before every load.
 
 Directories are created mode 0700, files mode 0600. That means only your user
@@ -130,9 +125,9 @@ The applet logs with a `[PanelProfiles]` prefix.
   log may be in a file like `/tmp/wpN-cinnamon.log` instead. `~/.xsession-errors`
   is the normal home for it.
 
-Recovering a layout: load another profile from the menu, or Restore previous
-layout to undo the last load. The rollback snapshot in
-`~/.config/cinnamon-panel-profiles/backups/` is written before every load.
+Recovering a layout: load another profile from the menu. The rollback
+snapshot in `~/.config/cinnamon-panel-profiles/backups/` is written before
+every load and a failed restore is undone automatically.
 
 Full reset: remove the state directory. The applet rebuilds it on next start.
 
@@ -140,8 +135,8 @@ Full reset: remove the state directory. The applet rebuilds it on next start.
 rm -rf ~/.config/cinnamon-panel-profiles
 ```
 
-Your panel layout itself is untouched by that; you only lose saved profiles
-and the startup designation.
+Your panel layout itself is untouched by that; you only lose the saved
+profiles and which ones were active.
 
 If `state.json` is damaged, the applet renames it to a timestamped `.corrupt`
 file, recreates a safe default, and leaves profile files untouched. If a

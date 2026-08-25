@@ -6,8 +6,15 @@ How to build, test and iterate on the Panel Profiles applet.
 
 - `applet.js`: composition root. Lifecycle, menu, settings binding, dirty
   tracking, notifications, and the dependency injection that feeds the lib.
-- `dialogs.js`: Save, Manage and StartupOffer dialogs. St/Clutter only, no
-  lib imports, no require.
+- `dialogs.js`: the Save dialog (new or replace, optional desklets) and shared
+  confirmation modals. St/Clutter only, no lib imports, no require.
+- `displayInfoWidget.py`: read-only custom settings widget (connected
+  displays and the active profile's expectation) for
+  cinnamon-settings.
+- `profilesManagerWidget.py`: custom settings widget that lists profiles
+  and performs rename/duplicate/delete directly on the profile files and
+  state.json (cinnamon-settings runs in its own process; the applet
+  re-reads profiles on every menu open).
 - `lib/constants.js`: paths, `PANEL_SETTING_KEYS`, schema versions, dir/file
   modes, timings.
 - `lib/logger.js`: `[PanelProfiles]` prefix, three levels, never logs config
@@ -19,16 +26,22 @@ How to build, test and iterate on the Panel Profiles applet.
 - `lib/appletConfigStore.js`: applet config capture/restore/watch plus the
   relative-path sanitization boundary.
 - `lib/profileSchema.js`: validate and migrate profiles, ids and name rules.
-- `lib/profileStore.js`: profile CRUD, state.json, rollback rotation.
+- `lib/profileStore.js`: profile CRUD, state.json, and the single last-good
+  recovery snapshot, serialized with a reentrant cross-process lock shared
+  by the settings widget.
 - `lib/monitorTopology.js`: topology read/match/wait over an injectable
   layout provider.
 - `lib/applyController.js`: the apply transaction state machine and the
-  single-operation lock.
+  in-process single-operation lock.
 
 The lib modules have no St/Clutter imports and no require calls, so they load
 headless. They share state through `setDependencies()`/`resetDependencies()`
 seams. Public names use `var`/`function` so both require and the plain
 `imports.<mod>` loader see them.
+
+Legacy rollback-history settings remain as hidden generic schema keys. They
+are compatibility placeholders only and are not part of the current single
+last-good recovery model.
 
 Related notes: `RESEARCH.md` (Cinnamon 6.6.9 live inspection),
 `docs/SCHEMA.md` (profile JSON), `docs/TESTING.md` (manual VM checklist),
@@ -101,14 +114,14 @@ export CINNAMON_VM=linuxmint-user   # run `virsh list --all` first, override if 
 
 Manual detach-window procedure, when you cannot script the display arrival:
 
-1. Set up the two-panel layout, save it, mark it as startup.
+1. Set up the two-panel layout and save it.
 2. Shut down. Start the VM with only the first head attached, or detach the
    second virt-viewer window.
-3. Boot. Cinnamon comes up with one monitor and the applet shows Waiting for
-   display 2.
-4. Reattach the second window. Cinnamon sees the monitor, the applet waits for
-   the stabilization delay, then restores the profile.
-5. Confirm the second panel and its applets are back and the profile verified.
+3. Boot. Cinnamon comes up with one monitor and nothing restores on its own.
+4. Click the saved profile: the applet shows Waiting for displays.
+5. Reattach the second window. Cinnamon sees the monitor, the applet waits
+   for the stabilization delay, then restores the profile.
+6. Confirm the second panel and its applets are back and the profile verified.
 
 ## Known Cinnamon 6.6 landmine
 

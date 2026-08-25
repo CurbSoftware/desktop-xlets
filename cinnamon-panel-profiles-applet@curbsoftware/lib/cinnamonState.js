@@ -85,6 +85,28 @@ function _panelKeys() {
     return (c && c.PANEL_SETTING_KEYS) ? c.PANEL_SETTING_KEYS : null;
 }
 
+/* Kind gate for restore/verify/fingerprint. With the constants module
+ * unreachable, mirror its rules inline (panel layout keys and the applet
+ * list belong to the panel family; the desklet keys to the desklet
+ * family; the internal "both" kind owns everything). */
+function _kindAllowsKey(includeDesklets, key) {
+    const c = _constants();
+    if (includeDesklets === "desklet") {
+        return c && c.DESKLET_SETTING_KEYS
+            ? c.DESKLET_SETTING_KEYS.indexOf(key) !== -1
+            : key.indexOf("desklet") !== -1;
+    }
+    if (c && typeof c.scopeAllowsKey === "function")
+        return c.scopeAllowsKey(includeDesklets === true ||
+            includeDesklets === "both", key);
+    const isDeskletKey = key === "enabled-desklets" ||
+        key === "desklet-decorations" || key === "desklet-snap" ||
+        key === "desklet-snap-interval";
+    if (isDeskletKey)
+        return includeDesklets === true || includeDesklets === "both";
+    return true;
+}
+
 function _selfUuid() {
     if (_deps && typeof _deps.selfUuid === "string" && _deps.selfUuid.length > 0)
         return _deps.selfUuid;
@@ -207,47 +229,125 @@ function captureSettings() {
     return result;
 }
 
-/* Snapshot keys to restore in the no-applet phase: every captured key except
- * enabled-applets (its own final phase), panels-enabled forced last so new
- * panels materialize with height and autohide already set. Keys the live
- * schema lacks are skipped by the caller-visible loop below. */
-function _orderedRestoreKeys(store) {
+/* Snapshot keys to restore in the no-list phase: every captured key except
+ * enabled-applets and enabled-desklets (their own phases; the desklet list
+ * writes just before the applet list), panels-enabled forced last so new
+ * panels materialize with height and autohide already set. Keys outside the
+ * snapshot's scope are dropped here, silently: they were captured verbatim
+ * for portability, never meant to restore. Keys the live schema lacks are
+ * skipped by the caller-visible loop below. */
+function _orderedRestoreKeys(store, kind) {
     const keys = _panelKeys();
+    const allowed = function (k) {
+        return _kindAllowsKey(kind, k);
+    };
     const present = keys
         ? keys.filter(function (k) {
-            return k !== "enabled-applets" && k !== "panels-enabled" && store[k];
+            return k !== "enabled-applets" && k !== "enabled-desklets" &&
+                k !== "panels-enabled" && store[k] && allowed(k);
         })
         : Object.keys(store).filter(function (k) {
-            return k !== "enabled-applets" && k !== "panels-enabled";
+            return k !== "enabled-applets" && k !== "enabled-desklets" &&
+                k !== "panels-enabled" && allowed(k);
         });
     /* Anything captured outside the constants list (future schema) still
      * restores, after the known property keys. */
     if (keys) {
         Object.keys(store).forEach(function (k) {
             if (keys.indexOf(k) === -1 && k !== "enabled-applets" &&
-                k !== "panels-enabled")
+                k !== "enabled-desklets" && k !== "panels-enabled" &&
+                store[k] && allowed(k))
                 present.push(k);
         });
     }
-    if (store["panels-enabled"])
+    if (store["panels-enabled"] && allowed("panels-enabled"))
         present.push("panels-enabled");
     return present;
+}
+
+function _targetPanelIds(store) {
+    try {
+        const rec = store && store["panels-enabled"];
+        const variant = rec && parseVariant(rec.type, rec.value);
+        if (!variant || variant.get_type_string() !== "as")
+            return null;
+        const ids = {};
+        parsePanelsEnabled(variant.get_strv()).panels.forEach(function (panel) {
+            ids[panel.id] = true;
+        });
+        return ids;
+    } catch (ignored) {
+        return null;
+    }
+}
+
+function _isPanelScopedSetting(key) {
+    return ["panels-autohide", "panels-show-delay", "panels-hide-delay",
+        "panels-height"].indexOf(key) !== -1 ||
+        key.indexOf("panel-zone-") === 0;
+}
+
+function _filterPanelScopedValue(key, value, panelIds) {
+    try {
+        const variant = parseVariant(null, value);
+        if (!variant)
+            return null;
+        if (key.indexOf("panel-zone-") === 0) {
+            if (variant.get_type_string() !== "s")
+                return null;
+            const got = variant.get_string();
+            const raw = Array.isArray(got) ? got[0] : got;
+            const rows = JSON.parse(raw);
+            if (!Array.isArray(rows))
+                return null;
+            const kept = rows.filter(function (row) {
+                return row && panelIds[parseInt(row.panelId, 10)];
+            });
+            return variantToString(GLib.Variant.new_string(JSON.stringify(kept)));
+        }
+        if (variant.get_type_string() !== "as")
+            return null;
+        const kept = variant.get_strv().filter(function (entry) {
+            return panelIds[parseInt(String(entry).split(":")[0], 10)];
+        });
+        return variantToString(GLib.Variant.new_strv(kept));
+    } catch (ignored) {
+        return null;
+    }
+}
+
+/* Before panels-enabled is written last, Cinnamon can retain or synthesize
+ * rows for panels that are about to be removed. Accept those extra retiring
+ * rows only when every target-panel row matches. Final apply verification
+ * still compares the complete canonical values after panel deletion. */
+function _readbackMatchesDuringPanelTransition(key, stored, live, panelIds) {
+    if (!panelIds || !_isPanelScopedSetting(key))
+        return false;
+    const storedFiltered = _filterPanelScopedValue(key, stored, panelIds);
+    const liveFiltered = _filterPanelScopedValue(key, live, panelIds);
+    if (storedFiltered === null || liveFiltered === null)
+        return false;
+    const expected = canonicalizeKeyValue(key, stored);
+    return canonicalizeKeyValue(key, storedFiltered) === expected &&
+        canonicalizeKeyValue(key, liveFiltered) === expected;
 }
 
 /**
  * restoreSettingsExceptEnabledApplets:
  * @snapshot (object): capture/profile shape with .cinnamonSettings.
+ * @kind (string): profile kind; keys outside the kind's family (either
+ *   enabled list, layout scalars) are skipped silently.
  *
- * Writes every captured panel key except enabled-applets, panels-enabled
- * last (see _orderedRestoreKeys). Keys missing from the live schema are
- * skipped with a warning, not an error: profiles must survive moving
- * between Cinnamon versions.
+ * Writes every captured panel key except the two enabled lists,
+ * panels-enabled last (see _orderedRestoreKeys). Keys missing from the live
+ * schema are skipped with a warning, not an error: profiles must survive
+ * moving between Cinnamon versions.
  *
  * Returns (object): {ok, warnings}. ok is false when a stored value could
  * not be parsed, written, or verified by readback; skipped-missing keys only
  * warn.
  */
-function restoreSettingsExceptEnabledApplets(snapshot) {
+function restoreSettingsExceptEnabledApplets(snapshot, kind) {
     const result = { ok: true, warnings: [] };
     try {
         const store = snapshot && snapshot.cinnamonSettings;
@@ -257,11 +357,12 @@ function restoreSettingsExceptEnabledApplets(snapshot) {
             return result;
         }
         const settings = _settings();
+        const panelIds = _targetPanelIds(store);
         let liveKeys = null;
         if (typeof settings.list_keys === "function")
             liveKeys = settings.list_keys();
 
-        _orderedRestoreKeys(store).forEach(function (key) {
+        _orderedRestoreKeys(store, kind).forEach(function (key) {
             const rec = store[key];
             if (!rec || typeof rec.value !== "string") {
                 result.ok = false;
@@ -292,14 +393,17 @@ function restoreSettingsExceptEnabledApplets(snapshot) {
                 result.warnings.push("write failed for " + key + ": " + e);
                 return;
             }
-            if (getRaw(key) !== rec.value) {
+            const liveValue = getRaw(key);
+            if (liveValue !== rec.value &&
+                    !_readbackMatchesDuringPanelTransition(
+                        key, rec.value, liveValue, panelIds)) {
                 result.ok = false;
                 /* Panel-layout key values only (never applet config), so
                  * printing them cannot leak anything private. Seeing both
                  * sides is the only way to tell a formatting difference
                  * from a real lost write. */
                 result.warnings.push("readback mismatch for " + key +
-                    ": stored " + rec.value + " live " + getRaw(key));
+                    ": stored " + rec.value + " live " + liveValue);
             }
         });
     } catch (e) {
@@ -337,8 +441,39 @@ function restoreEnabledApplets(snapshot) {
 }
 
 /**
+ * restoreEnabledDesklets:
+ * @snapshot (object): capture/profile shape with .cinnamonSettings.
+ *
+ * The desklet list's own phase, run just before the enabled-applets write.
+ * deskletManager live-applies this key during the call, but it can never
+ * destroy the calling APPLET, so the post-write restrictions that apply to
+ * restoreEnabledApplets do not start here.
+ *
+ * Returns (boolean): true if the stored variant was written.
+ */
+function restoreEnabledDesklets(snapshot) {
+    try {
+        const rec = snapshot && snapshot.cinnamonSettings &&
+            snapshot.cinnamonSettings["enabled-desklets"];
+        if (!rec)
+            return false;
+        const variant = parseVariant(rec.type, rec.value);
+        if (!variant)
+            return false;
+        _settings().set_value("enabled-desklets", variant);
+        return true;
+    } catch (e) {
+        _log("warn", "restoreEnabledDesklets failed: " + e);
+        return false;
+    }
+}
+
+/**
  * verifyAgainst:
  * @snapshot (object): capture/profile shape with .cinnamonSettings.
+ * @kind (string): profile kind; keys outside the kind's family are skipped
+ *   without a warning (they were never restored, so drift on them is not
+ *   a mismatch).
  *
  * Canonical comparison of every captured key that exists live. Keys missing
  * live warn instead of mismatching (the restore pass already warned about
@@ -346,7 +481,7 @@ function restoreEnabledApplets(snapshot) {
  *
  * Returns (object): {ok, mismatchedKeys, warnings}.
  */
-function verifyAgainst(snapshot) {
+function verifyAgainst(snapshot, kind) {
     const result = { ok: true, mismatchedKeys: [], warnings: [] };
     try {
         const store = snapshot && snapshot.cinnamonSettings;
@@ -356,6 +491,8 @@ function verifyAgainst(snapshot) {
             return result;
         }
         Object.keys(store).forEach(function (key) {
+            if (!_kindAllowsKey(kind, key))
+                return;
             const rec = store[key];
             if (!rec || typeof rec.value !== "string") {
                 result.warnings.push("no stored value for " + key);
@@ -382,9 +519,9 @@ function verifyAgainst(snapshot) {
  * ------------------------------------------------------------------ */
 
 /* enabled-applets entry: "panel<Id>:<zone>:<pos>:<uuid>[:<id>]". Both the
- * 5-field form (explicit instance id, current Cinnamon) and the legacy
- * 4-field form parse; anything else is malformed and preserved verbatim by
- * callers. Ids stay strings: id "0" is real (menu@cinnamon.org ships with
+ * 5-field form (explicit instance id, current Cinnamon), legacy 4-field
+ * form, and future override fields after field five parse. Unknown tails
+ * stay in raw and tail. Ids stay strings: id "0" is real (menu@cinnamon.org ships with
  * it) and any falsy check on an id is a bug. parseInt plus Number.isFinite
  * guards every numeric field. */
 var VALID_ZONES = ["left", "center", "right"];
@@ -407,7 +544,7 @@ function parseEnabledApplets(strv) {
                 return;
             }
             const fields = raw.split(":");
-            if (fields.length < 4 || fields.length > 5) {
+            if (fields.length < 4) {
                 result.malformed.push(raw);
                 return;
             }
@@ -430,11 +567,63 @@ function parseEnabledApplets(strv) {
                 uuid: fields[3],
                 instanceId: (fields[4] !== undefined && fields[4] !== "")
                     ? fields[4] : null,
+                tail: fields.slice(5),
                 raw: raw
             });
         });
     } catch (e) {
         _log("warn", "parseEnabledApplets failed: " + e);
+    }
+    return result;
+}
+
+/**
+ * parseEnabledDesklets:
+ * @strv (array): raw enabled-desklets strings.
+ *
+ * Entry format (verified live on Cinnamon 6.6):
+ * "uuid:instanceId:x:y" with x/y pixel positions; instance ids exist even
+ * for single-instance desklets (their config still files as <uuid>.json).
+ * Exactly four fields parse; anything else is malformed and preserved
+ * verbatim by callers. The instance id stays a string (id "0" is real) and
+ * negative x/y are legal, so only finiteness is checked.
+ *
+ * Returns (object): { entries: [{uuid, instanceId, x, y, raw}],
+ * malformed: [raw] }.
+ */
+function parseEnabledDesklets(strv) {
+    const result = { entries: [], malformed: [] };
+    try {
+        if (!Array.isArray(strv))
+            return result;
+        strv.forEach(function (raw) {
+            if (typeof raw !== "string") {
+                result.malformed.push(String(raw));
+                return;
+            }
+            const fields = raw.split(":");
+            if (fields.length !== 4 || fields[0].length === 0) {
+                result.malformed.push(raw);
+                return;
+            }
+            const instanceId = parseInt(fields[1], 10);
+            const x = parseInt(fields[2], 10);
+            const y = parseInt(fields[3], 10);
+            if (!Number.isFinite(instanceId) || !Number.isFinite(x) ||
+                !Number.isFinite(y)) {
+                result.malformed.push(raw);
+                return;
+            }
+            result.entries.push({
+                uuid: fields[0],
+                instanceId: fields[1],
+                x: x,
+                y: y,
+                raw: raw
+            });
+        });
+    } catch (e) {
+        _log("warn", "parseEnabledDesklets failed: " + e);
     }
     return result;
 }
@@ -522,6 +711,23 @@ function _canonEnabledApplets(strv) {
         return (a.panelId - b.panelId) ||
             (zoneRank[a.zone] - zoneRank[b.zone]) ||
             (a.order - b.order);
+    }).map(function (e) {
+        return e.raw;
+    });
+    return sorted.concat(parsed.malformed.slice().sort());
+}
+
+/* Desklet rows have no panel/zone; (uuid, id) is the semantic key, so the
+ * canonical order sorts entries by uuid then numeric id (x/y as tiebreak)
+ * and appends sorted malformed entries, mirroring _canonEnabledApplets. */
+function _canonEnabledDesklets(strv) {
+    const parsed = parseEnabledDesklets(strv);
+    const sorted = parsed.entries.slice().sort(function (a, b) {
+        const byUuid = a.uuid < b.uuid ? -1 : (a.uuid > b.uuid ? 1 : 0);
+        const aId = parseInt(a.instanceId, 10);
+        const bId = parseInt(b.instanceId, 10);
+        const byId = aId - bId;
+        return byUuid || byId || (a.x - b.x) || (a.y - b.y);
     }).map(function (e) {
         return e.raw;
     });
@@ -641,6 +847,8 @@ function canonicalizeKeyValue(key, valueStr) {
             return _printStrv(_canonPanelsEnabled(strv));
         if (key === "enabled-applets")
             return _printStrv(_canonEnabledApplets(strv));
+        if (key === "enabled-desklets")
+            return _printStrv(_canonEnabledDesklets(strv));
         return _printStrv(_canonPerPanel(strv));
     } catch (e) {
         _log("warn", "canonicalizeKeyValue failed for " + key + ": " + e);
@@ -651,14 +859,20 @@ function canonicalizeKeyValue(key, valueStr) {
 /**
  * fingerprintSettingsPart:
  * @snapshot (object): capture/profile shape with .cinnamonSettings.
+ * @kind (string): profile kind; keys outside the kind's family are skipped.
  *
  * Returns (string): the canonical settings part of the fingerprint: each
- * captured key's canonical value in PANEL_SETTING_KEYS order, joined with
- * unit separators. Missing keys are skipped, so a profile captured without
- * one key still fingerprints consistently against live state that also
- * lacks it.
+ * captured in-scope key's canonical value in PANEL_SETTING_KEYS order,
+ * joined with unit separators. Missing keys are skipped, so a profile
+ * captured without one key still fingerprints consistently against live
+ * state that also lacks it.
+ *
+ * Compat invariant: with kind "panel" the emitted string is
+ * byte-identical to the pre-desklet-support digest (the desklet keys sit at
+ * the end of the key list and are filtered out), so schema v1 profiles keep
+ * verifying after the upgrade. Never reorder the key list.
  */
-function fingerprintSettingsPart(snapshot) {
+function fingerprintSettingsPart(snapshot, kind) {
     try {
         const keys = _panelKeys();
         if (!keys)
@@ -668,6 +882,8 @@ function fingerprintSettingsPart(snapshot) {
             return "";
         const parts = [];
         keys.forEach(function (key) {
+            if (!_kindAllowsKey(kind, key))
+                return;
             const rec = store[key];
             if (rec && typeof rec.value === "string")
                 parts.push(canonicalizeKeyValue(key, rec.value));
@@ -730,6 +946,54 @@ function bumpNextAppletId(minId) {
 }
 
 /* ------------------------------------------------------------------ *
+ * next-desklet-id allocator (mirror of the applet counter)
+ * ------------------------------------------------------------------ */
+
+/**
+ * readNextDeskletId:
+ *
+ * Returns (int): the live next-desklet-id, or 0 if unreadable. Same
+ * contract as readNextAppletId: allocator counter, never captured, only
+ * ever bumped forward.
+ */
+function readNextDeskletId() {
+    try {
+        const variant = _settings().get_value("next-desklet-id");
+        if (!variant || variant.get_type_string() !== "i")
+            return 0;
+        const value = variant.get_int32();
+        return Number.isFinite(value) ? value : 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+/**
+ * bumpNextDeskletId:
+ * @minId (int): lowest acceptable value for the counter.
+ *
+ * Forward-only, like bumpNextAppletId.
+ *
+ * Returns (boolean): true unless the write was needed and failed.
+ */
+function bumpNextDeskletId(minId) {
+    try {
+        const target = parseInt(minId, 10);
+        if (!Number.isFinite(target))
+            return false;
+        const current = readNextDeskletId();
+        if (target <= current)
+            return true;
+        _settings().set_value("next-desklet-id",
+            GLib.Variant.new_int32(target));
+        return true;
+    } catch (e) {
+        _log("warn", "bumpNextDeskletId failed: " + e);
+        return false;
+    }
+}
+
+/* ------------------------------------------------------------------ *
  * Manager anchor
  * ------------------------------------------------------------------ */
 
@@ -745,19 +1009,20 @@ function _lowestPanelOnMonitor(panels, monitor) {
 
 /**
  * ensureManagerAnchor:
- * @state (object): { enabledApplets (array), panelsEnabled (array),
- *   nextAppletId (int), primaryMonitorIndex (int) }
+ * @state (object): { enabledApplets (array), liveEnabledApplets (array),
+ *   panelsEnabled (array), nextAppletId (int), primaryMonitorIndex (int) }
  *
  * Anchor repair per the plan: a profile must never remove the only Panel
- * Profiles instance. Self entries (this applet's uuid) keep the first one
- * whose panel exists; extra self entries are dropped (never duplicates).
- * With no surviving self entry, one is synthesized on the lowest panel id
- * on the primary monitor, falling back to monitor 0, then to the lowest
- * panel id anywhere (avoiding a duplicate panel id), and if there are no
- * panels at all a "1:<primary>:bottom" panel is appended to panelsEnabled.
- * The synthesized entry goes in the right zone at max right-zone order + 1
- * with instance id max(max numeric id, nextAppletId); the returned counter
- * is max(nextAppletId, allocatedId + 1), never lowered.
+ * Profiles instance. Target self entries collapse to one. Its placement is
+ * kept when that panel survives. If the profile has no manager entry, the
+ * live manager's placement is kept when its panel survives. Its instance id
+ * and override tail also come from the live manager whenever collision-free.
+ * This avoids moving the transaction owner during anchor repair and lets a
+ * profile delete the manager's old host panel without losing it. With no
+ * valid target or live placement, the lowest panel on the primary monitor
+ * wins, then monitor 0, then the lowest panel anywhere.
+ * With no panels, panel 1 is created. Fallback allocation is
+ * max(nextAppletId, maxExistingId + 1), so it never collides.
  *
  * Pure: nothing is written to settings, inputs are not mutated.
  *
@@ -778,6 +1043,8 @@ function ensureManagerAnchor(state) {
 
         const enabledApplets = Array.isArray(state.enabledApplets)
             ? state.enabledApplets.slice() : [];
+        const liveEnabledApplets = Array.isArray(state.liveEnabledApplets)
+            ? state.liveEnabledApplets.slice() : [];
         const panelsEnabled = Array.isArray(state.panelsEnabled)
             ? state.panelsEnabled.slice() : [];
         const nextAppletId = Number.isFinite(state.nextAppletId)
@@ -794,79 +1061,103 @@ function ensureManagerAnchor(state) {
         });
         const parsed = parseEnabledApplets(enabledApplets);
 
-        /* Keep the first self entry on an existing panel, drop the rest.
-         * Walking the raw array keeps duplicate handling occurrence-exact:
-         * two identical self strings keep the first copy and drop the
-         * second, which an indexOf-based splice could not do. */
-        let repaired = false;
-        let kept = false;
-        const outEntries = [];
-        enabledApplets.forEach(function (raw) {
-            const one = parseEnabledApplets([raw]).entries[0];
-            if (!one || one.uuid !== uuid) {
-                outEntries.push(raw);
-                return;
-            }
-            if (!panelIds[one.panelId]) {
-                repaired = true; /* self on a dead panel: drop */
-                return;
-            }
-            if (kept) {
-                repaired = true; /* extra self entry: drop */
-                return;
-            }
-            kept = true;
-            outEntries.push(raw);
-        });
+        const targetSelf = parsed.entries.find(function (entry) {
+            return entry.uuid === uuid && panelIds[entry.panelId];
+        }) || null;
+        const liveSelf = parseEnabledApplets(liveEnabledApplets).entries
+            .find(function (entry) { return entry.uuid === uuid; }) || null;
 
-        let allocatedId = null;
-        let outNextAppletId = nextAppletId;
-
-        if (!kept) {
-            /* No surviving anchor: synthesize one. */
-            let panelId;
-            let panel = _lowestPanelOnMonitor(parsedPanels.panels, primaryMonitorIndex);
+        let panelId = targetSelf ? targetSelf.panelId : null;
+        if (panelId === null && liveSelf && panelIds[liveSelf.panelId])
+            panelId = liveSelf.panelId;
+        if (panelId === null) {
+            let panel = _lowestPanelOnMonitor(parsedPanels.panels,
+                primaryMonitorIndex);
             if (!panel)
                 panel = _lowestPanelOnMonitor(parsedPanels.panels, 0);
             if (panel) {
                 panelId = panel.id;
             } else if (parsedPanels.panels.length > 0) {
-                let best = null;
-                parsedPanels.panels.forEach(function (p) {
-                    if (best === null || p.id < best)
-                        best = p.id;
-                });
-                panelId = best;
+                panelId = parsedPanels.panels.reduce(function (best, p) {
+                    return best === null || p.id < best ? p.id : best;
+                }, null);
             } else {
                 panelsEnabled.push("1:" + primaryMonitorIndex + ":bottom");
+                panelIds[1] = true;
                 panelId = 1;
             }
-
-            let maxOrder = -1;
-            let maxNumericId = 0;
-            parsed.entries.forEach(function (entry) {
-                if (entry.panelId === panelId && entry.zone === "right" &&
-                    entry.order > maxOrder)
-                    maxOrder = entry.order;
-                if (entry.instanceId !== null) {
-                    const n = parseInt(entry.instanceId, 10);
-                    if (Number.isFinite(n) && n > maxNumericId)
-                        maxNumericId = n;
-                }
-            });
-
-            allocatedId = Math.max(maxNumericId, nextAppletId);
-            const order = maxOrder + 1;
-            outEntries.push("panel" + panelId + ":right:" + order + ":" +
-                uuid + ":" + allocatedId);
-            outNextAppletId = Math.max(nextAppletId, allocatedId + 1);
-            repaired = true;
         }
+
+        let maxOrder = -1;
+        let maxNumericId = 0;
+        const usedByOther = {};
+        parsed.entries.forEach(function (entry) {
+            if (entry.panelId === panelId && entry.zone === "right" &&
+                    entry.order > maxOrder)
+                maxOrder = entry.order;
+            if (entry.instanceId === null)
+                return;
+            const n = parseInt(entry.instanceId, 10);
+            if (Number.isFinite(n) && n > maxNumericId)
+                maxNumericId = n;
+            if (entry.uuid !== uuid)
+                usedByOther[entry.instanceId] = true;
+        });
+
+        let allocatedId = null;
+        let newlyAllocated = false;
+        const identity = liveSelf || targetSelf;
+        if (identity && identity.instanceId !== null &&
+                !usedByOther[identity.instanceId]) {
+            allocatedId = identity.instanceId;
+        } else {
+            allocatedId = String(Math.max(nextAppletId, maxNumericId + 1));
+            newlyAllocated = true;
+        }
+        const livePlacement = !targetSelf && liveSelf &&
+            liveSelf.panelId === panelId ? liveSelf : null;
+        const placement = targetSelf || livePlacement;
+        const zone = placement ? placement.zone : "right";
+        const order = placement ? placement.order : maxOrder + 1;
+        const tail = liveSelf && Array.isArray(liveSelf.tail)
+            ? liveSelf.tail : (targetSelf && Array.isArray(targetSelf.tail)
+                ? targetSelf.tail : []);
+        let anchorRaw = "panel" + panelId + ":" + zone + ":" + order +
+            ":" + uuid + ":" + allocatedId;
+        if (tail.length > 0)
+            anchorRaw += ":" + tail.join(":");
+
+        const outEntries = [];
+        let inserted = false;
+        enabledApplets.forEach(function (raw) {
+            const one = parseEnabledApplets([raw]).entries[0];
+            if (one && one.uuid === uuid) {
+                if (!inserted) {
+                    outEntries.push(anchorRaw);
+                    inserted = true;
+                }
+                return;
+            }
+            outEntries.push(raw);
+        });
+        if (!inserted)
+            outEntries.push(anchorRaw);
+
+        const selfRows = parsed.entries.filter(function (entry) {
+            return entry.uuid === uuid;
+        });
+        const repaired = selfRows.length !== 1 || selfRows[0].raw !== anchorRaw ||
+            panelsEnabled.join("\x00") !==
+                (Array.isArray(state.panelsEnabled)
+                    ? state.panelsEnabled.join("\x00") : "");
+        const allocatedNumber = parseInt(allocatedId, 10);
+        const outNextAppletId = Number.isFinite(allocatedNumber)
+            ? Math.max(nextAppletId, allocatedNumber + 1) : nextAppletId;
 
         return {
             enabledApplets: outEntries,
             panelsEnabled: panelsEnabled,
-            allocatedId: allocatedId === null ? null : String(allocatedId),
+            allocatedId: newlyAllocated ? String(allocatedId) : null,
             nextAppletId: outNextAppletId,
             repaired: repaired
         };

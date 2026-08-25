@@ -19,7 +19,7 @@ For code changes that won't crash Cinnamon:
   1. Edit your extension files
   2. Press Win+L to open Looking Glass
   3. Go to "Extensions" tab
-  4. Right-click your extension → "Reload Code"
+  4. Right-click your extension, then choose "Reload Code"
 
 OPTION 2: Virtual Machine (Best for crash isolation)
 ---------------------------------------------------

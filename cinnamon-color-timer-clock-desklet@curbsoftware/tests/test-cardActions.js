@@ -11,7 +11,9 @@ vm.runInContext(
     code +
     "\nthis.exports = {" +
     "DAY_SECONDS, parseColor, rgbaToCss, rgbaToKey, normalizeSchedule, evaluate," +
-    "contrastColors, computeFittedFontSizes, computeCardInnerSize, fitKinds," +
+    "contrastColors, computeFittedFontSizes, computeCardInnerSize, computeResponsiveGrid," +
+    "computeResponsiveHeight," +
+    "nextStop, nextColor," +
     "worstTimeSample, CARD_LAYOUT, DEFAULT_CLOCK_SCHEDULE" +
     "};",
     sandbox
@@ -52,8 +54,14 @@ const milliFit = A.computeFittedFontSizes(inner.width, inner.height, {
 }, { time: 48, date: 13, timezone: 11 });
 assert(milliFit.time <= longFit.time, "hundredths shrink further or equal");
 
-const kinds = A.fitKinds(["clock", "timer", "chrono"], 840, 6);
-assert(kinds.length === 3, "three cards fit at 840");
+const wide = A.computeResponsiveGrid(3, 840, 6);
+assert(wide.rows === 1 && wide.cols === 3, "three cards use one wide row");
+const medium = A.computeResponsiveGrid(3, 600, 6);
+assert(medium.rows === 2 && medium.cols === 2, "footer-safe cards wrap at medium width");
+const narrow = A.computeResponsiveGrid(3, 200, 6);
+assert(narrow.rows === 3 && narrow.cols === 1, "narrow layout keeps all cards");
+assert(A.computeResponsiveHeight(3, 120, 6) === 416,
+    "stacked layout gains safe height");
 
 const parsed = A.parseColor("#3949ab");
 assert(parsed.ok && parsed.rgba[2] === 171, "parse hex color");
@@ -62,5 +70,7 @@ const sched = A.normalizeSchedule(A.DEFAULT_CLOCK_SCHEDULE, A.DAY_SECONDS);
 assert(sched.stops.length === 3, "default clock schedule");
 const color = A.evaluate(sched.stops, 12 * 3600, { wrap: true, smooth: true });
 assert(Array.isArray(color) && color.length === 4, "evaluate noon color");
+const next = A.nextStop(sched.stops, 13 * 3600, { wrap: true });
+assert(next.t === 18 * 3600 && Array.isArray(next.rgba), "next stop includes time and color");
 
 console.log("cardActions tests passed");

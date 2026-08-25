@@ -6,24 +6,36 @@
   "display-mode": {
     "type": "combobox",
     "default": "name",
-    "description": "Display mode",
+    "description": "Workspace button labels",
     "options": {
       "Name only": "name",
       "Number only": "number",
       "Number + Name": "both"
     }
   },
-  "show-menu-on-click": {
-    "type": "checkbox",
-    "default": true,
-    "description": "Show workspace menu on click"
+  "maximum-label-width": {
+    "type": "spinbutton",
+    "default": 140,
+    "min": 40,
+    "max": 400,
+    "step": 10,
+    "units": "px",
+    "description": "Maximum width of each workspace name"
+  },
+  "scroll-behavior": {
+    "type": "combobox",
+    "default": "disabled",
+    "description": "Scroll wheel behavior",
+    "options": {
+      "Disabled": "disabled",
+      "Switch workspaces": "normal",
+      "Switch workspaces in reverse": "reversed"
+    }
   },
   "scroll-to-switch": {
-    "type": "checkbox",
-    "default": false,
-    "description": "Use scroll wheel to switch workspaces"
+    "type": "generic",
+    "default": false
   },
-
   "management": {
     "type": "header",
     "description": "Workspace management"
@@ -31,7 +43,13 @@
   "enable-workspace-editing": {
     "type": "checkbox",
     "default": true,
-    "description": "Allow adding, removing and renaming workspaces from the menu"
+    "description": "Allow adding, removing and renaming workspaces"
+  },
+  "show-add-button": {
+    "type": "checkbox",
+    "default": false,
+    "description": "Show an add button after workspace names",
+    "dependency": "enable-workspace-editing"
   },
   "confirm-remove": {
     "type": "checkbox",

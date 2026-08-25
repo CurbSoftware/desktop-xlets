@@ -2,11 +2,12 @@
 """Live acceptance driver for the Panel Profiles applet.
 
 Drives the running Cinnamon desktop through org.Cinnamon.Eval (see
-cinnamon_eval.py) and walks the full spec section 41-49 matrix in twelve
-phases: install + injection + first-run menu, save flow + startup offer,
-exact restore, applet-config persistence, 5-cycle A/B switch, rollback,
-missing third-party applet, anchor repair, corrupt profile/state, rapid
-clicks, the startup matrix, and teardown.
+cinnamon_eval.py) and walks the full acceptance matrix in fifteen phases:
+install + injection + first-run menu, save flow, exact restore,
+applet-config persistence, 5-cycle A/B switch, rollback, missing
+third-party applet, anchor repair, corrupt profile/state, rapid clicks,
+pendingApply resume, optional desklet capture, the real menu path, the
+Configure window, and teardown.
 
 Baselines every org.cinnamon panel key, the applet state dir, the applet's
 own config file and the two calendar config files, then restores them all
@@ -24,6 +25,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 
@@ -68,6 +70,11 @@ PANEL_KEYS = [
     "panels-show-delay", "panels-hide-delay", "panels-height",
     "panel-scale-text-icons", "panel-zone-icon-sizes",
     "panel-zone-symbolic-icon-sizes", "panel-zone-text-sizes",
+]
+
+DESKLET_KEYS = [
+    "enabled-desklets", "desklet-decorations", "desklet-snap",
+    "desklet-snap-interval",
 ]
 
 passed = 0
@@ -264,10 +271,11 @@ def wait_rollback(timeout=14.0):
     return wait_for(pred, "rollback to settle", timeout)
 
 
-def save_profile(name):
+def save_profile(name, include_desklets=False):
     res = a('(function(){const r=A._modules.ApplyController.beginSaveNew(' +
-            json.dumps(name) + ');'
+            json.dumps(name) + ',' + json.dumps(include_desklets) + ');'
             'return {ok:r.ok, id:(r.profile&&r.profile.id)||null,'
+            ' includeDesklets:(r.profile&&r.profile.includeDesklets)||false,'
             ' reason:r.reason||null};})()')
     return res or {}
 
@@ -299,7 +307,7 @@ def move_applet(uuid, new_panel, new_zone, new_pos):
     for e in apps:
         f = e.split(":")
         if len(f) >= 4 and f[3] == uuid:
-            rest = ":" + f[4] if len(f) >= 5 else ""
+            rest = ":" + ":".join(f[4:]) if len(f) >= 5 else ""
             out.append("panel%d:%s:%d:%s%s" % (new_panel, new_zone, new_pos, uuid, rest))
             moved = True
         else:
@@ -343,6 +351,14 @@ def reload_applet():
     add_applet()
 
 
+def parse_strv(raw):
+    """gsettings prints an empty strv as '@as []'; literal_eval cannot."""
+    raw = raw.strip()
+    if raw == "@as []":
+        return []
+    return ast.literal_eval(raw)
+
+
 def enable_debug():
     a('A._modules.Logger.setDebug(true); true')
     a('A.settings.setValue("debug-logging", true); true')
@@ -383,31 +399,29 @@ print("session probe: " + str(probe))
 
 ORIG_APPLETS = gs_get("enabled-applets")
 ORIG_NEXT_ID = gs_get("next-applet-id")
-ORIG_PANEL = {key: gs_get(key) for key in PANEL_KEYS}
+ORIG_NEXT_DESKLET_ID = gs_get("next-desklet-id")
+ORIG_PANEL = {key: gs_get(key) for key in PANEL_KEYS + DESKLET_KEYS}
 INSTANCE = int(ast.literal_eval(ORIG_NEXT_ID))
 PANEL_ENTRY = "panel2:left:99:%s:%d" % (APPLET, INSTANCE)
 COREDUMP_BASE = coredump_pids()
 HAD_STATE = os.path.isdir(STATE_DIR)
-STATE_BAK = "/tmp/pp-state-backup"
+RUN_BAK = tempfile.mkdtemp(prefix="panel-profiles-live-")
+STATE_BAK = os.path.join(RUN_BAK, "state")
 HAD_CFG = os.path.isfile(CFG_FILE)
-CFG_BAK = "/tmp/pp-cfg-backup.json"
+CFG_BAK = os.path.join(RUN_BAK, "applet-config.json")
 HAD_CAL13 = os.path.isfile(CAL_13)
 HAD_CAL16 = os.path.isfile(CAL_16)
-CAL_BAK = "/tmp/pp-cal-backup"
-if HAD_STATE and os.path.isdir(STATE_BAK):
-    shutil.rmtree(STATE_BAK, ignore_errors=True)
+CAL_BAK = os.path.join(RUN_BAK, "calendar")
 if HAD_STATE:
-    shutil.move(STATE_DIR, STATE_BAK)
+    shutil.copytree(STATE_DIR, STATE_BAK)
 if HAD_CFG:
-    shutil.copy(CFG_FILE, CFG_BAK)
-if os.path.isdir(CAL_BAK):
-    shutil.rmtree(CAL_BAK, ignore_errors=True)
+    shutil.copy2(CFG_FILE, CFG_BAK)
 if HAD_CAL13 or HAD_CAL16:
     os.makedirs(CAL_BAK, exist_ok=True)
     if HAD_CAL13:
-        shutil.copy(CAL_13, os.path.join(CAL_BAK, "13.json"))
+        shutil.copy2(CAL_13, os.path.join(CAL_BAK, "13.json"))
     if HAD_CAL16:
-        shutil.copy(CAL_16, os.path.join(CAL_BAK, "16.json"))
+        shutil.copy2(CAL_16, os.path.join(CAL_BAK, "16.json"))
 
 LOG_START = log_size()
 print("baseline: next-applet-id=%s, %d panel keys, %d coredumps already present"
@@ -415,9 +429,14 @@ print("baseline: next-applet-id=%s, %d panel keys, %d coredumps already present"
 
 import atexit  # noqa: E402
 
+RESTORE_DONE = False
+
 
 @atexit.register
 def _restore():
+    global RESTORE_DONE
+    if RESTORE_DONE:
+        return
     try:
         close_modals()
         js(PRE + "if (A && A.menu && A.menu.isOpen) A.menu.close(); true")
@@ -428,19 +447,30 @@ def _restore():
     for key, value in ORIG_PANEL.items():
         gs_set(key, value)
     gs_set("next-applet-id", ORIG_NEXT_ID)
+    gs_set("next-desklet-id", ORIG_NEXT_DESKLET_ID)
     shutil.rmtree(STATE_DIR, ignore_errors=True)
     if HAD_STATE and os.path.isdir(STATE_BAK):
         shutil.copytree(STATE_BAK, STATE_DIR)
     if HAD_CFG:
         try:
             os.makedirs(os.path.dirname(CFG_FILE), exist_ok=True)
-            shutil.copy(CFG_BAK, CFG_FILE)
+            shutil.copy2(CFG_BAK, CFG_FILE)
         except Exception as exc:
             print("applet config restore failed: " + str(exc), file=sys.stderr)
+    elif os.path.isfile(CFG_FILE):
+        os.unlink(CFG_FILE)
     if HAD_CAL13:
-        shutil.copy(os.path.join(CAL_BAK, "13.json"), CAL_13)
+        os.makedirs(os.path.dirname(CAL_13), exist_ok=True)
+        shutil.copy2(os.path.join(CAL_BAK, "13.json"), CAL_13)
+    elif os.path.isfile(CAL_13):
+        os.unlink(CAL_13)
     if HAD_CAL16:
-        shutil.copy(os.path.join(CAL_BAK, "16.json"), CAL_16)
+        os.makedirs(os.path.dirname(CAL_16), exist_ok=True)
+        shutil.copy2(os.path.join(CAL_BAK, "16.json"), CAL_16)
+    elif os.path.isfile(CAL_16):
+        os.unlink(CAL_16)
+    shutil.rmtree(RUN_BAK, ignore_errors=True)
+    RESTORE_DONE = True
     print("restored enabled-applets, panel keys, next-applet-id, "
           "state dir, applet + calendar configs")
 
@@ -452,6 +482,9 @@ def _on_term(signum, frame):
 signal.signal(signal.SIGTERM, _on_term)
 signal.signal(signal.SIGINT, _on_term)
 
+# The recovery handler is armed before the test gets a clean state tree.
+shutil.rmtree(STATE_DIR, ignore_errors=True)
+
 # ------------------------------------------------------------------ #
 suite("1 install + injection + first-run menu")
 # ------------------------------------------------------------------ #
@@ -459,61 +492,66 @@ suite("1 install + injection + first-run menu")
 check("applet is installed", os.path.isfile(os.path.join(INSTALLED, "applet.js")) and
       os.path.isfile(os.path.join(INSTALLED, "metadata.json")),
       "install via ./dev-tools/install-extensions.sh -n '*panel-profiles*'")
-check("not already on a panel", APPLET not in ORIG_APPLETS)
+if APPLET in ORIG_APPLETS:
+    # The user's own session carries the applet; the atexit restore brings
+    # the original list back. Remove it so the suites start clean.
+    gs_set("enabled-applets",
+           str([e for e in ast.literal_eval(ORIG_APPLETS)
+                if APPLET not in e]))
+    time.sleep(0.6)
+check("not already on a panel", APPLET not in gs_get("enabled-applets"))
 
 add_applet()
 state = a('({modules: !!A._modules, watchIds: A._settingWatchIds.length,'
-          ' dirty: A._dirtyStatus, notif: !!A._notifier, idle: A._idleSources.length})')
+          ' dirtyPanel: A._dirtyStatus.panel, notif: !!A._notifier,'
+          ' idle: A._idleSources.length})')
 check("modules wired", state["modules"] is True)
-eq("ten GSettings watches", state["watchIds"], 10)
-eq("dirty starts UNKNOWN", state["dirty"], "UNKNOWN")
+eq("fourteen GSettings watches (panel + desklet keys)",
+   state["watchIds"], 14)
+eq("panel dirty starts UNKNOWN", state["dirtyPanel"], "UNKNOWN")
 check("notifier built", state["notif"] is True)
 eq("no idle sources", state["idle"], 0)
 
 items = a('A.updateMenu(); A.menu._getMenuItems().map(function(i){'
           'return i.label ? i.label.get_text() : "---";})')
 eq("first-run menu rows", items,
-   ["Panel Profiles", "---", "No panel profiles saved yet.",
+   ["No profiles saved yet.",
     "Save your current panel layout to create one.", "---",
-    "Save current layout…", "Manage profiles…"])
+    "Save current layout…", "Restore previous layout", "Configure…",
+    "Restart Cinnamon"])
+check("no title row and no status rows",
+      "Panel Profiles" not in items and
+      not any(l.startswith("Current:") or l.startswith("Displays:")
+              for l in items), str(items))
 check("save row sensitive",
-      a('A.menu._getMenuItems()[5].actor.reactive') is True)
+      a('A.menu._getMenuItems()[3].actor.reactive') is True)
 
 NEXT_FLOOR = next_id()
 
 # ------------------------------------------------------------------ #
-suite("2 save flow + startup offer")
+suite("2 save flow")
 # ------------------------------------------------------------------ #
 
 before = modals()
-a("A._openSaveDialog(); true")
+a('A._openSaveDialog(); true')
 wait_for(lambda: modals() == before + 1, "the save dialog to open")
 js('let s=imports.ui.main.modalActorFocusStack; let dlg=s[s.length-1].actor;'
    'dlg._entry.set_text("Smoke Profile"); true')
 click_modal_button("Save")
-wait_for(lambda: modals() == before or js(
-             '(function(){let s=imports.ui.main.modalActorFocusStack;'
-             'if(!s.length) return false;'
-             'return s[s.length-1].actor.buttonLayout.get_children()'
-             '.some(function(b){return String(b.label)==="Not now";});})()'),
-         "the save dialog to settle")
-time.sleep(0.3)
-if modals() == before + 1:
-    click_modal_button("Not now")
-    wait_for(lambda: modals() == before, "the startup offer to close")
-    check("startup offer shown once", True)
-else:
-    check("startup offer shown once", False, "modals=%d want %d" % (modals(), before + 1))
+wait_for(lambda: modals() == before, "the save dialog to close")
+check("no startup offer anymore", modals() == before, str(modals()))
 
+wait_for(lambda: read_state().get("activeProfileId") is not None,
+         "the saved profile state commit")
 saved = a('({n: A._modules.ProfileStore.listProfiles().length,'
-          ' active: A._modules.ProfileStore.getState().activeProfileId,'
-          ' startup: A._modules.ProfileStore.getState().startupProfileId,'
-          ' dirty: A._dirtyStatus, watches: !!A._configWatchHandle})')
+          ' activePanel: (function(){let s=A._modules.ProfileStore.getState();'
+          'return s?s.activeProfileId:null;})(),'
+          ' dirtyPanel: A._dirtyStatus.panel,'
+          ' watches: !!A._configWatchHandle.panel})')
 eq("one profile saved", saved["n"], 1)
-check("saved profile is active", isinstance(saved["active"], str) and
-      len(saved["active"]) > 0)
-eq("no startup profile (Not now)", saved["startup"], None)
-eq("dirty ACTIVE after save", saved["dirty"], "ACTIVE")
+check("saved profile is active", isinstance(saved.get("activePanel"), str) and
+      len(saved.get("activePanel", "")) > 0)
+eq("dirty ACTIVE after save", saved["dirtyPanel"], "ACTIVE")
 check("config watches attached", saved["watches"] is True)
 
 
@@ -556,8 +594,9 @@ eq("one profile before replace", len(first), 1)
 PRE_ID = first[0]["id"]
 PRE_UPDATED = first[0]["updatedAt"]
 
+time.sleep(1.1)  # updatedAt has second resolution; let the clock tick
 base = modals()
-a("A._openSaveDialog(); true")
+a('A._openSaveDialog(); true')
 wait_for(lambda: modals() == base + 1, "the save dialog to open")
 check("replace radio clicked", click_dialog_content_button(
     "Replace existing profile") is True)
@@ -586,16 +625,18 @@ suite("2c modified detection")
 
 ORIG_HEIGHT = panel1_height()
 set_panel1_height(48 if ORIG_HEIGHT != 48 else 40)
-wait_for(lambda: a("A._dirtyStatus") == "MODIFIED",
+wait_for(lambda: a("A._dirtyStatus.panel") == "MODIFIED",
          "dirty to flip to MODIFIED after a panel change", timeout=6.0)
-eq("dirty MODIFIED after panel height change", a("A._dirtyStatus"), "MODIFIED")
+eq("dirty MODIFIED after panel height change",
+   a("A._dirtyStatus.panel"), "MODIFIED")
 check("menu offers Update", any(
-    l.startswith("Update ") for l in menu_labels()), str(menu_labels()))
+    l.startswith("Update profile") for l in menu_labels()),
+    str(menu_labels()))
 
 set_panel1_height(ORIG_HEIGHT)
-wait_for(lambda: a("A._dirtyStatus") == "ACTIVE",
+wait_for(lambda: a("A._dirtyStatus.panel") == "ACTIVE",
          "dirty to settle back to ACTIVE", timeout=6.0)
-eq("dirty ACTIVE after restore", a("A._dirtyStatus"), "ACTIVE")
+eq("dirty ACTIVE after restore", a("A._dirtyStatus.panel"), "ACTIVE")
 
 # ------------------------------------------------------------------ #
 suite("3 exact restore")
@@ -619,6 +660,10 @@ set_panel1_height(40)
 move_applet("windows-quick-list@cinnamon.org", 2, "center", 0)
 a('A._applyProfile(' + json.dumps(A_ID) + '); true')
 wait_apply(A_ID)
+wait_for(lambda: panel1_height() == 48 and
+         any(e == "panel2:left:2:windows-quick-list@cinnamon.org:20"
+             for e in ast.literal_eval(gs_get("enabled-applets"))),
+         "A's restore to land on the desktop", 8.0)
 eq("height restored to A's 48", panel1_height(), 48)
 eq("windows-quick-list restored to A's spot",
    any(e == "panel2:left:2:windows-quick-list@cinnamon.org:20"
@@ -626,6 +671,11 @@ eq("windows-quick-list restored to A's spot",
 for key in PANEL_KEYS:
     stored = profile_cs_value(A_ID, key)
     live = live_raw(key)
+    if key == "enabled-applets":
+        # Our own entry is legitimately anchor-repaired onto a live panel;
+        # compare everyone else byte-for-byte.
+        live = str([e for e in ast.literal_eval(live) if APPLET not in e])
+        stored = str([e for e in ast.literal_eval(stored) if APPLET not in e])
     eq("key byte-equal: " + key, live, stored,
        "live=%r stored=%r" % (live, stored))
 
@@ -730,7 +780,8 @@ check("rollback snapshot exists", rollback_exists())
 a('A._modules.ApplyController.beginRollback(); true')
 wait_rollback()
 eq("previous layout returned (height %d)" % changed, panel1_height(), changed)
-eq("no active profile after rollback", read_state().get("activeProfileId"), None)
+eq("no active profiles after rollback",
+   read_state().get("activeProfileId"), None)
 
 # ------------------------------------------------------------------ #
 suite("7 missing third-party applet")
@@ -756,6 +807,16 @@ check("missing entry preserved in enabled-applets",
 seg = new_log(seg7)
 check("warning about the missing applet was logged",
       count_log(seg, "applet not installed: missing-applet@test.invalid") >= 1)
+
+# Cinnamon preserves entries for unavailable extensions. Remove this synthetic
+# entry before exact-restore phases so it cannot become unrelated live drift.
+apps = ast.literal_eval(gs_get("enabled-applets"))
+gs_set("enabled-applets", str([
+    e for e in apps if "missing-applet@test.invalid" not in e
+]))
+wait_for(lambda: not any("missing-applet@test.invalid" in e
+                         for e in ast.literal_eval(gs_get("enabled-applets"))),
+         "synthetic missing applet cleanup")
 
 # ------------------------------------------------------------------ #
 suite("8 anchor repair")
@@ -785,7 +846,12 @@ if len(self_entries) == 1:
         if int(f[0]) == panel_id:
             monitor = int(f[1])
     primary = js("imports.ui.main.layoutManager.primaryIndex")
-    eq("self entry sits on the primary monitor's panel", monitor, primary)
+    on_primary = any(int(p.split(":")[1]) == primary for p in pe)
+    if on_primary:
+        eq("self entry sits on the primary monitor's panel",
+           monitor, primary)
+    else:
+        check("self entry sits on an existing panel", monitor is not None)
 
 # ------------------------------------------------------------------ #
 suite("9 corrupt profile + corrupt state.json")
@@ -833,86 +899,13 @@ eq("second apply failure is busy", (res[1] or {}).get("failure"), "busy")
 wait_apply(RAPID_ID)
 
 # ------------------------------------------------------------------ #
-suite("11 startup matrix")
-# ------------------------------------------------------------------ #
+suite("11 pendingApply resume")
 
 enable_debug()
 
-startup = save_profile("Startup")
-check("Startup saved", startup.get("ok") is True, str(startup))
-STARTUP_ID = startup.get("id")
-a('A._modules.ApplyController.setStartupProfile(' + json.dumps(STARTUP_ID) + '); true')
-eq("startup profile set", read_state().get("startupProfileId"), STARTUP_ID)
-
-# 11a. fingerprint short-circuit (no rollback churn on a clean boot).
-rb_path = os.path.join(STATE_DIR, "backups", "last-good.json")
-if os.path.isfile(rb_path):
-    os.remove(rb_path)
-reload_applet()
-time.sleep(0.5)
-st = read_state()
-eq("short-circuit: active == startup", st.get("activeProfileId"), STARTUP_ID)
-eq("short-circuit: no pendingApply", st.get("pendingApply"), None)
-eq("short-circuit: no rollback written", rollback_exists(), False)
-seg = new_log(LOG_START)
-check("short-circuit: log line present",
-      count_log(seg, "startup profile already matches") >= 1)
-
-# 11b. startup apply path (desktop modified, then restored).
-s_h = panel1_height()
-b_changed = s_h - 4 if s_h >= 44 else s_h + 4
-set_panel1_height(b_changed)
-reload_applet()
-wait_for(lambda: panel1_height() == s_h, "startup restore to reapply Startup", 14.0)
-wait_for(lambda: read_state().get("pendingApply") is None and
-         read_state().get("lastSuccessfulApply") is not None,
-         "startup apply verification to commit", 10.0)
-st = read_state()
-eq("apply: active == startup", st.get("activeProfileId"), STARTUP_ID)
-eq("apply: pendingApply cleared", st.get("pendingApply"), None)
-check("apply: rollback written", rollback_exists())
-check("apply: lastSuccessfulApply recorded", st.get("lastSuccessfulApply") is not None)
-seg = new_log(LOG_START)
-check("apply: verification succeeded logged",
-      count_log(seg, "verification succeeded for Startup") >= 1)
-if "verification mismatched" in seg or "FAILED" in json.dumps(read_state()):
-    print("DIAG 11b live panels-height: %s" % gs_get("panels-height"))
-    print("DIAG 11b saved panels-height: %s" % profile_cs_value(STARTUP_ID,
-                                                                "panels-height"))
-    print("DIAG 11b live enabled-applets: %s" % gs_get("enabled-applets"))
-    print("DIAG 11b ours: %s" % [e for e in ast.literal_eval(
-        gs_get("enabled-applets")) if APPLET in e])
-    print("DIAG 11b state: %s" % read_state())
-
-# 11c. monitor-wait timeout (profile expects 3, only 2 live).
-c_changed = s_h - 4 if s_h >= 44 else s_h + 4
-set_panel1_height(c_changed)
-three_body = 'p.monitorTopology.expectedCount=3;'
-three_id, made = craft(STARTUP_ID, "ThreeHeads", three_body)
-check("ThreeHeads crafted", made == three_id, "result=%r" % made)
-a('A._modules.ApplyController.setStartupProfile(' + json.dumps(three_id) + '); true')
-a('A.settings.setValue("startup-wait-timeout", 8); true')
-reload_applet()
-time.sleep(0.6)
-eq("wait: menu wait state 2/3", a("A._waitState"), {"current": 2, "required": 3})
-labels = menu_labels()
-check("wait: menu shows Displays: 2 / 3", "Displays: 2 / 3" in labels)
-segc = log_size()
-wait_for(lambda: controller_state() == "IDLE" and
-         read_state().get("lastFailure") is not None,
-         "timeout to settle IDLE", 16.0)
-time.sleep(0.4)
-st = read_state()
-check("timeout: lastFailure records the wait",
-      "monitor wait timed out" in str((st.get("lastFailure") or {}).get("message", "")))
-seg = new_log(segc)
-eq("timeout: exactly one warning log line",
-   count_log(seg, "monitor wait timed out"), 1)
-eq("timeout: panels untouched (height %d)" % c_changed, panel1_height(), c_changed)
-check("timeout: wait display cleared", a("A._waitState") is None)
-
-# 11d. pendingApply resume across the applet's own reload.
-a('A._modules.ApplyController.setStartupProfile(null); true')
+# A profile that moves the applet itself: the enabled-applets write
+# destroys this instance mid-call, state.json carries the marker, and the
+# successor instance resumes and verifies exactly once.
 set_panel1_height(40)
 time.sleep(0.3)
 resume_src = save_profile("Resume Src")
@@ -942,7 +935,8 @@ wait_for(lambda: read_state().get("pendingApply") is None and
 js("delete global._wp11Ref; true")
 st = read_state()
 eq("resume: pendingApply cleared", st.get("pendingApply"), None)
-eq("resume: active == Resume B", st.get("activeProfileId"), resume_b)
+eq("resume: active profile == Resume B",
+   st.get("activeProfileId"), resume_b)
 apps = ast.literal_eval(gs_get("enabled-applets"))
 check("resume: our uuid now on panel1",
       any(e.startswith("panel1:") and APPLET in e for e in apps), str(apps))
@@ -952,8 +946,178 @@ eq("resume: exactly ONE success notification (verification ran once)",
    count_log(seg, "verification succeeded for Resume B"), 1,
    "\n".join(l for l in seg.splitlines() if "verification succeeded" in l))
 
+
+suite("11b host panel deletion handoff")
+
+# Target removes panel 1, which currently owns this applet. The transaction
+# must continue without its actor, create panel 2, restore configured applets,
+# and let exactly one successor manager verify.
+host_body = (
+    'const peRec=p.cinnamonSettings["panels-enabled"];'
+    'peRec.value=CS.variantToString(GLib.Variant.new_strv(["2:0:top"]));'
+    '["panels-show-delay","panels-hide-delay"].forEach(function(k){'
+    'const rec=p.cinnamonSettings[k];'
+    'const v=CS.parseVariant(rec.type,rec.value);'
+    'rec.value=CS.variantToString(GLib.Variant.new_strv('
+    'v.get_strv().filter(function(e){return e.split(":")[0]==="2";})));});'
+    '["panel-zone-icon-sizes","panel-zone-symbolic-icon-sizes",'
+    '"panel-zone-text-sizes"].forEach(function(k){'
+    'const rec=p.cinnamonSettings[k];'
+    'const v=CS.parseVariant(rec.type,rec.value);'
+    'const got=v.get_string();'
+    'const raw=Array.isArray(got)?got[0]:got;'
+    'const rows=JSON.parse(raw).filter(function(row){return row.panelId===2;});'
+    'rec.value=CS.variantToString(GLib.Variant.new_string(JSON.stringify(rows)));});'
+    'const eaRec=p.cinnamonSettings["enabled-applets"];'
+    'const ea=CS.parseVariant(eaRec.type,eaRec.value);'
+    'eaRec.value=CS.variantToString(GLib.Variant.new_strv('
+    'ea.get_strv().map(function(e){return e.replace(/^panel[0-9]+:/,"panel2:");})));'
+)
+host_id, made = craft(RESUME_SRC, "Host Handoff", host_body)
+check("host handoff profile crafted", made == host_id, "result=%r" % made)
+segd = log_size()
+a("global._hostPanelRef = A; true")
+a('A._applyProfile(' + json.dumps(host_id) + '); true')
+wait_for(lambda: js("global._hostPanelRef._destroyed") is True,
+         "old host-panel instance to be destroyed", 12.0)
+wait_for(lambda: read_state().get("pendingApply") is None and
+         read_state().get("activeProfileId") == host_id,
+         "host-panel handoff to settle", 14.0)
+apps = ast.literal_eval(gs_get("enabled-applets"))
+check("manager anchored on surviving panel 2",
+      len([e for e in apps if APPLET in e and e.startswith("panel2:")]) == 1,
+      str(apps))
+check("configured applets moved to panel 2",
+      all(e.startswith("panel2:") for e in apps), str(apps))
+seg = new_log(segd)
+eq("host handoff verified exactly once",
+   count_log(seg, "verification succeeded for Host Handoff"), 1)
+js("delete global._hostPanelRef; true")
+
+
+suite("12 optional desklets")
+
+live_desklets = parse_strv(gs_get("enabled-desklets"))
+check("at least one desklet live for the optional capture test",
+      len(live_desklets) >= 1, gs_get("enabled-desklets"))
+
+dk = save_profile("Panels and Desklets", True)
+check("combined profile saved", dk.get("ok") is True, str(dk))
+DK_ID = dk.get("id")
+eq("desklets option stamped", dk.get("includeDesklets"), True)
+dk_profile = a('(function(){const l=A._modules.ProfileStore.loadProfile(' +
+               json.dumps(DK_ID) + ');'
+               'return l.profile ? {includeDesklets: l.profile.includeDesklets,'
+               ' deskletConfigs: l.profile.deskletConfigs.length,'
+               ' hasAppletKey: !!l.profile.cinnamonSettings["enabled-applets"]}'
+               ' : null;})()')
+eq("stored profile includes desklets",
+   (dk_profile or {}).get("includeDesklets"), True)
+check("desklet config files captured",
+      (dk_profile or {}).get("deskletConfigs", 0) >= 1, str(dk_profile))
+check("settings still captured in full",
+      (dk_profile or {}).get("hasAppletKey") is True)
+
+# Drift the desklet world, then apply. Panels and desklets come back together.
+gs_set("enabled-desklets", "[]")
+time.sleep(0.3)
+a('A._applyProfile(' + json.dumps(DK_ID) + '); true')
+wait_apply(DK_ID)
+eq("desklet list restored by the desklet apply",
+   sorted(parse_strv(gs_get("enabled-desklets"))), sorted(live_desklets))
+for key in DESKLET_KEYS:
+    if key == "enabled-desklets":
+        continue
+    stored = profile_cs_value(DK_ID, key)
+    eq("desklet key byte-equal: " + key, live_raw(key), stored)
+eq("combined profile active", read_state().get("activeProfileId"), DK_ID)
+
+# Scope discipline: a panels-only profile never touches desklets, even though it
+# captured them. Save while desklets are live, empty the list, apply: the
+# desklets must stay gone.
+ap = save_profile("Panels Only", False)
+AP_ID = ap.get("id")
+eq("panel profile excludes desklets", ap.get("includeDesklets"), False)
+gs_set("enabled-desklets", "[]")
+time.sleep(0.3)
+a('A._applyProfile(' + json.dumps(AP_ID) + '); true')
+wait_apply(AP_ID)
+eq("panel apply leaves the emptied desklet list alone",
+   parse_strv(gs_get("enabled-desklets")), [])
+gs_set("enabled-desklets", str(live_desklets))
+time.sleep(0.3)
+
 # ------------------------------------------------------------------ #
-suite("12 teardown + final state + error sweep")
+suite("13 menu path")
+# ------------------------------------------------------------------ #
+
+# The user's complaint was UX-level: drive the REAL menu, not the modules.
+labels = menu_labels()
+check("menu shows save and recovery items",
+      "Save current layout…" in labels and "Restore previous layout" in labels,
+      str(labels))
+check("menu shows Configure and Restart",
+      "Configure…" in labels and "Restart Cinnamon" in labels, str(labels))
+check("menu has no removed items",
+      not any(l.startswith("Manage profiles") or
+              l.startswith("Duplicate profile") for l in labels),
+      str(labels))
+check("menu lists combined profile",
+      any(l == "Panels and Desklets" for l in labels), str(labels))
+
+def activate_menu_item(label):
+    return a('(function(){let P=imports.ui.popupMenu;'
+             'function walk(m){let items=m._getMenuItems();'
+             'for (let i=0;i<items.length;i++){'
+             'if (items[i] instanceof P.PopupMenuSection){'
+             'if (walk(items[i])) return true; continue;}'
+             'if (items[i].label && items[i].label.get_text()===' +
+             json.dumps(label) + '){items[i].emit("activate"); return true;}}'
+             'return false;}'
+             'A.updateMenu(); return walk(A.menu);})()')
+
+check("combined row activates via the real menu",
+      activate_menu_item("Panels and Desklets") is True)
+wait_apply(DK_ID)
+eq("menu-activated combined profile becomes active",
+   read_state().get("activeProfileId"), DK_ID)
+check("panel row activates via the real menu",
+      activate_menu_item("Smoke Profile") is True)
+wait_for(lambda: read_state().get("activeProfileId") is not None and
+         read_state().get("pendingApply") is None,
+         "menu-activated panel apply to settle", 14.0)
+eq("menu-activated panel apply sets active profile",
+   read_state().get("activeProfileId") is not None, True)
+
+# ------------------------------------------------------------------ #
+suite("14 Configure opens the xlet settings window")
+# ------------------------------------------------------------------ #
+
+base_procs = subprocess.run(["pgrep", "-f", "xlet-settings"],
+                            capture_output=True, text=True).stdout.split()
+
+def new_xlet_procs():
+    return [p for p in subprocess.run(
+        ["pgrep", "-f", "xlet-settings"],
+        capture_output=True, text=True).stdout.split()
+        if p not in base_procs]
+
+check("Configure item activates", activate_menu_item("Configure…") is True)
+opened = wait_for(lambda: new_xlet_procs(),
+                  "an xlet-settings process to appear", 15.0)
+procs = new_xlet_procs()
+if opened and procs:
+    time.sleep(1.5)
+    for proc in procs:
+        subprocess.run(["kill", proc], capture_output=True)
+    time.sleep(0.8)
+    check("Configure opened the xlet settings window", True)
+else:
+    check("Configure opened the xlet settings window", False,
+          "no new process after activate")
+
+
+suite("15 teardown + final state + error sweep")
 # ------------------------------------------------------------------ #
 
 a("global._ppRef = A; true")
@@ -961,13 +1125,15 @@ remove_applet()
 after = js('let r=global._ppRef;'
            '({destroyed: r._destroyed, watchIds: r._settingWatchIds.length,'
            ' idle: r._idleSources.length, debounce: r._dirtyDebounceId,'
-           ' cfgWatch: r._configWatchHandle ? r._configWatchHandle.alive : null})')
+           ' cfgWatchPanel: r._configWatchHandle.panel ? r._configWatchHandle.panel.alive : null,'
+           ' cfgWatchDesklet: r._configWatchHandle.desklet ? r._configWatchHandle.desklet.alive : null})')
 js("delete global._ppRef; true")
 eq("instance marked destroyed", after["destroyed"], True)
 eq("GSettings watches released", after["watchIds"], 0)
 eq("idle sources cleared", after["idle"], 0)
 eq("debounce cleared", after["debounce"], None)
-eq("config watch released", after["cfgWatch"], None)
+eq("panel config watch released", after["cfgWatchPanel"], None)
+eq("desklet config watch released", after["cfgWatchDesklet"], None)
 eq("applet removed from the panel", a("!!A"), False)
 if modals() != 0:
     print("DIAG 12 leftover modals: %s" % js(
@@ -981,7 +1147,9 @@ eq("no modal grabs left", modals(), 0)
 _restore()
 eq("enabled-applets restored verbatim", gs_get("enabled-applets"), ORIG_APPLETS)
 eq("next-applet-id restored verbatim", gs_get("next-applet-id"), ORIG_NEXT_ID)
-for key in PANEL_KEYS:
+eq("next-desklet-id restored verbatim", gs_get("next-desklet-id"),
+   ORIG_NEXT_DESKLET_ID)
+for key in PANEL_KEYS + DESKLET_KEYS:
     eq("panel key restored: " + key, gs_get(key), ORIG_PANEL[key])
 check("applet state dir restored", (os.path.isdir(STATE_DIR) == HAD_STATE))
 time.sleep(0.5)

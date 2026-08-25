@@ -1,8 +1,8 @@
 /* Panel Profiles profile store: profiles CRUD, state.json, rollback files.
  *
  * Everything the applet persists lives under STATE_DIR: named profiles in
- * profiles/<id>.json, rollback snapshots in backups/last-good[-<n>].json,
- * and the small machine-owned state.json (active/startup/pendingApply).
+ * profiles/<id>.json, one rollback snapshot in backups/last-good.json, and
+ * the small machine-owned state.json (active/pendingApply).
  * All writes go through atomicFile (temp sibling + rename, 0600, dirs 0700).
  * Profile ids are validated against a tight pattern before they ever touch
  * a path, because ids come from filenames and, via imports, from outside.
@@ -11,8 +11,8 @@
  * parallel work package and MUST NOT be imported here. Instead the
  * composition root injects validators via setDependencies({ validateProfile,
  * migrateProfile }). Until then this store falls back to a minimal
- * structural check (schemaVersion === 1, id and name strings) and skips
- * migration entirely.
+ * structural check (current schemaVersion, id and name strings) and skips
+ * migration entirely. Its version check follows constants.SCHEMA_VERSION.
  *
  * No St/Clutter imports and no require() calls: this module must stay
  * loadable headless via imports.searchPath so the dev-tools test harness can
@@ -118,10 +118,91 @@ function _warn(msg) {
  * is also the traversal guard for filenames that come off disk or out of
  * imported data. */
 const PROFILE_ID_RE = /^[A-Za-z0-9-]+$/;
+const STORE_LOCK_STALE_SECONDS = 300;
+let _storeLockDepth = 0;
 
 function _stateDirPath() {
     _resolveSiblings();
     return _constants ? _constants.STATE_DIR : "";
+}
+
+function _storeLockPath() {
+    return GLib.build_filenamev([_stateDirPath(), "store.lock"]);
+}
+
+function _tryCreateStoreLock() {
+    const lock = Gio.File.new_for_path(_storeLockPath());
+    try {
+        const stream = lock.create(Gio.FileCreateFlags.NONE, null);
+        const info = new Gio.FileInfo();
+        info.set_attribute_uint32("unix::mode", 0o600);
+        lock.set_attributes_from_info(info, Gio.FileQueryInfoFlags.NONE, null);
+        return { file: lock, stream: stream };
+    } catch (e) {
+        try {
+            const info = lock.query_info("time::modified",
+                Gio.FileQueryInfoFlags.NONE, null);
+            const modified = info.get_attribute_uint64("time::modified");
+            const now = Math.floor(GLib.get_real_time() / 1000000);
+            if (modified > 0 && now - modified > STORE_LOCK_STALE_SECONDS) {
+                lock.delete(null);
+                const stream = lock.create(Gio.FileCreateFlags.NONE, null);
+                const privateInfo = new Gio.FileInfo();
+                privateInfo.set_attribute_uint32("unix::mode", 0o600);
+                lock.set_attributes_from_info(privateInfo,
+                    Gio.FileQueryInfoFlags.NONE, null);
+                return { file: lock, stream: stream };
+            }
+        } catch (ignored) {
+        }
+        return null;
+    }
+}
+
+/* Short cross-process critical section shared with the settings widget.
+ * The apply controller uses it for profile existence, rollback capture and
+ * the durable prepared marker. */
+function withStoreLock(fn) {
+    if (typeof fn !== "function")
+        return { ok: false, error: "invalid lock callback" };
+    if (_storeLockDepth > 0) {
+        _storeLockDepth++;
+        try {
+            return { ok: true, value: fn() };
+        } catch (e) {
+            return { ok: false,
+                error: e && e.message ? e.message : String(e) };
+        } finally {
+            _storeLockDepth--;
+        }
+    }
+    _resolveSiblings();
+    if (!_atomicFile || !_atomicFile.ensurePrivateDir(_stateDirPath()))
+        return { ok: false, error: "state directory unavailable" };
+    const held = _tryCreateStoreLock();
+    if (!held)
+        return { ok: false, error: "profile store is busy" };
+    _storeLockDepth = 1;
+    try {
+        return { ok: true, value: fn() };
+    } catch (e) {
+        return { ok: false, error: e && e.message ? e.message : String(e) };
+    } finally {
+        _storeLockDepth = 0;
+        try {
+            held.stream.close(null);
+        } catch (ignored) {
+        }
+        try {
+            held.file.delete(null);
+        } catch (ignored) {
+        }
+    }
+}
+
+function _lockedValue(fallback, fn) {
+    const locked = withStoreLock(fn);
+    return locked && locked.ok === true ? locked.value : fallback;
 }
 
 function _profilesDirPath() {
@@ -144,11 +225,6 @@ function _lastGoodPath() {
     return GLib.build_filenamev([_backupsDirPath(), _constants.LAST_GOOD_FILE]);
 }
 
-function _numberedRollbackPath(n) {
-    return GLib.build_filenamev([_backupsDirPath(),
-        _constants.LAST_GOOD_FILE.replace(/\.json$/, "") + "-" + n + ".json"]);
-}
-
 /* ISO 8601 with a numeric timezone offset (-07:00 style). GLib's own
  * format_iso8601() omits the minutes half of the offset on whole-hour
  * zones and nothing downstream can parse that; %:z always emits hh:mm. */
@@ -159,13 +235,11 @@ function _isoNow() {
 function _defaultState() {
     _resolveSiblings();
     return {
-        schemaVersion: _constants ? _constants.STATE_SCHEMA_VERSION : 1,
+        schemaVersion: _constants ? _constants.STATE_SCHEMA_VERSION : 3,
         activeProfileId: null,
-        startupProfileId: null,
         pendingApply: null,
         lastSuccessfulApply: null,
-        lastFailure: null,
-        warnedPrimaryPlacement: false
+        lastFailure: null
     };
 }
 
@@ -180,6 +254,37 @@ function _mergeState(parsed) {
         }
     }
     return state;
+}
+
+/* Old state shapes collapse to one active profile. A v2 state can carry two
+ * active ids from the short-lived split-profile design; panel wins because
+ * every v4 profile restores panels. */
+function _migrateState(parsed) {
+    const next = _defaultState();
+    if (!parsed || typeof parsed !== "object")
+        return next;
+    next.lastSuccessfulApply = parsed.lastSuccessfulApply !== undefined
+        ? parsed.lastSuccessfulApply : null;
+    next.lastFailure = parsed.lastFailure !== undefined
+        ? parsed.lastFailure : null;
+    next.pendingApply = (parsed.pendingApply &&
+        parsed.pendingApply.reason === "removal")
+        ? null : (parsed.pendingApply !== undefined
+            ? parsed.pendingApply : null);
+    next.activeProfileId = parsed.activePanelProfileId ||
+        parsed.activeProfileId || parsed.activeDeskletProfileId || null;
+    return next;
+}
+
+/* Accept v1/v2 state shapes, migrated to v3 in memory. */
+function _acceptableState(parsed) {
+    if (!parsed || typeof parsed !== "object")
+        return null;
+    if (parsed.schemaVersion === _defaultState().schemaVersion)
+        return _mergeState(parsed);
+    if (parsed.schemaVersion === 1 || parsed.schemaVersion === 2)
+        return _migrateState(parsed);
+    return null;
 }
 
 function _selfUuidValue() {
@@ -204,9 +309,14 @@ function _selfUuidValue() {
  * because destroying the user's state to "fix" it is worse than running
  * on defaults.
  *
- * Returns (object): { state, recoveredWarnings[] }.
+ * Returns (object): { state, recoveredWarnings[], busy? }. Lock contention
+ * returns state:null and busy:true so startup never mistakes an unread state
+ * for an empty one.
  */
 function init() {
+    if (_storeLockDepth === 0)
+        return _lockedValue({ state: null, recoveredWarnings: [], busy: true },
+            init);
     const warnings = [];
     let state = _defaultState();
     _resolveSiblings();
@@ -237,11 +347,11 @@ function init() {
         } catch (ignored) {
             parsed = null;
         }
-        const shapeOk = parsed !== null && typeof parsed === "object" &&
-            parsed.schemaVersion === _defaultState().schemaVersion;
+        const shapeOk = _acceptableState(parsed);
         if (shapeOk) {
-            state = _mergeState(parsed);
-            /* Persist the merge only when it actually changed something. */
+            state = shapeOk;
+            /* Persist the migrated/merged state only when it actually
+             * changed something (a v1 file upgrades to v2 on disk here). */
             const mergedText = JSON.stringify(state, null, 2);
             if (mergedText !== text &&
                 !_atomicFile.writePrivateFileAtomic(statePath, mergedText))
@@ -301,6 +411,8 @@ function _quarantineStateFile(statePath) {
  * Returns (array): [{id, name, updatedAt, expectedCount, valid}].
  */
 function listProfiles() {
+    if (_storeLockDepth === 0)
+        return _lockedValue([], listProfiles);
     const out = [];
     _resolveSiblings();
     if (!_atomicFile)
@@ -322,25 +434,18 @@ function listProfiles() {
             let entry = {
                 id: id,
                 name: id,
+                includeDesklets: false,
                 updatedAt: null,
                 expectedCount: null,
                 valid: false
             };
-            const text = _atomicFile.readTextFile(_profileFilePath(id));
-            let parsed = null;
-            try {
-                parsed = text === null ? null : JSON.parse(text);
-            } catch (ignored) {
-                parsed = null;
-            }
-            if (parsed !== null && typeof parsed === "object" &&
-                typeof parsed.name === "string" && parsed.name.length > 0) {
+            const loaded = loadProfile(id);
+            const parsed = loaded && !loaded.error ? loaded.profile : null;
+            if (parsed) {
                 entry.name = parsed.name;
-                entry.updatedAt = typeof parsed.updatedAt === "string"
-                    ? parsed.updatedAt : null;
-                entry.expectedCount = parsed.monitorTopology &&
-                    typeof parsed.monitorTopology.expectedCount === "number"
-                    ? parsed.monitorTopology.expectedCount : null;
+                entry.updatedAt = parsed.updatedAt;
+                entry.expectedCount = parsed.monitorTopology.expectedCount;
+                entry.includeDesklets = parsed.includeDesklets === true;
                 entry.valid = true;
             }
             out.push(entry);
@@ -361,13 +466,16 @@ function listProfiles() {
  *
  * Reads and parses the profile, then migrates and validates it. With no
  * injected validators this is a minimal structural check only
- * (schemaVersion === 1, id and name strings); the composition root injects
+ * (current schemaVersion, id and name strings); the composition root injects
  * profileSchema.validate/migrate at applet init (see the dependency note
  * at the top of this file).
  *
  * Returns (object): { profile, error } with profile null on any failure.
  */
 function loadProfile(id) {
+    if (_storeLockDepth === 0)
+        return _lockedValue({ profile: null, error: "profile store is busy" },
+            function () { return loadProfile(id); });
     _resolveSiblings();
     if (!_atomicFile)
         return { profile: null, error: "sibling modules unavailable" };
@@ -395,6 +503,9 @@ function loadProfile(id) {
                 return { profile: null, error: "migration failed: " + e.message };
             }
         }
+
+        if (profile.id !== id)
+            return { profile: null, error: "profile id does not match filename" };
 
         if (_validateProfile) {
             let error = null;
@@ -435,6 +546,8 @@ function loadProfile(id) {
  * Returns (boolean): true on success.
  */
 function saveProfile(profile) {
+    if (_storeLockDepth === 0)
+        return _lockedValue(false, function () { return saveProfile(profile); });
     _resolveSiblings();
     if (!_atomicFile)
         return false;
@@ -455,25 +568,31 @@ function saveProfile(profile) {
 
 /**
  * createFromSnapshot:
- * @input (object): { name, description, snapshot, configs, configHashes,
- * topology, fingerprint, cinnamonVersion, sessionType }
+ * @input (object): { name, description, snapshot, configs, deskletConfigs,
+ * includeDesklets, configHashes, topology, fingerprint, cinnamonVersion,
+ * sessionType }
  *
- * Builds a full schema v1 profile around a captured snapshot and saves it.
- * snapshot maps to the cinnamonSettings field. configHashes is accepted
- * for signature compatibility but deliberately NOT persisted: every hash
- * already lives in appletConfigs[].sha256 and the sorted list is derivable
- * via appletConfigStore.configHashList, so storing it would be a second
- * copy that can drift.
+ * Builds a current profile around a captured snapshot and saves it.
+ * snapshot maps to cinnamonSettings; includeDesklets remembers whether
+ * desklet settings and configs restore with the panels. configHashes is
+ * accepted for signature compatibility but deliberately NOT persisted:
+ * every hash already lives in the config entries' sha256 and the sorted
+ * list is derivable via appletConfigStore.configHashList, so storing it
+ * would be a second copy that can drift.
  *
  * Returns (object|null): the saved profile, or null.
  */
 function createFromSnapshot(input) {
+    if (_storeLockDepth === 0)
+        return _lockedValue(null, function () {
+            return createFromSnapshot(input);
+        });
     _resolveSiblings();
     try {
         input = input || {};
         const now = _isoNow();
         const profile = {
-            schemaVersion: _constants ? _constants.SCHEMA_VERSION : 1,
+            schemaVersion: _constants ? _constants.SCHEMA_VERSION : 4,
             id: GLib.uuid_string_random(),
             name: input.name,
             description: typeof input.description === "string"
@@ -489,6 +608,9 @@ function createFromSnapshot(input) {
             monitorTopology: input.topology || { expectedCount: 1, monitors: [] },
             cinnamonSettings: input.snapshot || {},
             appletConfigs: Array.isArray(input.configs) ? input.configs : [],
+            deskletConfigs: Array.isArray(input.deskletConfigs)
+                ? input.deskletConfigs : [],
+            includeDesklets: input.includeDesklets === true,
             fingerprint: typeof input.fingerprint === "string"
                 ? input.fingerprint : "",
             managerAnchor: { uuid: _selfUuidValue(), required: true }
@@ -505,30 +627,49 @@ function createFromSnapshot(input) {
 /**
  * updateFromSnapshot:
  * @existing (object): previously loaded profile.
- * @input (object): { snapshot, configs, configHashes, topology, fingerprint }
+ * @input (object): { snapshot, configs, deskletConfigs, configHashes,
+ * topology, fingerprint }
  *
- * Replaces the panel state (settings, configs, topology, fingerprint) while
- * preserving identity and metadata: id, createdAt, name, description,
- * environment and managerAnchor. updatedAt is refreshed. A field is only
- * replaced when the input actually carries it, so an empty configs array
- * (a capture with no third-party configs) clears the stored list instead
- * of being mistaken for "not provided".
+ * Replaces the captured state (settings, configs, topology, fingerprint)
+ * while preserving identity and metadata: id, createdAt, name, description,
+ * environment and managerAnchor. includeDesklets is preserved unless the
+ * caller explicitly provides it.
+ * updatedAt is refreshed. A field is only replaced when the input actually
+ * carries it, so an empty configs array (a capture with no third-party
+ * configs) clears the stored list instead of being mistaken for "not
+ * provided".
  *
  * Returns (object|null): the updated profile, or null.
  */
 function updateFromSnapshot(existing, input) {
+    if (_storeLockDepth === 0)
+        return _lockedValue(null, function () {
+            return updateFromSnapshot(existing, input);
+        });
     _resolveSiblings();
     try {
         if (existing === null || typeof existing !== "object")
             return null;
         if (typeof existing.id !== "string" || !PROFILE_ID_RE.test(existing.id))
             return null;
+        /* The caller may have captured live Cinnamon state after loading
+         * this profile. Re-read under the store lock so a concurrent delete
+         * cannot be undone and a concurrent rename is not overwritten. */
+        const current = loadProfile(existing.id);
+        if (!current || current.error || !current.profile)
+            return null;
+        existing = current.profile;
         input = input || {};
         if ("snapshot" in input)
             existing.cinnamonSettings = input.snapshot || {};
         if ("configs" in input)
             existing.appletConfigs = Array.isArray(input.configs)
                 ? input.configs : [];
+        if ("deskletConfigs" in input)
+            existing.deskletConfigs = Array.isArray(input.deskletConfigs)
+                ? input.deskletConfigs : [];
+        if ("includeDesklets" in input)
+            existing.includeDesklets = input.includeDesklets === true;
         if ("topology" in input)
             existing.monitorTopology = input.topology ||
                 { expectedCount: 1, monitors: [] };
@@ -544,124 +685,6 @@ function updateFromSnapshot(existing, input) {
 }
 
 /* ------------------------------------------------------------------ *
- * Duplicate / delete / rename
- * ------------------------------------------------------------------ */
-
-/**
- * duplicateProfile:
- * @id (string): profile to duplicate.
- *
- * Deep-copies the profile under a fresh id and name "<name> Copy"
- * (then " Copy 2", " Copy 3", ... on collisions). createdAt and updatedAt
- * are stamped now. Startup designation is never copied: it lives in
- * state.json keyed by id, and the duplicate's id is new.
- *
- * Returns (object|null): the saved duplicate, or null.
- */
-function duplicateProfile(id) {
-    _resolveSiblings();
-    try {
-        const loaded = loadProfile(id);
-        if (loaded.error)
-            return null;
-        const copy = JSON.parse(JSON.stringify(loaded.profile));
-        copy.name = _uniqueCopyName(loaded.profile.name);
-        copy.id = GLib.uuid_string_random();
-        const now = _isoNow();
-        copy.createdAt = now;
-        copy.updatedAt = now;
-        return saveProfile(copy) ? copy : null;
-    } catch (e) {
-        _warn("duplicateProfile failed: " + e);
-        return null;
-    }
-}
-
-function _nameExists(name) {
-    const profiles = listProfiles();
-    for (let i = 0; i < profiles.length; i++) {
-        if (profiles[i].valid && profiles[i].name === name)
-            return true;
-    }
-    return false;
-}
-
-function _uniqueCopyName(base) {
-    if (typeof base !== "string" || base.length === 0)
-        base = "Profile";
-    let name = base + " Copy";
-    if (!_nameExists(name))
-        return name;
-    let n = 2;
-    while (_nameExists(base + " Copy " + n))
-        n++;
-    return base + " Copy " + n;
-}
-
-/**
- * deleteProfile:
- * @id (string): profile to delete.
- *
- * Deletes the file and fixes state.json in the same breath: activeProfileId
- * and startupProfileId are cleared when (and only when) they point at the
- * deleted profile.
- *
- * Returns (boolean): true when the file was removed.
- */
-function deleteProfile(id) {
-    _resolveSiblings();
-    if (!_atomicFile)
-        return false;
-    try {
-        if (typeof id !== "string" || !PROFILE_ID_RE.test(id))
-            return false;
-        const path = _profileFilePath(id);
-        if (!_atomicFile.fileExists(path))
-            return false;
-        try {
-            Gio.File.new_for_path(path).delete(null);
-        } catch (e) {
-            _warn("deleteProfile failed: " + e);
-            return false;
-        }
-        /* Best-effort state fix-up; the file is already gone. */
-        mutateState(function (state) {
-            if (state.activeProfileId === id)
-                state.activeProfileId = null;
-            if (state.startupProfileId === id)
-                state.startupProfileId = null;
-        });
-        return true;
-    } catch (e) {
-        _warn("deleteProfile failed: " + e);
-        return false;
-    }
-}
-
-/**
- * renameProfile:
- * @id (string): profile to rename.
- * @newName (string): the new name; the CALLER sanitizes (trim, cap).
- *
- * Returns (boolean): true when the rename was persisted.
- */
-function renameProfile(id, newName) {
-    _resolveSiblings();
-    try {
-        if (typeof newName !== "string" || newName.length === 0)
-            return false;
-        const loaded = loadProfile(id);
-        if (loaded.error)
-            return false;
-        loaded.profile.name = newName;
-        return saveProfile(loaded.profile);
-    } catch (e) {
-        _warn("renameProfile failed: " + e);
-        return false;
-    }
-}
-
-/* ------------------------------------------------------------------ *
  * Rollback snapshots
  * ------------------------------------------------------------------ */
 
@@ -669,15 +692,13 @@ function renameProfile(id, newName) {
  * writeRollback:
  * @bundle (object): full profile-shaped snapshot ({name: "(rollback)", ...}).
  *
- * Writes backups/last-good.json atomically, rotating first: the existing
- * last-good.json becomes last-good-2.json, last-good-2 becomes last-good-3,
- * and anything past ROLLBACK_KEEP total files drops off. The NEW snapshot
- * always lands in last-good.json; last-good itself is mandatory, the
- * numbered tail is the retention window (spec 16: keep 3-5 total).
+ * Writes the one user-accessible backups/last-good.json atomically.
  *
  * Returns (boolean): true on success.
  */
 function writeRollback(bundle) {
+    if (_storeLockDepth === 0)
+        return _lockedValue(false, function () { return writeRollback(bundle); });
     _resolveSiblings();
     if (!_atomicFile)
         return false;
@@ -687,34 +708,7 @@ function writeRollback(bundle) {
         if (!_atomicFile.ensurePrivateDir(_backupsDirPath()))
             return false;
 
-        const keep = _constants ? _constants.ROLLBACK_KEEP : 3;
         const lastGood = _lastGoodPath();
-        /* Oldest first so each move lands on a vacated name. */
-        try {
-            Gio.File.new_for_path(_numberedRollbackPath(keep)).delete(null);
-        } catch (ignored) {
-            /* usually just ENOENT */
-        }
-        for (let i = keep - 1; i >= 2; i--) {
-            const from = _numberedRollbackPath(i);
-            if (_atomicFile.fileExists(from)) {
-                try {
-                    Gio.File.new_for_path(from).move(
-                        Gio.File.new_for_path(_numberedRollbackPath(i + 1)),
-                        Gio.FileCopyFlags.OVERWRITE, null, null);
-                } catch (ignored) {
-                    /* a stuck older snapshot must not block the new one */
-                }
-            }
-        }
-        if (keep >= 2 && _atomicFile.fileExists(lastGood)) {
-            try {
-                Gio.File.new_for_path(lastGood).move(
-                    Gio.File.new_for_path(_numberedRollbackPath(2)),
-                    Gio.FileCopyFlags.OVERWRITE, null, null);
-            } catch (ignored) {
-            }
-        }
         return _atomicFile.writePrivateFileAtomic(lastGood,
             JSON.stringify(bundle, null, 2));
     } catch (e) {
@@ -730,6 +724,8 @@ function writeRollback(bundle) {
  * missing or unparseable.
  */
 function readRollback() {
+    if (_storeLockDepth === 0)
+        return _lockedValue(null, readRollback);
     _resolveSiblings();
     if (!_atomicFile)
         return null;
@@ -756,9 +752,12 @@ function readRollback() {
  * in-memory copies after a crash or another instance's write). Missing or
  * corrupt files yield the safe defaults without writing anything.
  *
- * Returns (object): the state.
+ * Returns (object|null): the state, or null while another process owns the
+ * store lock. Callers that drive recovery must retry null results.
  */
 function getState() {
+    if (_storeLockDepth === 0)
+        return _lockedValue(null, getState);
     _resolveSiblings();
     if (!_atomicFile)
         return _defaultState();
@@ -772,14 +771,37 @@ function getState() {
         } catch (ignored) {
             return _defaultState();
         }
-        if (parsed === null || typeof parsed !== "object" ||
-            parsed.schemaVersion !== _defaultState().schemaVersion)
-            return _defaultState();
-        return _mergeState(parsed);
+        const acceptable = _acceptableState(parsed);
+        return acceptable ? acceptable : _defaultState();
     } catch (e) {
         _warn("getState failed: " + e);
         return _defaultState();
     }
+}
+
+/* A state mutation must not silently replace unreadable state with defaults.
+ * Quarantine it while the shared store lock is held, then let the requested
+ * mutation populate the fresh state. If quarantine fails, abort the write so
+ * the original file remains available for manual recovery. */
+function _stateForMutation() {
+    const statePath = _stateFilePath();
+    const text = _atomicFile.readTextFile(statePath);
+    if (text === null)
+        return _defaultState();
+    let parsed = null;
+    try {
+        parsed = JSON.parse(text);
+    } catch (ignored) {
+        parsed = null;
+    }
+    const acceptable = _acceptableState(parsed);
+    if (acceptable)
+        return acceptable;
+    const quarantined = _quarantineStateFile(statePath);
+    if (quarantined === null)
+        return null;
+    _warn("state.json corrupt, quarantined as " + quarantined);
+    return _defaultState();
 }
 
 /**
@@ -794,13 +816,17 @@ function getState() {
  * write failed.
  */
 function mutateState(fn) {
+    if (_storeLockDepth === 0)
+        return _lockedValue(null, function () { return mutateState(fn); });
     _resolveSiblings();
     if (!_atomicFile)
         return null;
     try {
         if (typeof fn !== "function")
             return null;
-        const state = getState();
+        const state = _stateForMutation();
+        if (state === null)
+            return null;
         let result;
         try {
             result = fn(state);
