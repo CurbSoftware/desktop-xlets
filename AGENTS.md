@@ -14,8 +14,8 @@ Write all user facing text in a human-friendly way. Humanize writing by:
 
 
 Development lives in this repository (`/home/user/projects/cinnamon-monorepo`).
-Do not open `/home/user/projects/cinnamon-projects` (renamed to
-`cinnamon-projects.retired`).
+Generated per-spice repos under `/home/user/projects/cinnamon/` are publish
+targets only; never edit them by hand.
 
 ## Critical Commands
 
