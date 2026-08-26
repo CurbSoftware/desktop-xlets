@@ -194,12 +194,18 @@ new submissions. Summary of the flow:
 - This monorepo (flat layout) is the dev home; each shipped xlet ALSO has a
   standalone repo under the CurbSoftware org holding the Spices layout
   (`info.json`, `screenshot.png`, `README.md`, `LICENSE` at root;
-  `files/<uuid>/…` with everything Cinnamon installs).
-- PRs go to `linuxmint/cinnamon-spices-desklets` from fork
-  `RobertAlexanderH/cinnamon-spices-desklets`, branch `<name>-initial` off
-  `upstream/master`, one UUID per PR. Run `./validate-spice <uuid>` and
-  `./cinnamon-spices-makepot <uuid>` in a clone of the spices repo before
-  submitting; sync any pot changes back here.
+  `files/<uuid>/…` with everything Cinnamon installs). Generated copies live
+  in `/home/user/projects/cinnamon/<name>/` (one git repo per xlet, named
+  like its GitHub repo); never edit them by hand, a `.monorepo-sync.json`
+  manifest guards them.
+- `./dev-tools/publish-spices.sh` clones or creates each standalone repo,
+  syncs the generated tree from here, commits, and pushes to `origin main`.
+- `./dev-tools/submit-spice.sh <alias>` forks and shallow-clones the registry
+  on demand, runs every gate (tests, official `validate-spice`,
+  `cinnamon-spices-makepot` canonicality), pushes branch
+  `<alias>-spices-submission` off `upstream/master` to fork
+  `RobertAlexanderH/cinnamon-spices-{desklets,applets}`, and opens one PR per
+  UUID against `linuxmint`. Sync any pot changes back here.
 - Post-merge: bump `metadata.json` `version` on every functional change;
   NEVER edit `last-edited` (the website pipeline owns it); watch for issues
   titled `spice name: description`.

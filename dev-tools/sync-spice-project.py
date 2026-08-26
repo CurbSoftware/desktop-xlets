@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sync one-way release projects and prepare one-spice registry pull requests."""
+"""Sync one-way release projects, publish standalone repos, and prepare one-spice registry pull requests."""
 
 from __future__ import annotations
 
@@ -13,11 +13,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 
 ROOT = Path(__file__).resolve().parent.parent
 RELEASE_TOOL = ROOT / "dev-tools" / "spices-release.py"
-DEFAULT_PARENT = ROOT.parent / "cinnamon-spice-projects"
+DEFAULT_PARENT = ROOT.parent / "cinnamon"
 RETIRED_PARENT = ROOT.parent / "cinnamon-projects.retired"
 MANIFEST = ".monorepo-sync.json"
 MANIFEST_SCHEMA = 1
@@ -285,7 +286,7 @@ def sync_project(
     remote_template: str | None,
     push: bool,
 ) -> Path:
-    target = parent / project["uuid"]
+    target = parent / project["uuid"].split("@")[0]
     if target.is_symlink():
         raise SyncError("refusing symlinked project target: " + str(target))
     with tempfile.TemporaryDirectory(prefix="spice-project-sync-") as temporary_name:
@@ -361,7 +362,7 @@ def sync_project(
             init_repository(target)
         if remote_template:
             try:
-                remote = remote_template.format(**project)
+                remote = remote_template.format(**project, repo=project["uuid"].split("@")[0])
             except KeyError as error:
                 raise SyncError("unknown remote template field: " + str(error)) from error
             set_remote(target, remote)
@@ -377,6 +378,69 @@ def sync_project(
             run(["git", "push", "-u", "origin", "HEAD:main"], cwd=target)
         say("  project: " + str(target))
         return target
+
+
+def repo_name(project: dict) -> str:
+    return project["uuid"].split("@")[0]
+
+
+def remote_slug(remote: str) -> str:
+    text = remote.rstrip("/")
+    if text.endswith(".git"):
+        text = text[: -len(".git")]
+    if "://" in text:
+        text = text.split("://", 1)[1]
+    if ":" in text:
+        text = text.split(":", 1)[1]
+    parts = [part for part in text.split("/") if part]
+    if len(parts) < 2:
+        raise SyncError("cannot derive an owner/name from remote: " + remote)
+    return parts[-2] + "/" + parts[-1]
+
+
+def ensure_standalone_repo(project: dict, parent: Path, remote_template: str) -> None:
+    target = parent / repo_name(project)
+    if target.exists():
+        return
+    remote = remote_template.format(**project, repo=repo_name(project))
+    slug = remote_slug(remote)
+    if run(["gh", "repo", "view", slug], capture=True, check=False).returncode == 0:
+        say("CLONE " + slug)
+        run(["gh", "repo", "clone", slug, str(target)])
+        # Adoption: clear the working tree so sync treats the clone as a fresh
+        # target. History survives; staged deletions drop old-layout extras.
+        for entry in target.iterdir():
+            if entry.name == ".git":
+                continue
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+        run(["git", "add", "-A"], cwd=target)
+    else:
+        say("CREATE " + slug)
+        run(["gh", "repo", "create", slug, "--public"])
+
+
+def default_registry_checkout(kind: str) -> Path:
+    return ROOT.parent / ("cinnamon-spices-applets" if kind == "applet" else "cinnamon-spices-desklets")
+
+
+def ensure_registry_checkout(kind: str, checkout: Path) -> None:
+    # Shallow clone keeps this cheap; if git ever refuses a push from it,
+    # delete the checkout and re-run with a full clone instead.
+    fork = "RobertAlexanderH/" + default_registry_checkout(kind).name
+    upstream = "linuxmint/" + default_registry_checkout(kind).name
+    if not checkout.exists():
+        if run(["gh", "repo", "view", fork], capture=True, check=False).returncode != 0:
+            say("FORK " + fork)
+            run(["gh", "repo", "fork", upstream, "--clone=false"])
+            time.sleep(5)
+        say("CLONE " + fork + " (shallow)")
+        run(["gh", "repo", "clone", fork, str(checkout), "--", "--depth=1"])
+    if run(["git", "remote", "get-url", "upstream"], cwd=checkout, capture=True, check=False).returncode != 0:
+        run(["git", "remote", "add", "upstream", "https://github.com/" + upstream + ".git"], cwd=checkout)
+    run(["git", "fetch", "upstream", "master", "--depth=1"], cwd=checkout)
 
 
 def ensure_clean_checkout(checkout: Path, kind: str) -> None:
@@ -555,9 +619,34 @@ def parser() -> argparse.ArgumentParser:
     sync.add_argument("--commit", action="store_true", help="commit managed changes in each project")
     sync.add_argument(
         "--remote-template",
-        help="set origin using fields {alias}, {uuid}, {kind}, and {source}",
+        help="set origin using fields {alias}, {uuid}, {repo}, {kind}, and {source}",
     )
     sync.add_argument("--push", action="store_true", help="push committed standalone projects to origin/main")
+
+    publish = commands.add_parser(
+        "publish",
+        help="clone or create each standalone repo, then sync, commit, and push to origin main",
+    )
+    publish.add_argument("extensions", nargs="*", default=["all"])
+    publish.add_argument("--parent", type=Path, default=DEFAULT_PARENT)
+    publish.add_argument(
+        "--remote-template",
+        default="git@github.com:CurbSoftware/{repo}.git",
+        help="origin for standalone repos using fields {alias}, {uuid}, {repo}, {kind}, and {source}",
+    )
+    publish.add_argument("--dry-run", action="store_true")
+
+    submit = commands.add_parser(
+        "submit",
+        help="ensure the registry fork checkout, then test, prepare, push, and open the PR for one spice",
+    )
+    submit.add_argument("extension")
+    submit.add_argument("--parent", type=Path, default=DEFAULT_PARENT)
+    submit.add_argument("--base-ref", default="upstream/master")
+    submit.add_argument("--branch")
+    submit.add_argument("--replace-existing", action="store_true")
+    submit.add_argument("--force", action="store_true", help="replace drifted standalone files")
+    submit.add_argument("--live", action="store_true", help="include the live Cinnamon test gate")
 
     registry = commands.add_parser("prepare-pr", help="prepare one clean Cinnamon Spices registry branch")
     registry.add_argument("extension")
@@ -594,7 +683,32 @@ def main() -> int:
                     push=args.push,
                 )
             return 0
+        if args.command == "publish":
+            parent = safe_parent(args.parent)
+            projects = select_projects(args.extensions, allow_many=True)
+            if not args.dry_run:
+                for project in projects:
+                    ensure_standalone_repo(project, parent, args.remote_template)
+            for project in projects:
+                sync_project(
+                    project,
+                    parent=parent,
+                    force=False,
+                    dry_run=args.dry_run,
+                    initialize=True,
+                    commit=True,
+                    remote_template=args.remote_template,
+                    push=True,
+                )
+            return 0
         project = select_projects([args.extension], allow_many=False)[0]
+        if args.command == "submit":
+            checkout = default_registry_checkout(project["kind"])
+            ensure_registry_checkout(project["kind"], checkout)
+            args.registry_checkout = checkout
+            args.commit = True
+            args.push = True
+            args.open_pr = True
         test_command = [sys.executable, str(RELEASE_TOOL), "test", project["alias"]]
         if args.live:
             test_command.append("--live")

@@ -125,6 +125,8 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | `spices-release.py` | Check, test, build, and officially validate independent Spices submissions |
 | `release-spice.sh` | One-spice wrapper around the complete release gate |
 | `sync-spice-project.py` | Sync standalone per-spice Git repos and prepare one-spice registry branches |
+| `publish-spices.sh` | Clone or create each standalone repo, then sync, commit, and push to origin main |
+| `submit-spice.sh` | Fork and clone the registry on demand, run all gates, push the branch, open the PR |
 
 ## Testing
 
@@ -144,6 +146,12 @@ python3 dev-tools/live-test-color-desklet.py   # desklet must be installed and e
 
 # Publish tree: update one standalone Git repo from the monorepo
 python3 dev-tools/sync-spice-project.py sync workspace-grid --commit
+
+# Publish all standalone repos (clone/create, sync, commit, push to origin main)
+./dev-tools/publish-spices.sh
+
+# Submit one spice to the registry (opens a real pull request)
+./dev-tools/submit-spice.sh workspace-grid
 ```
 
 `St` widgets cannot be instantiated outside the Cinnamon process because `libst.so`

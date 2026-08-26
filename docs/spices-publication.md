@@ -5,8 +5,10 @@ from it. Each candidate is submitted in its own pull request to either
 `linuxmint/cinnamon-spices-desklets` or `linuxmint/cinnamon-spices-applets`.
 
 The generated standalone repositories live together in the sibling directory
-`/home/user/projects/cinnamon-spice-projects/`. Each UUID directory there is a
-separate Git repository. Never develop in those generated copies. Make the
+`/home/user/projects/cinnamon/`. Each directory there (named like the GitHub
+repo, for example `cinnamon-color-timer-clock-desklet`) is a separate Git
+repository mirroring its repo under
+`github.com/CurbSoftware`. Never develop in those generated copies. Make the
 change here, test it here, then sync it out.
 
 ## Current submission set
@@ -58,28 +60,29 @@ python3 dev-tools/spices-release.py test all --live
 
 ## Independent project repositories
 
-Create or update every releasable standalone repository and commit each one
-independently:
+The one-shot path clones or creates each standalone GitHub repo (public,
+under `CurbSoftware`), adopts an existing clone by resetting its working tree
+to the generated layout, then syncs, commits, and pushes to `origin main`:
 
 ```bash
-python3 dev-tools/sync-spice-project.py sync all --commit
+./dev-tools/publish-spices.sh
 ```
 
-Update only one project:
+Name spices to subset, or preview with `--dry-run`:
 
 ```bash
-python3 dev-tools/sync-spice-project.py sync workspace-grid --commit
+./dev-tools/publish-spices.sh workspace-grid color-clock --dry-run
 ```
 
 The default layout is:
 
 ```text
-/home/user/projects/cinnamon-spice-projects/
-  cinnamon-world-clock-desklet@curbsoftware/.git/
-  cinnamon-color-timer-clock-desklet@curbsoftware/.git/
-  cinnamon-workspace-grid-desklet@curbsoftware/.git/
-  cinnamon-workspace-name-applet@curbsoftware/.git/
-  cinnamon-panel-profiles-applet@curbsoftware/.git/
+/home/user/projects/cinnamon/
+  cinnamon-world-clock-desklet/.git/
+  cinnamon-color-timer-clock-desklet/.git/
+  cinnamon-workspace-grid-desklet/.git/
+  cinnamon-workspace-name-applet/.git/
+  cinnamon-panel-profiles-applet/.git/
 ```
 
 Each repository contains one official Spices-shaped project plus
@@ -88,17 +91,17 @@ revision. The sync refuses to overwrite a manual edit in a generated project.
 Move that edit back into this monorepo and rerun the sync. `--force` is the
 explicit escape hatch after the drift has been reviewed.
 
-To attach and publish standalone repositories, use a remote template. No
-remote is created or contacted unless these flags are supplied:
+For step-by-step control without any network action, use the underlying sync
+command directly:
 
 ```bash
-python3 dev-tools/sync-spice-project.py sync all --commit --push \
-  --remote-template 'git@github.com:CurbSoftware/cinnamon-{alias}-{kind}.git'
+python3 dev-tools/sync-spice-project.py sync all --commit
+python3 dev-tools/sync-spice-project.py sync workspace-grid --commit
 ```
 
-Create the GitHub repositories first, or set `origin` in each local repository
-yourself. The available template fields are `{alias}`, `{uuid}`, `{kind}`, and
-`{source}`.
+The remote template defaults to `git@github.com:CurbSoftware/{repo}.git` in
+`publish`. The available template fields are `{alias}`, `{uuid}`, `{repo}`,
+`{kind}`, and `{source}`.
 
 The transition is reversible. The monorepo remains complete and runnable. To
 roll back the split, stop syncing and move the sibling parent aside. No source
@@ -185,6 +188,18 @@ python3 dev-tools/sync-spice-project.py prepare-pr workspace-grid \
   --registry-checkout /path/to/cinnamon-spices-desklets \
   --base-ref upstream/master
 ```
+
+The one-shot path is the wrapper. It forks the registry repository when
+needed, clones it shallowly on demand into the sibling
+`cinnamon-spices-desklets` (or `cinnamon-spices-applets`) directory, then runs
+the full prepare sequence including commit, push, and PR creation:
+
+```bash
+./dev-tools/submit-spice.sh workspace-grid
+```
+
+Run it only when the spice is fully ready; it opens a real pull request.
+Pass `--replace-existing` to update an entry that is already in the registry.
 
 Review the staged registry diff:
 

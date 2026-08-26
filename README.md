@@ -4,7 +4,12 @@ This is the **one development repo** for CurbSoftware Cinnamon desklets and appl
 
 Git remote: [CurbSoftware/cinnamon-monorepo](https://github.com/CurbSoftware/cinnamon-monorepo).
 
-Work here. Do not open `/home/user/projects/cinnamon-projects` (renamed to `cinnamon-projects.retired`). Per-spice GitHub repos and `cinnamon-spices-desklets` are publish clones only, not a second product.
+Work here. Never develop in a generated copy. Per-spice repos under
+`/home/user/projects/cinnamon/` and the registry clones are publish targets
+only, produced by scripts, not a second product.
+
+New here? Start with [`docs/repo-guide.md`](docs/repo-guide.md), which walks
+the whole repo: every extension, every dev tool, and how releases ship.
 
 ## Extensions
 
@@ -37,6 +42,15 @@ Details: [`dev-tools/README.md`](dev-tools/README.md). Agent notes: [`AGENTS.md`
 
 ## Publishing to Cinnamon Spices
 
-Linux Mint wants **one spice per pull request** against [linuxmint/cinnamon-spices-desklets](https://github.com/linuxmint/cinnamon-spices-desklets). Do not develop in those clones. Copy out from this monorepo into an isolated per-spice repo when you are ready to PR.
+Push every standalone repo from the monorepo, then submit one spice at a time:
+
+```bash
+./dev-tools/publish-spices.sh                # sync, commit, push each repo to origin main
+./dev-tools/submit-spice.sh <alias>          # open the registry PR when the spice is ready
+```
+
+Linux Mint wants **one spice per pull request** against
+[linuxmint/cinnamon-spices-desklets](https://github.com/linuxmint/cinnamon-spices-desklets)
+or `-applets`.
 
 Full path: [`docs/spices-publication.md`](docs/spices-publication.md).

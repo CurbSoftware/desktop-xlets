@@ -582,7 +582,7 @@ CardWidget.prototype = {
          * (timer/chrono crossing an hour) triggers a refit. */
         this._fitLen = texts.time.length;
         const maxSizes = {
-            time: Number(this.desklet.timeSize) || 48,
+            time: Number(this.desklet.timeSize) || 44,
             date: Number(this.desklet.dateSize) || 13,
             timezone: Number(this.desklet.labelSize) || 11
         };
