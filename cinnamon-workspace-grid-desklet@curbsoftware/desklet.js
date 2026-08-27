@@ -583,16 +583,33 @@ MyDesklet.prototype = {
     },
 
     _createAddTile: function (layout) {
+        /* Non-reactive so Cinnamon owns DND. Do not fill the child: that
+         * stretched the label and left a tiny centered plus. */
         const button = new St.Bin({
             style_class: 'curb-workspace-grid-add-tile',
             reactive: false,
-            x_fill: true,
-            y_fill: true
+            x_fill: false,
+            y_fill: false,
+            x_align: St.Align.MIDDLE,
+            y_align: St.Align.MIDDLE
         });
         const label = new St.Label({
             text: "+",
-            style_class: 'curb-workspace-grid-add-label'
+            style_class: 'curb-workspace-grid-add-label',
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER
         });
+        try {
+            label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+            label.clutter_text.line_wrap = false;
+            label.clutter_text.set_line_alignment(Pango.Alignment.CENTER);
+        } catch (e) {}
+        const margin = Math.max(0, layout.tileMargin || 0);
+        const innerW = Math.max(12, layout.cellWidth - 2 * margin - 8);
+        const innerH = Math.max(12, layout.cellHeight - 2 * margin - 8);
+        const pt = Math.max(18, Math.min(48, Math.round(
+            Math.min(innerH * 0.45, innerW * 0.7) * 0.75)));
+        label.set_style("font-size: " + pt + "pt; font-weight: 600;");
         button.set_child(label);
         button._isAddTile = true;
         button.set_accessible_name(_("Add workspace"));
