@@ -159,7 +159,9 @@ LOG_START = log_size()
 suite("applet loads onto a panel")
 # ------------------------------------------------------------------ #
 
-applets = ast.literal_eval(ORIG_APPLETS)
+# Drop any pre-existing instances of this applet so the test runs against
+# exactly one instance it owns; teardown restores the original set.
+applets = [entry for entry in ast.literal_eval(ORIG_APPLETS) if APPLET not in entry]
 gs_set("org.cinnamon", "enabled-applets", str(applets + [PANEL_ENTRY]))
 wait_for(lambda: a("!!A") is True, "the applet to appear on panel2")
 check("applet instance is live", a("!!A") is True)
@@ -183,7 +185,7 @@ suite("button strip and context menu")
 eq("first workspace name is visible", a('A.buttons[0].get_child().get_text()'),
    js("imports.ui.main.getWorkspaceName(0)"))
 eq("exactly one active button", a('A.buttons.filter(function(b){return '
-   'b.get_style_pseudo_class().indexOf("outlined")!==-1;}).length'), 1)
+   '(b.get_style_pseudo_class()||"").indexOf("outlined")!==-1;}).length'), 1)
 items = a('A._applet_context_menu._getMenuItems().map(function(i){'
           'return i.label ? i.label.get_text() : "---";})')
 eq("workspace actions use native context menu", items[:4],
@@ -307,7 +309,10 @@ eq("scroll setting restored", a('A.settings.getValue("scroll-behavior")'),
 a('global._claudeAppletRef = A; true')
 
 gs_set("org.cinnamon", "enabled-applets", ORIG_APPLETS)
-wait_for(lambda: a("!!A") is False, "Cinnamon to remove the applet from the panel")
+# Restoring the baseline re-enables any instance the user had, so the check
+# is that THIS test instance stopped being the live one, not that none exist.
+wait_for(lambda: a("A !== global._claudeAppletRef") is True,
+         "Cinnamon to remove the test instance from the panel")
 
 after = js('let r=global._claudeAppletRef;'
            '({name: r._wsNameId, pending: r._actionSources.length, rebuild: r._rebuildSource})')
@@ -320,7 +325,7 @@ js('delete global._claudeAppletRef; true')
 suite("state restored")
 # ------------------------------------------------------------------ #
 
-eq("applet removed from the panel", a("!!A"), False)
+eq("test instance removed from the panel", a("A === global._claudeAppletRef"), False)
 eq("enabled-applets restored", gs_get("org.cinnamon", "enabled-applets"), ORIG_APPLETS)
 eq("workspace count restored", ws_count(), ORIG_COUNT)
 eq("workspace names restored",
