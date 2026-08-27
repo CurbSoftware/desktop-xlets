@@ -138,7 +138,7 @@ def semantic_file_map(root: Path) -> dict[str, str]:
             continue
         relative = path.relative_to(root).as_posix()
         content = path.read_bytes()
-        if path.suffix == ".pot":
+        if path.suffix in {".pot", ".po"}:
             lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
             lines = [
                 line for line in lines
