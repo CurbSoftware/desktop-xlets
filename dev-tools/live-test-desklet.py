@@ -10,6 +10,8 @@ Original workspace names, count and active index are asserted restored at the en
 """
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import time
@@ -23,6 +25,7 @@ LOG = os.path.expanduser("~/.xsession-errors")
 
 passed = 0
 failures = []
+blocked = []
 suite_name = ""
 
 
@@ -44,6 +47,11 @@ def check(label, condition, detail=None):
 
 def eq(label, actual, expected):
     check(label, actual == expected, f"got {actual!r}, want {expected!r}")
+
+
+def block(label, detail):
+    blocked.append(f"{suite_name} / {label} -- {detail}")
+    print("  BLOCKED " + label + " -- " + detail)
 
 
 def js(code):
@@ -166,6 +174,87 @@ def close_all_modals():
        "for (let i=s.length-1;i>=0;i--){try{s[i].actor.destroy();}catch(e){}} true")
 
 
+def cinnamon_setting(key):
+    return subprocess.check_output(
+        ["gsettings", "get", "org.cinnamon", key], text=True).strip()
+
+
+def set_cinnamon_setting(key, value):
+    subprocess.run(["gsettings", "set", "org.cinnamon", key, value], check=True)
+
+
+def showing_desktop():
+    output = subprocess.check_output(
+        ["xprop", "-root", "_NET_SHOWING_DESKTOP"], text=True)
+    match = re.search(r"=\s*([01])\s*$", output)
+    return bool(int(match.group(1))) if match else False
+
+
+def set_showing_desktop(show):
+    subprocess.run(["wmctrl", "-k", "on" if show else "off"], check=True)
+
+
+def actor_position():
+    return tuple(d("[Math.round(D.actor.x),Math.round(D.actor.y)]"))
+
+
+def reset_desklet_home():
+    x, y = ORIG_POS
+    d(f"D.actor.set_position({x},{y});true")
+
+
+def tile_point(index):
+    return d(
+        f"a=D.buttons[{index}]; p=a.get_transformed_position(); s=a.get_transformed_size();"
+        "[Math.round(p[0]+Math.min(40,s[0]/3)),"
+        "Math.round(p[1]+Math.min(40,s[1]/3))]")
+
+
+def xdotool_screen():
+    out = subprocess.check_output(["xdotool", "getdisplaygeometry"], text=True)
+    width, height = out.split()
+    return int(width), int(height)
+
+
+class PointerBoundsError(RuntimeError):
+    pass
+
+
+def checked_point(point, label):
+    """Reject points xdotool cannot address (second-monitor stage coords)."""
+    stage_w, stage_h = ORIG_STAGE
+    tool_w, tool_h = ORIG_XDOTOOL
+    x = int(round(point[0]))
+    y = int(round(point[1]))
+    if x < 0 or y < 0 or x >= stage_w or y >= stage_h:
+        raise PointerBoundsError(
+            f"{label} ({x}, {y}) is outside the {stage_w}x{stage_h} stage")
+    if x >= tool_w or y >= tool_h:
+        raise PointerBoundsError(
+            f"{label} ({x}, {y}) is outside xdotool's {tool_w}x{tool_h} screen")
+    return x, y
+
+
+def drag_point(point, dx, dy):
+    before = actor_position()
+    start_x, start_y = checked_point(point, "drag start")
+    mid_x, mid_y = checked_point((start_x + int(dx / 2), start_y + int(dy / 2)),
+                                 "drag midpoint")
+    end_x, end_y = checked_point((start_x + dx, start_y + dy), "drag endpoint")
+    subprocess.run(["xdotool", "mousemove", "--sync", str(start_x), str(start_y),
+                    "mousedown", "1", "sleep", "0.15",
+                    "mousemove", "--sync", str(mid_x), str(mid_y),
+                    "sleep", "0.18",
+                    "mousemove", "--sync", str(end_x), str(end_y),
+                    "sleep", "0.35", "mouseup", "1"], check=True)
+    settle(0.4)
+    released = actor_position()
+    subprocess.run(["xdotool", "mousemove_relative", "--sync", "120", "80"],
+                   check=True)
+    settle(0.15)
+    return before, released, actor_position()
+
+
 # ------------------------------------------------------------------ #
 # Setup
 # ------------------------------------------------------------------ #
@@ -192,6 +281,12 @@ ORIG_DESKLET_SETTINGS = d('({layout: D.settings.getValue("layout-mode"),'
                           ' cols: D.settings.getValue("fixed-cols"),'
                           ' display: D.settings.getValue("display-type"),'
                           ' editing: D.settings.getValue("enable-workspace-editing")})')
+ORIG_POS = tuple(d("[Math.round(D.actor.x),Math.round(D.actor.y)]"))
+ORIG_STAGE = tuple(js("[Math.round(global.stage.width),Math.round(global.stage.height)]"))
+ORIG_XDOTOOL = xdotool_screen() if shutil.which("xdotool") else (0, 0)
+ORIG_LOCK = cinnamon_setting("lock-desklets")
+ORIG_SNAP = cinnamon_setting("desklet-snap")
+ORIG_SHOWING_DESKTOP = showing_desktop()
 
 import atexit  # noqa: E402
 
@@ -216,7 +311,13 @@ def _safety_net():
            f'D.settings.setValue("display-type", {json.dumps(ORIG_DESKLET_SETTINGS["display"])});'
            f'D.settings.setValue("enable-workspace-editing", '
            f'{str(ORIG_DESKLET_SETTINGS["editing"]).lower()});'
+           'if (D && D.actor) {'
+           f'D.actor.set_position({ORIG_POS[0]},{ORIG_POS[1]});'
+           '}'
            '} true')
+        set_cinnamon_setting("lock-desklets", ORIG_LOCK)
+        set_cinnamon_setting("desklet-snap", ORIG_SNAP)
+        set_showing_desktop(ORIG_SHOWING_DESKTOP)
     except Exception as exc:  # noqa: BLE001
         print("safety net failed: " + str(exc), file=sys.stderr)
 
@@ -238,9 +339,100 @@ check("workspace-names watcher connected", state["nameWatcher"] is True)
 check("workspace lifecycle signals connected", state["signals"] >= 6, state)
 eq("no leaked idle sources", state["idle"], 0)
 check("no tile menu open", state["tileMenu"] is False)
+check("tiles are St.Bin, not St.Button",
+      d("D.buttons[0] instanceof imports.gi.St.Bin && "
+        "!(D.buttons[0] instanceof imports.gi.St.Button)") is True)
+check("grid table is not a reactive event sink",
+      d("D.mainContainer.get_children()[0].reactive") is False)
 
 check("helper module resolves", d('!!WA') is True)
 eq("MAX_WORKSPACES", d('WA.MAX_WORKSPACES'), 36)
+
+# ------------------------------------------------------------------ #
+suite("drag release ownership")
+# ------------------------------------------------------------------ #
+
+check("xdotool is available", shutil.which("xdotool") is not None)
+drag_ok = shutil.which("xdotool") is not None
+if drag_ok:
+    set_showing_desktop(True)
+    set_cinnamon_setting("lock-desklets", "false")
+    set_cinnamon_setting("desklet-snap", "false")
+    settle(0.5)
+    check("desklet DND is not privately inhibited",
+          d("D._draggable.inhibit") is False)
+    try:
+        reset_desklet_home()
+        settle(0.08)
+        origin = tile_point(0)
+        try:
+            checked_point(origin, "tile origin")
+            reachable = True
+        except PointerBoundsError as exc:
+            reachable = False
+            block("DND pointer matrix", str(exc))
+
+        if reachable:
+            stayed = True
+            moved_count = 0
+            for i in range(6):
+                direction = 1 if i % 2 == 0 else -1
+                before, released, after = drag_point(
+                    tile_point(0), 100 * direction, 50 * direction)
+                stayed = stayed and released == after
+                moved_count += int(before != released)
+                reset_desklet_home()
+                settle(0.08)
+            check("tile surface releases cleanly across drags", stayed)
+            check("tile surface movement is observed", moved_count > 0,
+                  f"moved {moved_count}/6")
+            check("Cinnamon drag-in-progress is clear after release",
+                  d("D._draggable._dragInProgress") is False)
+
+            reset_desklet_home()
+            settle(0.08)
+            pos = actor_position()
+            edge_dx = max(40, min(120, ORIG_XDOTOOL[0] - origin[0] - 40))
+            edge_dy = max(20, min(60, ORIG_XDOTOOL[1] - origin[1] - 40))
+            before, released, after = drag_point(tile_point(0), edge_dx, edge_dy)
+            check("near-edge drag releases cleanly", released == after)
+            check("near-edge drag still moves the desklet", before != released)
+            check("near-edge drop leaves drag-in-progress clear",
+                  d("D._draggable._dragInProgress") is False)
+            reset_desklet_home()
+            settle(0.08)
+
+            other_pos = d(
+                'let all=imports.ui.main.deskletContainer.actor.get_children();'
+                'let hit=null;'
+                'for (let i=0;i<all.length;i++){'
+                '  let a=all[i]; if(a===D.actor) continue;'
+                '  if(a._desklet){hit=[Math.round(a.x),Math.round(a.y)]; break;}'
+                '} hit')
+            if other_pos:
+                start = tile_point(0)
+                dx = int(other_pos[0] - start[0])
+                dy = int(other_pos[1] - start[1])
+                if abs(dx) < 20 and abs(dy) < 20:
+                    dx, dy = 90, 40
+                try:
+                    before, released, after = drag_point(start, dx, dy)
+                    check("overlap drag releases cleanly", released == after)
+                    check("overlap drop leaves drag-in-progress clear",
+                          d("D._draggable._dragInProgress") is False)
+                except PointerBoundsError as exc:
+                    block("overlap drag", str(exc))
+                reset_desklet_home()
+                settle(0.08)
+    except PointerBoundsError as exc:
+        block("DND pointer matrix", str(exc))
+    finally:
+        close_all_modals()
+        reset_desklet_home()
+        set_cinnamon_setting("lock-desklets", ORIG_LOCK)
+        set_cinnamon_setting("desklet-snap", ORIG_SNAP)
+        set_showing_desktop(ORIG_SHOWING_DESKTOP)
+        settle(0.3)
 
 # ------------------------------------------------------------------ #
 suite("name watcher targets the real gsettings key")
@@ -633,12 +825,17 @@ settle(0.3)
 suite("left-click still switches workspaces")
 # ------------------------------------------------------------------ #
 
-target = 1 if ORIG_ACTIVE != 1 else 2
-d(f'D._onWorkspaceButtonClicked(D.buttons[{target}], 1); true')
-settle(0.4)
-eq("switched", js("global.workspace_manager.get_active_workspace_index()"), target)
-d(f'WA.activateWorkspaceByIndex({ORIG_ACTIVE}); true')
-settle(0.4)
+tile_count = d('D.buttons.length')
+if tile_count > 1:
+    target = 1 if ORIG_ACTIVE != 1 else 0
+    d(f'D._onWorkspaceButtonClicked(D.buttons[{target}], 1); true')
+    settle(0.4)
+    eq("switched", js("global.workspace_manager.get_active_workspace_index()"), target)
+    d(f'WA.activateWorkspaceByIndex({ORIG_ACTIVE}); true')
+    settle(0.4)
+else:
+    check("click handler ignores a missing tile",
+          d('D._onWorkspaceButtonClicked(null, 1); true') is True)
 
 # ------------------------------------------------------------------ #
 suite("applet loads and builds its menu")
@@ -684,12 +881,15 @@ eq("desklet settings restored", restored_settings, ORIG_DESKLET_SETTINGS)
 d('D._cleanup(); true')
 after = d('({signals: D._signalManager._storage.length, previews: D._previewSignals._storage.length,'
           ' name: D.ws_name_id, idle: D._idleSources.length, timeout: D._rebuildTimeout,'
-          ' menu: !!D._tileMenu, flag: D._cleanedUp})')
+          ' skip: D._skipTileClickTimeout, menu: !!D._tileMenu, flag: D._cleanedUp,'
+          ' dragBegin: D._dragBeginId})')
 eq("workspace signals released", after["signals"], 0)
 eq("preview signals released", after["previews"], 0)
 eq("workspace-names released", after["name"], None)
 eq("idle sources cleared", after["idle"], 0)
 eq("rebuild timeout cleared", after["timeout"], None)
+eq("drag skip timeout cleared", after["skip"], None)
+eq("drag-begin handler released", after["dragBegin"], 0)
 check("tile menu released", after["menu"] is False)
 check("cleanup flag set", after["flag"] is True)
 
@@ -736,4 +936,9 @@ if failures:
     for f in failures:
         print("  - " + f)
     sys.exit(1)
-print(f"All {passed} live assertions passed.")
+if blocked:
+    print(f"All {passed} runnable checks passed; {len(blocked)} environment-blocked:")
+    for item in blocked:
+        print("  - " + item)
+else:
+    print(f"All {passed} live assertions passed.")

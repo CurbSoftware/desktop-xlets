@@ -593,6 +593,19 @@ function readFile(path) {
     check(name + " identical in both xlets", textA !== null && textA === textB);
 });
 
+suite("desklet drag ownership contract");
+const deskletSource = readFile(DESKLET_DIR + "/desklet.js");
+check("desklet never changes private draggable inhibit",
+    deskletSource.indexOf("_draggable.inhibit") === -1);
+check("desklet never synthesizes a DND release",
+    deskletSource.indexOf("fakeRelease") === -1);
+check("workspace tiles are not St.Button grabs",
+    deskletSource.indexOf("new St.Button({") === -1);
+check("grid table is not a reactive event sink",
+    deskletSource.indexOf("reactive: true") === -1);
+check("Cinnamon owns desklet DND",
+    deskletSource.indexOf("Cinnamon owns desklet DND") !== -1);
+
 /* ------------------------------------------------------------------ *
  * Summary
  * ------------------------------------------------------------------ */

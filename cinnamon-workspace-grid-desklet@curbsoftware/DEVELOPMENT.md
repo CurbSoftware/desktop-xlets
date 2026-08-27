@@ -42,10 +42,12 @@ Names mode disconnects all preview-only signals.
 
 - `destroy` and `on_desklet_removed` both call idempotent `_cleanup()`.
 - Remove every timeout and deferred action source.
-- Destroy popup menus and tooltips explicitly.
+- Destroy popup menus and leftover tooltips explicitly.
 - Disconnect stable and preview signal managers.
 - Disconnect the workspace-name GSettings watcher.
 - Finalize settings once.
+- Desklet DND belongs to Cinnamon. Keep the grid table and tiles non-reactive.
+  Never change private draggable state or synthesize pointer releases.
 
 ## Verification
 
