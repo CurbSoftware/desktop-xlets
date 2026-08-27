@@ -37,6 +37,39 @@ Open Cinnamon Settings, then Applets, then Workspace Names.
 Existing installations keep the same UUID. The former scroll checkbox is
 migrated once to the new three-state scroll setting.
 
+## Manual install
+
+No root needed. Everything installs into your home directory.
+
+From a release package:
+
+```bash
+curl -fLO https://github.com/CurbSoftware/cinnamon-workspace-name-applet/releases/latest/download/cinnamon-workspace-name-applet.zip
+unzip cinnamon-workspace-name-applet.zip
+rm -rf ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
+cp -r cinnamon-workspace-name-applet@curbsoftware/files/cinnamon-workspace-name-applet@curbsoftware \
+   ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
+```
+
+Or straight from git:
+
+```bash
+git clone https://github.com/CurbSoftware/cinnamon-workspace-name-applet.git
+cd cinnamon-workspace-name-applet
+rm -rf ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
+cp -r files/cinnamon-workspace-name-applet@curbsoftware \
+   ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
+```
+
+The `rm -rf` before the copy is the upgrade path: old files are removed so
+nothing deleted upstream lingers, then the copy brings the new tree in. Your
+settings are stored separately in
+`~/.config/cinnamon/spices/cinnamon-workspace-name-applet@curbsoftware/`
+and survive reinstalls.
+
+Restart Cinnamon (**Alt-F2**, type `r`, Enter) and enable the applet in
+Cinnamon Settings, Applets.
+
 ## Testing
 
 ```sh

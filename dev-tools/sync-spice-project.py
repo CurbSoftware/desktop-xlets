@@ -443,6 +443,37 @@ def ensure_registry_checkout(kind: str, checkout: Path) -> None:
     run(["git", "fetch", "upstream", "master", "--depth=1"], cwd=checkout)
 
 
+def ensure_release(project: dict, target: Path) -> None:
+    metadata_path = target / "files" / project["uuid"] / "metadata.json"
+    if not metadata_path.is_file():
+        return
+    version = json.loads(metadata_path.read_text(encoding="utf-8")).get("version")
+    if not version:
+        return
+    tag = "v" + version
+    origin = run(["git", "remote", "get-url", "origin"], cwd=target, capture=True, check=False)
+    if origin.returncode != 0:
+        return
+    slug = remote_slug(origin.stdout.strip())
+    existing = run(["git", "ls-remote", "--tags", slug, tag], capture=True, check=False)
+    if existing.stdout.strip():
+        return
+    with tempfile.TemporaryDirectory(prefix="spice-release-pkg-") as temporary_name:
+        output = Path(temporary_name)
+        output.joinpath(".spices-release-output").touch()
+        run([sys.executable, str(RELEASE_TOOL), "build", project["alias"], "--output-dir", str(output)])
+        asset = output / (repo_name(project) + ".zip")
+        shutil.copy2(output / (project["uuid"] + ".zip"), asset)
+        say("RELEASE " + slug + " " + tag)
+        run([
+            "gh", "release", "create", tag,
+            "--repo", slug,
+            "--title", slug.split("/")[1] + " " + tag,
+            "--notes", "Generated from CurbSoftware/cinnamon-monorepo.",
+            str(asset),
+        ], cwd=target)
+
+
 def ensure_clean_checkout(checkout: Path, kind: str) -> None:
     if not checkout.is_dir() or not (checkout / ".git").exists():
         raise SyncError("registry checkout is not a Git repository: " + str(checkout))
@@ -638,6 +669,12 @@ def parser() -> argparse.ArgumentParser:
         help="origin for standalone repos using fields {alias}, {uuid}, {repo}, {kind}, and {source}",
     )
     publish.add_argument("--dry-run", action="store_true")
+    publish.add_argument(
+        "--no-release",
+        dest="release",
+        action="store_false",
+        help="do not create a GitHub release package for a new version",
+    )
 
     submit = commands.add_parser(
         "submit",
@@ -699,7 +736,7 @@ def main() -> int:
                 for project in projects:
                     ensure_standalone_repo(project, parent, args.remote_template)
             for project in projects:
-                sync_project(
+                target = sync_project(
                     project,
                     parent=parent,
                     force=False,
@@ -709,6 +746,8 @@ def main() -> int:
                     remote_template=args.remote_template,
                     push=True,
                 )
+                if not args.dry_run and args.release:
+                    ensure_release(project, target)
             return 0
         project = select_projects([args.extension], allow_many=False)[0]
         if args.command == "submit":
