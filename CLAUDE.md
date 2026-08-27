@@ -192,7 +192,7 @@ The full submission manual is `docs/spices-publication.md` - follow it for
 new submissions. Summary of the flow:
 
 - This monorepo (flat layout) is the dev home; each shipped xlet ALSO has a
-  standalone repo under the CurbSoftware org holding the Spices layout
+  standalone repo under RobertAlexanderH holding the Spices layout
   (`info.json`, `screenshot.png`, `README.md`, `LICENSE` at root;
   `files/<uuid>/…` with everything Cinnamon installs). Generated copies live
   in `/home/user/projects/cinnamon/<name>/` (one git repo per xlet, named

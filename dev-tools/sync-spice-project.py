@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RELEASE_TOOL = ROOT / "dev-tools" / "spices-release.py"
 DEFAULT_PARENT = ROOT.parent / "cinnamon"
 RETIRED_PARENT = ROOT.parent / "cinnamon-projects.retired"
+DEFAULT_REMOTE_TEMPLATE = "git@github.com:RobertAlexanderH/{repo}.git"
 MANIFEST = ".monorepo-sync.json"
 MANIFEST_SCHEMA = 1
 
@@ -398,13 +399,27 @@ def remote_slug(remote: str) -> str:
     return parts[-2] + "/" + parts[-1]
 
 
+def ensure_origin(target: Path, remote: str) -> None:
+    if not (target / ".git").exists():
+        return
+    current = run(["git", "remote", "get-url", "origin"], cwd=target, capture=True, check=False)
+    if current.returncode != 0:
+        run(["git", "remote", "add", "origin", remote], cwd=target)
+        return
+    if current.stdout.strip() != remote:
+        say("REMOTE " + str(target.name) + " -> " + remote)
+        run(["git", "remote", "set-url", "origin", remote], cwd=target)
+
+
 def ensure_standalone_repo(project: dict, parent: Path, remote_template: str) -> None:
     target = parent / repo_name(project)
-    if target.exists():
-        return
     remote = remote_template.format(**project, repo=repo_name(project))
     slug = remote_slug(remote)
-    if run(["gh", "repo", "view", slug], capture=True, check=False).returncode == 0:
+    if run(["gh", "repo", "view", slug], capture=True, check=False).returncode != 0:
+        say("CREATE " + slug)
+        # cwd must not be a git checkout or gh may treat the monorepo as --source.
+        run(["gh", "repo", "create", slug, "--public", "--clone=false"], cwd=parent)
+    if not target.exists():
         say("CLONE " + slug)
         run(["gh", "repo", "clone", slug, str(target)])
         # Adoption: clear the working tree so sync treats the clone as a fresh
@@ -417,9 +432,8 @@ def ensure_standalone_repo(project: dict, parent: Path, remote_template: str) ->
             else:
                 entry.unlink()
         run(["git", "add", "-A"], cwd=target)
-    else:
-        say("CREATE " + slug)
-        run(["gh", "repo", "create", slug, "--public"])
+        return
+    ensure_origin(target, remote)
 
 
 def default_registry_checkout(kind: str) -> Path:
@@ -665,7 +679,7 @@ def parser() -> argparse.ArgumentParser:
     publish.add_argument("--parent", type=Path, default=DEFAULT_PARENT)
     publish.add_argument(
         "--remote-template",
-        default="git@github.com:CurbSoftware/{repo}.git",
+        default=DEFAULT_REMOTE_TEMPLATE,
         help="origin for standalone repos using fields {alias}, {uuid}, {repo}, {kind}, and {source}",
     )
     publish.add_argument("--dry-run", action="store_true")

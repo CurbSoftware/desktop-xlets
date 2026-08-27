@@ -145,7 +145,7 @@ the main script; helper modules and stylesheets need a Cinnamon restart.
 
 The monorepo is the only source of truth. `publish-spices.sh` writes each
 shippable xlet into its own repo under `/home/user/projects/cinnamon/`
-(named like its GitHub repo), commits, and pushes to `CurbSoftware/<name>`
+(named like its GitHub repo), commits, and pushes to `RobertAlexanderH/<name>`
 on `main`. When a spice is ready for the public registry, `submit-spice.sh
 <alias>` prepares a one-UUID branch against `linuxmint/cinnamon-spices-*`,
 runs the official validator, pushes to your fork, and opens the pull request.
