@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/"
 "issues\n"
-"POT-Creation-Date: 2026-08-26 18:58-0700\n"
+"POT-Creation-Date: 2026-08-26 19:25-0700\n"
 "PO-Revision-Date: 2023-05-16 21:13+0200\n"
 "Last-Translator: Claudiux <claude.clerc@gmail.com>\n"
 "Language-Team: \n"
@@ -67,7 +67,7 @@ msgstr ""
 
 #. metadata.json->name
 #, fuzzy
-msgid "Workspace Names"
+msgid "In Panel Workspace Name"
 msgstr "Nom de l'espace de travail (Workspace Name)"
 
 #. metadata.json->description

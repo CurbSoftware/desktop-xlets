@@ -88,7 +88,7 @@ MyDesklet.prototype = {
 ├── cinnamon-docs/               # Developer documentation & references
 ├── cinnamon-world-clock@.../    # World Clock Desklet
 ├── workspace-grid-desklet@.../  # Workspace Grid Desklet
-├── workspace-name@.../          # Workspace Name Applet
+├── workspace-name@.../          # In Panel Workspace Name Applet
 ├── AGENTS.md                    # Critical coding rules
 └── CLAUDE.md                    # Additional context & architecture notes
 ```

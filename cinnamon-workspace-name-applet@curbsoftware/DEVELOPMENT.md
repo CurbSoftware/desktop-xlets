@@ -1,4 +1,4 @@
-# Workspace Names Development
+# In Panel Workspace Name Development
 
 ## Runtime structure
 

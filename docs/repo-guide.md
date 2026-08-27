@@ -56,7 +56,7 @@ inside the card.
 A clickable grid of workspaces with names, active-workspace highlight, auto
 or fixed rows and columns, and add, remove, and rename from a per-tile menu.
 
-### Workspace Name (applet)
+### In Panel Workspace Name (applet)
 
 Panel applet showing the current workspace name (name, number, or both), with
 a menu that lists workspaces and can add, rename, or remove the current one.

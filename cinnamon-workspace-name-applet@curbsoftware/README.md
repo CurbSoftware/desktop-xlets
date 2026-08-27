@@ -1,16 +1,16 @@
-# Workspace Names Applet
+# In Panel Workspace Name
 
-Workspace Names puts every workspace directly on a Cinnamon panel. Each named
+In Panel Workspace Name puts every workspace directly on a Cinnamon panel. Each named
 button switches to its workspace with one click. The active workspace uses the
 panel theme's outlined state.
 
 ## Screenshots
 
-![Workspace Names on the panel](screenshots/cinnamon-workspace-name-applet.webp)
+![In Panel Workspace Name on the panel](screenshots/cinnamon-workspace-name-applet.webp)
 
 The settings window:
 
-![Workspace Names settings](screenshots/workspace-name-config.webp)
+![In Panel Workspace Name settings](screenshots/workspace-name-config.webp)
 
 ## Features
 
@@ -26,7 +26,7 @@ The settings window:
 
 ## Settings
 
-Open Cinnamon Settings, then Applets, then Workspace Names.
+Open Cinnamon Settings, then Applets, then In Panel Workspace Name.
 
 - Workspace button labels
 - Maximum workspace name width
@@ -76,3 +76,13 @@ Cinnamon Settings, Applets.
 gjs dev-tools/test-workspace-actions.js
 python3 dev-tools/live-test-applet.py
 ```
+
+## References
+
+Derived from
+[workspace-name@willurd](https://github.com/linuxmint/cinnamon-spices-applets/tree/master/workspace-name@willurd);
+`info.json` keeps `original_author: willurd`. Related reference work:
+[Cassia Window List](https://github.com/linuxmint/cinnamon-spices-applets/tree/master/CassiaWindowList@klangman)
+by klangman.
+
+UUID: `cinnamon-workspace-name-applet@curbsoftware`

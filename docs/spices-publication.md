@@ -27,7 +27,7 @@ Command Launcher is nearly identical to the existing
 a sound submission. Any useful change should be prepared as a focused pull
 request against that existing UUID, with its current author involved.
 
-Workspace Names keeps `original_author: willurd` in `info.json`. Its pull
+In Panel Workspace Name keeps `original_author: willurd` in `info.json`. Its pull
 request must explain that it is a substantial new implementation derived from
 the existing Workspace Name applet. Confirm the upstream licensing and
 maintainer handoff with the Spices reviewers before asking them to merge it.
@@ -181,7 +181,7 @@ request unless asked.
 
 The official POT flow needs `cinnamon-xlet-makepot` and GNU gettext. A spice
 that already ships translated `.po` files also needs `intltool-update`. On
-Linux Mint, install the `intltool` package before preparing Workspace Names.
+Linux Mint, install the `intltool` package before preparing In Panel Workspace Name.
 
 ```bash
 python3 dev-tools/sync-spice-project.py prepare-pr workspace-grid \

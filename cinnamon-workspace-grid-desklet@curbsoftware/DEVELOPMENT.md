@@ -10,7 +10,7 @@
 - `stylesheet.css` uses `curb-workspace-grid-*` classes.
 
 `workspaceActions.js` and `renameDialog.js` are byte-identical to copies in
-Workspace Names applet. Headless tests enforce this.
+In Panel Workspace Name applet. Headless tests enforce this.
 
 ## Grid invariants
 
