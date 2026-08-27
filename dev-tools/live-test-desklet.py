@@ -548,14 +548,25 @@ eq("each preview represents every connected monitor",
      'return c.get_style_class_name&&c.get_style_class_name()==="curb-workspace-grid-preview";'
      '})[0];return p?p.get_children().filter(function(c){return c.get_style_class_name&&'
      'c.get_style_class_name()==="curb-workspace-grid-monitor";}).length:0;})'),
-   [d('M.layoutManager.monitors.length')] * ws_count())
+   [d('M.layoutManager.monitors.filter(function(m){return m.width>0&&m.height>0;}).length')]
+   * ws_count())
+monitor_geoms = d('D.buttons.map(function(b){let p=b.get_child().get_children().filter(function(c){'
+                  'return c.get_style_class_name&&c.get_style_class_name()==="curb-workspace-grid-preview";'
+                  '})[0];return p?p.get_children().filter(function(c){return c.get_style_class_name&&'
+                  'c.get_style_class_name()==="curb-workspace-grid-monitor";}).map(function(c){'
+                  'return [c.x,c.y,c.width,c.height].join(",");}):[];})')
+n_positive_monitors = d('M.layoutManager.monitors.filter(function(m){'
+                        'return m.width>0&&m.height>0;}).length')
+check("monitor actors occupy distinct geometries",
+      all(len(set(geoms)) == len(geoms) and len(geoms) == n_positive_monitors
+          for geoms in monitor_geoms),
+      monitor_geoms)
 check("preview event signals connected", d('D._previewSignals._storage.length') > 0)
 ordered = d('let w=global.workspace_manager.get_workspace_by_index(0);'
             'D._getPreviewWindows(w).map(function(win){return win.get_user_time();})')
 eq("preview windows sorted from back to front", ordered, sorted(ordered))
 expected_drawings = d('let w=global.workspace_manager.get_workspace_by_index(0);'
-                      'let areas=M.layoutManager.monitors.map(function(m,i){return '
-                      'w.get_work_area_for_monitor(typeof m.index==="number"?m.index:i);});'
+                      'let areas=M.layoutManager.monitors;'
                       'let desktop=imports.ui.deskletManager.desklets["' + DESKLET + '"]'
                       '.previewGeometry.boundingRect(areas)||w.get_work_area_all_monitors();'
                       'let viewport=imports.ui.deskletManager.desklets["' + DESKLET + '"]'

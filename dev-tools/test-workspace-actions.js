@@ -251,6 +251,159 @@ eq("icon centered when it fits",
 eq("icon omitted when too large",
     Geometry.iconRect({ x: 10, y: 10, width: 8, height: 20 }, 12), null);
 
+function mappedMonitors(monitors, previewWidth, previewHeight) {
+    const areas = Geometry.copyRects(monitors);
+    const desktop = Geometry.boundingRect(areas);
+    const viewport = Geometry.fitRect(desktop, previewWidth, previewHeight);
+    return {
+        areas: areas,
+        desktop: desktop,
+        viewport: viewport,
+        projected: areas.map(function (rect) {
+            return Geometry.projectRectInto(rect, desktop, viewport);
+        })
+    };
+}
+
+function interiorOverlap(first, second) {
+    const left = Math.max(first.x, second.x);
+    const top = Math.max(first.y, second.y);
+    const right = Math.min(first.x + first.width, second.x + second.width);
+    const bottom = Math.min(first.y + first.height, second.y + second.height);
+    if (right <= left || bottom <= top)
+        return 0;
+    return (right - left) * (bottom - top);
+}
+
+function noInteriorOverlaps(rects) {
+    for (let i = 0; i < rects.length; i++) {
+        if (!rects[i])
+            return false;
+        for (let j = i + 1; j < rects.length; j++) {
+            if (interiorOverlap(rects[i], rects[j]) > 0)
+                return false;
+        }
+    }
+    return true;
+}
+
+suite("preview geometry for any monitor count");
+eq("single monitor fills the fitted preview",
+    mappedMonitors([{ x: 0, y: 0, width: 1920, height: 1080 }], 192, 108).projected,
+    [{ x: 0, y: 0, width: 192, height: 108 }]);
+
+const threeAcross = mappedMonitors([
+    { x: 0, y: 0, width: 1920, height: 1080 },
+    { x: 1920, y: 0, width: 1920, height: 1080 },
+    { x: 3840, y: 0, width: 1920, height: 1080 }
+], 192, 108);
+eq("three-across union", threeAcross.desktop,
+    { x: 0, y: 0, width: 5760, height: 1080 });
+eq("three-across fit keeps aspect", threeAcross.viewport,
+    { x: 0, y: 36, width: 192, height: 36 });
+eq("three-across projected monitors", threeAcross.projected, [
+    { x: 0, y: 36, width: 64, height: 36 },
+    { x: 64, y: 36, width: 64, height: 36 },
+    { x: 128, y: 36, width: 64, height: 36 }
+]);
+check("three-across monitors do not overlap", noInteriorOverlaps(threeAcross.projected));
+
+const grid2x2 = mappedMonitors([
+    { x: 0, y: 0, width: 1920, height: 1080 },
+    { x: 1920, y: 0, width: 1920, height: 1080 },
+    { x: 0, y: 1080, width: 1920, height: 1080 },
+    { x: 1920, y: 1080, width: 1920, height: 1080 }
+], 192, 108);
+eq("2x2 union", grid2x2.desktop, { x: 0, y: 0, width: 3840, height: 2160 });
+eq("2x2 fit fills the tile", grid2x2.viewport, { x: 0, y: 0, width: 192, height: 108 });
+eq("2x2 projected monitors", grid2x2.projected, [
+    { x: 0, y: 0, width: 96, height: 54 },
+    { x: 96, y: 0, width: 96, height: 54 },
+    { x: 0, y: 54, width: 96, height: 54 },
+    { x: 96, y: 54, width: 96, height: 54 }
+]);
+check("2x2 monitors do not overlap", noInteriorOverlaps(grid2x2.projected));
+
+const plus5 = mappedMonitors([
+    { x: 0, y: -1080, width: 1920, height: 1080 },
+    { x: -1920, y: 0, width: 1920, height: 1080 },
+    { x: 0, y: 0, width: 1920, height: 1080 },
+    { x: 1920, y: 0, width: 1920, height: 1080 },
+    { x: 0, y: 1080, width: 1920, height: 1080 }
+], 192, 108);
+eq("five-monitor plus union", plus5.desktop,
+    { x: -1920, y: -1080, width: 5760, height: 3240 });
+eq("five-monitor plus fit fills the tile", plus5.viewport,
+    { x: 0, y: 0, width: 192, height: 108 });
+eq("five-monitor plus projected monitors", plus5.projected, [
+    { x: 64, y: 0, width: 64, height: 36 },
+    { x: 0, y: 36, width: 64, height: 36 },
+    { x: 64, y: 36, width: 64, height: 36 },
+    { x: 128, y: 36, width: 64, height: 36 },
+    { x: 64, y: 72, width: 64, height: 36 }
+]);
+check("five-monitor plus does not overlap", noInteriorOverlaps(plus5.projected));
+
+const ell = mappedMonitors([
+    { x: 0, y: 0, width: 1920, height: 1080 },
+    { x: 1920, y: 0, width: 1920, height: 1080 },
+    { x: 0, y: 1080, width: 1920, height: 1080 }
+], 192, 108);
+eq("L-shape union", ell.desktop, { x: 0, y: 0, width: 3840, height: 2160 });
+eq("L-shape projected monitors", ell.projected, [
+    { x: 0, y: 0, width: 96, height: 54 },
+    { x: 96, y: 0, width: 96, height: 54 },
+    { x: 0, y: 54, width: 96, height: 54 }
+]);
+check("L-shape monitors do not overlap", noInteriorOverlaps(ell.projected));
+
+const mixed = mappedMonitors([
+    { x: 0, y: 0, width: 2560, height: 1440 },
+    { x: 2560, y: 0, width: 1920, height: 1080 }
+], 224, 72);
+eq("mixed-size union", mixed.desktop, { x: 0, y: 0, width: 4480, height: 1440 });
+eq("mixed-size projected monitors", mixed.projected, [
+    { x: 0, y: 0, width: 128, height: 72 },
+    { x: 128, y: 0, width: 96, height: 54 }
+]);
+check("mixed-size monitors do not overlap", noInteriorOverlaps(mixed.projected));
+
+const negativeOrigin = mappedMonitors([
+    { x: -1280, y: -720, width: 1280, height: 720 },
+    { x: 0, y: -720, width: 1920, height: 720 },
+    { x: -1280, y: 0, width: 1280, height: 1080 },
+    { x: 0, y: 0, width: 1920, height: 1080 }
+], 160, 90);
+eq("negative-origin union", negativeOrigin.desktop,
+    { x: -1280, y: -720, width: 3200, height: 1800 });
+eq("negative-origin fit fills the tile", negativeOrigin.viewport,
+    { x: 0, y: 0, width: 160, height: 90 });
+eq("negative-origin projected monitors", negativeOrigin.projected, [
+    { x: 0, y: 0, width: 64, height: 36 },
+    { x: 64, y: 0, width: 96, height: 36 },
+    { x: 0, y: 36, width: 64, height: 54 },
+    { x: 64, y: 36, width: 96, height: 54 }
+]);
+check("negative-origin monitors do not overlap",
+    noInteriorOverlaps(negativeOrigin.projected));
+
+const withGhost = [
+    { x: 0, y: 0, width: 1920, height: 1040 },
+    { x: 1920, y: 0, width: 0, height: 1040 },
+    { x: 1920, y: 0, width: 1920, height: 1040 }
+];
+eq("ghost monitor omitted from copy", Geometry.copyRects(withGhost), [
+    { x: 0, y: 0, width: 1920, height: 1040 },
+    { x: 1920, y: 0, width: 1920, height: 1040 }
+]);
+const ghostMapped = mappedMonitors(withGhost, 210, 84);
+eq("ghost does not drop remaining monitors", ghostMapped.projected, [
+    { x: 0, y: 14, width: 105, height: 57 },
+    { x: 105, y: 14, width: 105, height: 57 }
+]);
+check("copied layout-manager style objects keep numeric geometry",
+    Geometry.copyRects([{ x: 10, y: 20, width: 30, height: 40, index: 7, name: "DP-1" }])[0].width === 30);
+
 suite("desklet grid model matches shared compatibility helpers");
 eq("fixed dimensions match", Grid.computeGridDims(10, "fixed", 2, 3),
     WA.computeGridDims(10, "fixed", 2, 3));
