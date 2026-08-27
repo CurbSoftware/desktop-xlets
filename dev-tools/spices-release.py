@@ -25,7 +25,8 @@ RUNTIME_ROOT_EXCLUDES = {
     "info.json", "screenshot.png",
 }
 RUNTIME_DIR_EXCLUDES = {
-    ".git", ".idea", ".vscode", "__pycache__", "docs", "fixtures", "tests",
+    ".git", ".idea", ".vscode", "__pycache__", "docs", "fixtures",
+    "screenshots", "tests",
 }
 RUNTIME_SUFFIX_EXCLUDES = {".mo", ".pyc", ".swp", ".swo"}
 
@@ -246,6 +247,9 @@ def build_stage(item: dict, destination: Path) -> Path:
         path = source / name
         if path.is_file():
             shutil.copy2(path, stage / name)
+    screenshots = source / "screenshots"
+    if screenshots.is_dir():
+        shutil.copytree(screenshots, stage / "screenshots")
     for relative in runtime_files(source):
         target = runtime / relative
         target.parent.mkdir(parents=True, exist_ok=True)

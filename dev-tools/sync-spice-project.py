@@ -533,15 +533,18 @@ def prepare_registry(project: dict, args: argparse.Namespace) -> None:
     if run(["git", "rev-parse", "--verify", base_ref], cwd=checkout, capture=True, check=False).returncode != 0:
         raise SyncError("base ref does not exist in registry checkout: " + base_ref)
     branch = args.branch or (project["alias"] + "-spices-submission")
-    if run(
+    exists = run(
         ["git", "show-ref", "--verify", "refs/heads/" + branch],
         cwd=checkout,
         capture=True,
         check=False,
-    ).returncode == 0:
+    ).returncode == 0
+    if exists and not args.update_branch:
         raise SyncError("registry branch already exists: " + branch)
-
-    run(["git", "switch", "-c", branch, base_ref], cwd=checkout)
+    if exists:
+        run(["git", "switch", branch], cwd=checkout)
+    else:
+        run(["git", "switch", "-c", branch, base_ref], cwd=checkout)
     try:
         with tempfile.TemporaryDirectory(prefix="spice-registry-") as temporary_name:
             stage = build_project(project, Path(temporary_name))
@@ -644,6 +647,7 @@ def parser() -> argparse.ArgumentParser:
     submit.add_argument("--parent", type=Path, default=DEFAULT_PARENT)
     submit.add_argument("--base-ref", default="upstream/master")
     submit.add_argument("--branch")
+    submit.add_argument("--update-branch", action="store_true")
     submit.add_argument("--replace-existing", action="store_true")
     submit.add_argument("--force", action="store_true", help="replace drifted standalone files")
     submit.add_argument("--live", action="store_true", help="include the live Cinnamon test gate")
@@ -654,6 +658,11 @@ def parser() -> argparse.ArgumentParser:
     registry.add_argument("--registry-checkout", type=Path, required=True)
     registry.add_argument("--base-ref", default="master")
     registry.add_argument("--branch")
+    registry.add_argument(
+        "--update-branch",
+        action="store_true",
+        help="apply the stage onto an existing branch instead of refusing (updates an open PR)",
+    )
     registry.add_argument("--replace-existing", action="store_true")
     registry.add_argument("--force", action="store_true", help="replace drifted standalone files")
     registry.add_argument("--live", action="store_true", help="include the live Cinnamon test gate")

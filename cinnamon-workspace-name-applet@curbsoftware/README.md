@@ -4,6 +4,14 @@ Workspace Names puts every workspace directly on a Cinnamon panel. Each named
 button switches to its workspace with one click. The active workspace uses the
 panel theme's outlined state.
 
+## Screenshots
+
+![Workspace Names on the panel](screenshots/cinnamon-workspace-name-applet.webp)
+
+The settings window:
+
+![Workspace Names settings](screenshots/workspace-name-config.webp)
+
 ## Features
 
 - One visible button per workspace
