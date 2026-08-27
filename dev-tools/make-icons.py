@@ -134,7 +134,7 @@ ICONS = {
     "cinnamon-world-clock-desklet@curbsoftware": world_clock,
     "cinnamon-color-timer-clock-desklet@curbsoftware": color_timer_clock,
     "cinnamon-workspace-grid-desklet@curbsoftware": workspace_grid,
-    "cinnamon-workspace-name-applet@curbsoftware": in_panel_workspace_name,
+    "cinnamon-workspace-names-applet@curbsoftware": in_panel_workspace_name,
     "cinnamon-panel-profiles-applet@curbsoftware": panel_profiles,
     "command-launcher@curbsoftware": command_launcher,
 }

@@ -14,7 +14,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cinnamon_eval import ev  # noqa: E402
 
-APPLET = "cinnamon-workspace-name-applet@curbsoftware"
+APPLET = "cinnamon-workspace-names-applet@curbsoftware"
 INSTANCE = 907
 PANEL_ENTRY = f"panel2:right:9:{APPLET}:{INSTANCE}"
 LOG = os.path.expanduser("~/.xsession-errors")
@@ -249,6 +249,33 @@ js('let s=imports.ui.main.modalActorFocusStack; let dlg=s[s.length-1].actor;'
 wait_for(lambda: open_modals() == modals_before, "the rename dialog to close")
 eq("name committed", js(f'imports.ui.main.getWorkspaceName({NEW_INDEX})'), "FromApplet")
 eq("applet button follows", a(f'A.buttons[{NEW_INDEX}].get_child().get_text()'), "FromApplet")
+
+# ------------------------------------------------------------------ #
+suite("right-click rename on a workspace button")
+# ------------------------------------------------------------------ #
+
+modals_before = open_modals()
+names_before = gs_get("org.cinnamon.desktop.wm.preferences", "workspace-names")
+eq("left press falls through", a('A._onWorkspaceButtonPress(A.buttons[0],'
+   '{get_button: function(){return 1;}})'), False)
+eq("left press opened no dialog", open_modals(), modals_before)
+a('A._onWorkspaceButtonPress(A.buttons[0], {get_button: function(){return 3;}}); true')
+wait_for(lambda: open_modals() == modals_before + 1, "the rename dialog to appear")
+eq("right press pushed dialog", open_modals(), modals_before + 1)
+js('let s=imports.ui.main.modalActorFocusStack; let dlg=s[s.length-1].actor;'
+   'dlg._entry.set_text("RightClicked");'
+   'let bs=dlg.buttonLayout.get_children();'
+   'for (let i=0;i<bs.length;i++) if (bs[i].label==="Rename") bs[i].emit("clicked", 1);'
+   'true')
+wait_for(lambda: open_modals() == modals_before, "the right-click dialog to close")
+eq("right-click renamed workspace 0", js('imports.ui.main.getWorkspaceName(0)'),
+   "RightClicked")
+eq("button 0 follows", a('A.buttons[0].get_child().get_text()'), "RightClicked")
+# Workspace 0 survives the later removal suites, so restore the names array
+# as this suite found it (earlier suites may have set names of their own).
+gs_set("org.cinnamon.desktop.wm.preferences", "workspace-names", names_before)
+wait_for(lambda: a('A.buttons[0].get_child().get_text()') != "RightClicked",
+         "the restored name to refresh")
 
 # ------------------------------------------------------------------ #
 suite("display modes")

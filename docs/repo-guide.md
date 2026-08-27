@@ -14,7 +14,7 @@ cinnamon-monorepo/
   cinnamon-world-clock-desklet@curbsoftware/        desklet, ship
   cinnamon-color-timer-clock-desklet@curbsoftware/  desklet, ship
   cinnamon-workspace-grid-desklet@curbsoftware/     desklet, ship
-  cinnamon-workspace-name-applet@curbsoftware/      applet, ship
+  cinnamon-workspace-names-applet@curbsoftware/      applet, ship
   cinnamon-panel-profiles-applet@curbsoftware/      applet, ship
   command-launcher@curbsoftware/                    applet, blocked from Spices
   dev-tools/                                        install, test, build, publish

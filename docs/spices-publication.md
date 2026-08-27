@@ -81,7 +81,7 @@ The default layout is:
   cinnamon-world-clock-desklet/.git/
   cinnamon-color-timer-clock-desklet/.git/
   cinnamon-workspace-grid-desklet/.git/
-  cinnamon-workspace-name-applet/.git/
+  cinnamon-workspace-names-applet/.git/
   cinnamon-panel-profiles-applet/.git/
 ```
 

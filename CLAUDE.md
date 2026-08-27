@@ -25,7 +25,7 @@ This is a Cinnamon extensions monorepo containing workspace management and clock
 - Supports auto-sizing or fixed row/column layout
 - Add (trailing `+` tile), remove and rename workspaces via a per-tile right-click menu
 
-#### In Panel Workspace Name Applet (`cinnamon-workspace-name-applet@curbsoftware/`)
+#### In Panel Workspace Name Applet (`cinnamon-workspace-names-applet@curbsoftware/`)
 - Panel applet showing the current workspace name (name / number / both)
 - Menu lists all workspaces and can add, rename or remove the current one
 - Demonstrates workspace event handling and name retrieval patterns

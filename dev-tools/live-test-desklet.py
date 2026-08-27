@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cinnamon_eval import ev  # noqa: E402
 
 DESKLET = "cinnamon-workspace-grid-desklet@curbsoftware"
-APPLET = "cinnamon-workspace-name-applet@curbsoftware"
+APPLET = "cinnamon-workspace-names-applet@curbsoftware"
 LOG = os.path.expanduser("~/.xsession-errors")
 
 passed = 0

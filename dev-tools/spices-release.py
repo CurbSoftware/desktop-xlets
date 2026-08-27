@@ -62,8 +62,8 @@ EXTENSIONS = (
     },
     {
         "alias": "workspace-names",
-        "source": "cinnamon-workspace-name-applet@curbsoftware",
-        "uuid": "cinnamon-workspace-name-applet@curbsoftware",
+        "source": "cinnamon-workspace-names-applet@curbsoftware",
+        "uuid": "cinnamon-workspace-names-applet@curbsoftware",
         "kind": "applet",
         "tests": (("gjs", "dev-tools/test-workspace-actions.js"),),
         "live": ("python3", "dev-tools/live-test-applet.py"),

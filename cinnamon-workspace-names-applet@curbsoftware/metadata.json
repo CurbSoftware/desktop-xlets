@@ -1,6 +1,6 @@
 {
-    "uuid": "cinnamon-workspace-name-applet@curbsoftware",
+    "uuid": "cinnamon-workspace-names-applet@curbsoftware",
     "name": "In Panel Workspace Name",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Show named workspace buttons in the panel and manage workspaces from the applet menu"
 }

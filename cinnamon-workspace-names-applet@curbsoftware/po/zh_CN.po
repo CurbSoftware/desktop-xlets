@@ -1,29 +1,25 @@
-# WORKSPACE NAMES
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# Gökhan Gökkaya <gokhanlnx@gmail.com>, 2018.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/"
 "issues\n"
-"POT-Creation-Date: 2026-08-26 19:25-0700\n"
-"PO-Revision-Date: 2018-11-03 19:39+0300\n"
-"Last-Translator: Gökhan GÖKKAYA <gokhanlnx@gmail.com>\n"
-"Language-Team: Linux Mint Türkiye <gokhanlnx@gmail.com>\n"
-"Language: tr\n"
+"POT-Creation-Date: 2026-08-26 20:49-0700\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.0.6\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #. applet.js:113
 msgid "Manage workspaces (Expo)"
 msgstr ""
 
-#. applet.js:121 applet.js:316 applet.js:324
+#. applet.js:121 applet.js:326 applet.js:334
 msgid "Add workspace"
 msgstr ""
 
@@ -35,12 +31,12 @@ msgstr ""
 msgid "Remove current workspace"
 msgstr ""
 
-#. applet.js:281 applet.js:339
+#. applet.js:289 applet.js:349
 #, fuzzy, javascript-format
 msgid "Workspace %d: %s"
-msgstr "Çalışma Alanı Adı"
+msgstr "工作区名称"
 
-#. applet.js:338
+#. applet.js:348
 msgid "Current workspace"
 msgstr ""
 
@@ -68,7 +64,7 @@ msgstr ""
 #. metadata.json->name
 #, fuzzy
 msgid "In Panel Workspace Name"
-msgstr "Çalışma Alanı Adı"
+msgstr "工作区名称"
 
 #. metadata.json->description
 msgid ""
@@ -83,7 +79,7 @@ msgstr ""
 #. settings-schema.json->display-mode->description
 #, fuzzy
 msgid "Workspace button labels"
-msgstr "Çalışma Alanı Adı"
+msgstr "工作区名称"
 
 #. settings-schema.json->display-mode->options
 msgid "Name only"
@@ -124,7 +120,7 @@ msgstr ""
 #. settings-schema.json->management->description
 #, fuzzy
 msgid "Workspace management"
-msgstr "Çalışma Alanı Adı"
+msgstr "工作区名称"
 
 #. settings-schema.json->enable-workspace-editing->description
 msgid "Allow adding, removing and renaming workspaces"

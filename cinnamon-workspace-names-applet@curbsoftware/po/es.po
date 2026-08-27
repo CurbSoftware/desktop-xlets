@@ -8,23 +8,22 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/"
 "issues\n"
-"POT-Creation-Date: 2026-08-26 19:25-0700\n"
-"PO-Revision-Date: 2021-02-16 19:27+0100\n"
+"POT-Creation-Date: 2026-08-26 20:49-0700\n"
+"PO-Revision-Date: 2021-12-26 04:30-0300\n"
 "Last-Translator: \n"
 "Language-Team: \n"
-"Language: pl\n"
+"Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.3\n"
-"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
-"|| n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.0.1\n"
 
 #. applet.js:113
 msgid "Manage workspaces (Expo)"
 msgstr ""
 
-#. applet.js:121 applet.js:316 applet.js:324
+#. applet.js:121 applet.js:326 applet.js:334
 msgid "Add workspace"
 msgstr ""
 
@@ -36,12 +35,12 @@ msgstr ""
 msgid "Remove current workspace"
 msgstr ""
 
-#. applet.js:281 applet.js:339
+#. applet.js:289 applet.js:349
 #, fuzzy, javascript-format
 msgid "Workspace %d: %s"
-msgstr "Nazwa przestrzeni roboczej"
+msgstr "Nombre del área de trabajo"
 
-#. applet.js:338
+#. applet.js:348
 msgid "Current workspace"
 msgstr ""
 
@@ -69,7 +68,7 @@ msgstr ""
 #. metadata.json->name
 #, fuzzy
 msgid "In Panel Workspace Name"
-msgstr "Nazwa przestrzeni roboczej"
+msgstr "Nombre del área de trabajo"
 
 #. metadata.json->description
 msgid ""
@@ -84,7 +83,7 @@ msgstr ""
 #. settings-schema.json->display-mode->description
 #, fuzzy
 msgid "Workspace button labels"
-msgstr "Nazwa przestrzeni roboczej"
+msgstr "Nombre del área de trabajo"
 
 #. settings-schema.json->display-mode->options
 msgid "Name only"
@@ -125,7 +124,7 @@ msgstr ""
 #. settings-schema.json->management->description
 #, fuzzy
 msgid "Workspace management"
-msgstr "Nazwa przestrzeni roboczej"
+msgstr "Nombre del área de trabajo"
 
 #. settings-schema.json->enable-workspace-editing->description
 msgid "Allow adding, removing and renaming workspaces"

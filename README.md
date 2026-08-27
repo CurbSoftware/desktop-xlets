@@ -18,7 +18,7 @@ the whole repo: every extension, every dev tool, and how releases ship.
 | `cinnamon-world-clock-desklet@curbsoftware/` | World Clock | desklet |
 | `cinnamon-color-timer-clock-desklet@curbsoftware/` | Color Timer Clock | desklet |
 | `cinnamon-workspace-grid-desklet@curbsoftware/` | Workspace Grid | desklet |
-| `cinnamon-workspace-name-applet@curbsoftware/` | In Panel Workspace Name | applet |
+| `cinnamon-workspace-names-applet@curbsoftware/` | In Panel Workspace Name | applet |
 | `cinnamon-panel-profiles-applet@curbsoftware/` | Panel Profiles | applet |
 | `command-launcher@curbsoftware/` | Command Launcher | applet |
 

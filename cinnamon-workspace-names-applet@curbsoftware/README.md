@@ -6,7 +6,7 @@ panel theme's outlined state.
 
 ## Screenshots
 
-![In Panel Workspace Name on the panel](screenshots/cinnamon-workspace-name-applet.webp)
+![In Panel Workspace Name on the panel](screenshots/cinnamon-workspace-names-applet.webp)
 
 The settings window:
 
@@ -44,27 +44,27 @@ No root needed. Everything installs into your home directory.
 From a release package:
 
 ```bash
-curl -fLO https://github.com/CurbSoftware/cinnamon-workspace-name-applet/releases/latest/download/cinnamon-workspace-name-applet.zip
-unzip cinnamon-workspace-name-applet.zip
-rm -rf ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
-cp -r cinnamon-workspace-name-applet@curbsoftware/files/cinnamon-workspace-name-applet@curbsoftware \
-   ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
+curl -fLO https://github.com/CurbSoftware/cinnamon-workspace-names-applet/releases/latest/download/cinnamon-workspace-names-applet.zip
+unzip cinnamon-workspace-names-applet.zip
+rm -rf ~/.local/share/cinnamon/applets/cinnamon-workspace-names-applet@curbsoftware
+cp -r cinnamon-workspace-names-applet@curbsoftware/files/cinnamon-workspace-names-applet@curbsoftware \
+   ~/.local/share/cinnamon/applets/cinnamon-workspace-names-applet@curbsoftware
 ```
 
 Or straight from git:
 
 ```bash
-git clone https://github.com/CurbSoftware/cinnamon-workspace-name-applet.git
-cd cinnamon-workspace-name-applet
-rm -rf ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
-cp -r files/cinnamon-workspace-name-applet@curbsoftware \
-   ~/.local/share/cinnamon/applets/cinnamon-workspace-name-applet@curbsoftware
+git clone https://github.com/CurbSoftware/cinnamon-workspace-names-applet.git
+cd cinnamon-workspace-names-applet
+rm -rf ~/.local/share/cinnamon/applets/cinnamon-workspace-names-applet@curbsoftware
+cp -r files/cinnamon-workspace-names-applet@curbsoftware \
+   ~/.local/share/cinnamon/applets/cinnamon-workspace-names-applet@curbsoftware
 ```
 
 The `rm -rf` before the copy is the upgrade path: old files are removed so
 nothing deleted upstream lingers, then the copy brings the new tree in. Your
 settings are stored separately in
-`~/.config/cinnamon/spices/cinnamon-workspace-name-applet@curbsoftware/`
+`~/.config/cinnamon/spices/cinnamon-workspace-names-applet@curbsoftware/`
 and survive reinstalls.
 
 Restart Cinnamon (**Alt-F2**, type `r`, Enter) and enable the applet in
@@ -85,4 +85,4 @@ Derived from
 [Cassia Window List](https://github.com/linuxmint/cinnamon-spices-applets/tree/master/CassiaWindowList@klangman)
 by klangman.
 
-UUID: `cinnamon-workspace-name-applet@curbsoftware`
+UUID: `cinnamon-workspace-names-applet@curbsoftware`

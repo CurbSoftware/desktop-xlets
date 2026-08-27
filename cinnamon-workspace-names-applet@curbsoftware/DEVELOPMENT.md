@@ -22,10 +22,12 @@ queue one `Mainloop.timeout_add(0)` rebuild. Never use `idle_add` for this UI.
 
 ## Settings compatibility
 
-The UUID remains `cinnamon-workspace-name-applet@curbsoftware`. Existing
-display and editing values stay compatible. `scroll-to-switch` remains as a
-hidden generic migration key. A stored `true` value migrates once to
-`scroll-behavior=normal`, then resets to `false`.
+The UUID was renamed to `cinnamon-workspace-names-applet@curbsoftware` (plural)
+at 1.2.0, before any release, to distinguish it from upstream
+`workspace-name@willurd`. Settings live under the new UUID's directory; there
+is no installed base to migrate. Display and editing values are unchanged.
+`scroll-to-switch` remains as a hidden generic migration key. A stored `true`
+value migrates once to `scroll-behavior=normal`, then resets to `false`.
 
 ## Lifecycle rules
 
@@ -38,8 +40,8 @@ hidden generic migration key. A stored `true` value migrates once to
 ## Verification
 
 ```sh
-node --check cinnamon-workspace-name-applet@curbsoftware/applet.js
-python3 -m json.tool cinnamon-workspace-name-applet@curbsoftware/settings-schema.json
+node --check cinnamon-workspace-names-applet@curbsoftware/applet.js
+python3 -m json.tool cinnamon-workspace-names-applet@curbsoftware/settings-schema.json
 gjs dev-tools/test-workspace-actions.js
 python3 dev-tools/live-test-applet.py
 ```

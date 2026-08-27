@@ -34,7 +34,7 @@ const SCRIPT_DIR = GLib.path_get_dirname(
     Gio.File.new_for_commandline_arg(System.programInvocationName).get_path());
 const REPO_ROOT = GLib.path_get_dirname(SCRIPT_DIR);
 const DESKLET_DIR = REPO_ROOT + "/cinnamon-workspace-grid-desklet@curbsoftware";
-const APPLET_DIR = REPO_ROOT + "/cinnamon-workspace-name-applet@curbsoftware";
+const APPLET_DIR = REPO_ROOT + "/cinnamon-workspace-names-applet@curbsoftware";
 
 imports.searchPath.unshift(DESKLET_DIR);
 const WA = imports.workspaceActions;

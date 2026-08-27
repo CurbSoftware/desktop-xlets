@@ -12,7 +12,7 @@ const St = imports.gi.St;
 const Tooltips = imports.ui.tooltips;
 const Gettext = imports.gettext;
 
-const uuid = "cinnamon-workspace-name-applet@curbsoftware";
+const uuid = "cinnamon-workspace-names-applet@curbsoftware";
 const MIN_SWITCH_INTERVAL_MS = 220;
 
 Gettext.bindtextdomain(uuid, GLib.get_user_data_dir() + "/locale");
@@ -166,7 +166,15 @@ WorkspaceNamesApplet.prototype = {
     },
 
     on_applet_clicked: function () {
-        /* Workspace buttons own primary clicks. Right click remains applet menu. */
+        /* Workspace buttons own primary clicks. */
+    },
+
+    _onWorkspaceButtonPress: function (button, event) {
+        /* Right click on a workspace button renames that workspace and must
+         * not fall through to the applet menu. */
+        if (event.get_button() !== 3) return false;
+        this._onRenameWorkspace(button.index);
+        return true;
     },
 
     on_applet_scroll_event: function (actor, event) {
@@ -291,6 +299,8 @@ WorkspaceNamesApplet.prototype = {
         label.set_style("max-width: " + this._buttonMetrics.labelWidth + "px;");
         button.set_child(label);
         button.connect("clicked", () => WorkspaceActions.activateWorkspaceByIndex(index));
+        button.connect("button-press-event", (actor, event) =>
+            this._onWorkspaceButtonPress(actor, event));
 
         const vertical = this.orientation === St.Side.LEFT || this.orientation === St.Side.RIGHT;
         if (vertical) {
