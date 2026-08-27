@@ -431,10 +431,10 @@ check("active index is now valid",
 eq("tiles rebuilt", d('D.buttons.length'), ORIG_COUNT)
 highlighted = d('D.buttons.filter(function(b){'
                 'return b.get_style_pseudo_class() && '
-                'b.get_style_pseudo_class().indexOf("outlined")!==-1;}).length')
+                '(b.get_style_pseudo_class()||"").indexOf("outlined")!==-1;}).length')
 eq("exactly one tile highlighted", highlighted, 1)
 check("active tile has current-workspace accessible name",
-      d('D.buttons.filter(function(b){return b.get_style_pseudo_class().indexOf("outlined")!==-1;})'
+      d('D.buttons.filter(function(b){return (b.get_style_pseudo_class()||"").indexOf("outlined")!==-1;})'
         '[0].get_accessible_name().indexOf("Current workspace")===0') is True)
 
 # ------------------------------------------------------------------ #
