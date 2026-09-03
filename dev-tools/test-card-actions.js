@@ -516,10 +516,11 @@ check("swatch is fill-only, no contrast rings",
 check("swatch has a 1px footer-coloured border",
     deskletSource.indexOf("cr.setLineWidth(1)") !== -1 &&
     deskletSource.indexOf("10 / 255, 14 / 255, 18 / 255, 0.78") !== -1);
-check("swatch overlays the footer right edge",
-    deskletSource.indexOf("const SWATCH_HALF = 14") !== -1 &&
-    deskletSource.indexOf("Clutter.BinLayout") !== -1 &&
-    deskletSource.indexOf("margin-right: ") !== -1);
+check("swatch is a fixed footer child, not overlay-positioned",
+    deskletSource.indexOf("this._bottom.add(this._swatchBox") !== -1 &&
+    deskletSource.indexOf("const SWATCH_HALF") === -1 &&
+    deskletSource.indexOf("_syncSwatchLayout") === -1 &&
+    deskletSource.indexOf("set_position(") === -1);
 check("timer adjusters are hour/minute/second on the card body",
     deskletSource.indexOf('"minus-hour"') !== -1 &&
     deskletSource.indexOf('"minus-minute"') !== -1 &&

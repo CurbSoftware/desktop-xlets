@@ -601,6 +601,25 @@ check("timer hour/minute/second sit on the body",
       by_kind.get("timer", {}).get("aux") is True
       and by_kind.get("timer", {}).get("adjust") == 6,
       repr(by_kind.get("timer")))
+swatch_slot = js("JSON.stringify(D._cards.map(function(c){"
+                 "let cp=c.actor.get_transformed_position();"
+                 "let cs=c.actor.get_transformed_size();"
+                 "let bp=c._bottom.get_transformed_position();"
+                 "let bs=c._bottom.get_transformed_size();"
+                 "let sp=c._swatchBox.get_transformed_position();"
+                 "let ss=c._swatchBox.get_transformed_size();"
+                 "return {kind:c.kind,"
+                 "cardInset:Math.round(cp[0]+cs[0]-(sp[0]+ss[0])),"
+                 "barInset:Math.round(bp[0]+bs[0]-(sp[0]+ss[0])),"
+                 "ctrlW:c._controls?Math.round(c._controls.get_width()):0,"
+                 "textW:Math.round(c._nextText.get_width())};}))")
+swatch_slot = json.loads(swatch_slot)
+insets = [item["barInset"] for item in swatch_slot]
+check("swatch stays on the footer right edge regardless of buttons or time width",
+      len(insets) >= 2 and max(insets) - min(insets) <= 2
+      and any(item["ctrlW"] == 0 for item in swatch_slot)
+      and any(item["ctrlW"] > 0 for item in swatch_slot),
+      repr(swatch_slot))
 hidden = js("D.showNextBar=false;D._rebuildCards();"
             "JSON.stringify({clockHost:D._cards[0]._footerHost.visible,"
             "timerHost:D._cards[1]._footerHost.visible,"

@@ -79,7 +79,7 @@ CardWidget(kind)
             ├── title label
             ├── value label
             ├── body row (timer h/m/s under Ready, or chrono Lap)
-            └── footer host: bar (play/reset + HH:MM:SS) with overlay swatch + go-next
+            └── footer bar: play/reset + HH:MM:SS + fixed-right swatch with go-next
 
 cardActions.js     parseColor, normalizeSchedule, evaluate, nextStop,
                    secondsUntilStop, responsive grid and text-fit helpers
