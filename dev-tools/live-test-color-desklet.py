@@ -538,21 +538,24 @@ layout = js("c=D._cards[2].actor;p=c.get_transformed_position();s=c.get_transfor
 layout = json.loads(layout)
 check("600px layout keeps every enabled card", layout["cards"] == ["clock", "timer", "chrono"])
 check("600px layout wraps to two rows", layout["dims"] == {"rows": 2, "cols": 2})
-check("wrapped layout grows to safe height", layout["height"] >= 280)
+check("wrapped layout grows to safe height", layout["height"] >= 344)
 check("incomplete final row is centered",
       abs(layout["lastCenter"] - layout["containerCenter"]) <= 4,
       f"last={layout['lastCenter']}, container={layout['containerCenter']}")
-check("clock uses inert spacer, not hidden controls",
-      js("D._cards[0]._ctlButtons.length===0 && "
-         "D._cards[0]._controls.has_style_class_name('ctc-card-controls-spacer')") is True)
-preview = js("JSON.stringify(D._cards.map(function(c){p=c._nextLabel.get_preferred_width(-1);"
-             "return {label:c._nextLabel.get_text(),width:c._swatch.width,"
-             "height:c._swatch.height,visible:c._nextPreview.visible,"
-             "labelFits:c._nextLabel.width>=p[1]};}))")
+check("clock has no control buttons",
+      js("D._cards[0]._ctlButtons.length===0 && !D._cards[0]._controls") is True)
+preview = js("JSON.stringify(D._cards.map(function(c){"
+             "return {kind:c.kind,text:c._nextText.get_text(),"
+             "width:c._swatch.width,height:c._swatch.height,"
+             "visible:c._nextText.visible,host:c._footerHost.visible};}))")
 preview = json.loads(preview)
-check("all cards show a labelled 20px next-colour chip",
-      all(item == {"label": "Next", "width": 20, "height": 20,
-                   "visible": True, "labelFits": True} for item in preview),
+check("next swatch is 28px square",
+      all(item["width"] == 28 and item["height"] == 28 for item in preview),
+      repr(preview))
+check("clock footer shows HH:MM:SS",
+      any(item["kind"] == "clock"
+          and re.match(r"^\d{2}:\d{2}:\d{2}$", str(item.get("text", "")))
+          and item.get("visible") and item.get("host") for item in preview),
       repr(preview))
 empty = js("D.showClock=false;D.showTimer=false;D.showChronometer=false;D._rebuildCards();"
            "JSON.stringify({cards:D._cards.length,empty:D.mainContainer.has_style_class_name('ctc-empty-container')})")
@@ -568,7 +571,53 @@ settle(0.3)
 # original settings file is restored by the atexit hook.
 js("D.resetSchedules();D.timerMinutes=5;D.timerSeconds=0;"
    "D._timer={phase:'stopped',durationSec:300,endMs:0,remainingMs:0};"
-   "D._persistTimer();D._updateAll();true")
+   "D._chrono={phase:'stopped',startMs:0,accumMs:0};"
+   "D._persistTimer();D._persistChrono();D._updateAll();true")
+settle(0.3)
+
+suite("next color countdown")
+next_bar = js("JSON.stringify(D._cards.map(function(c){"
+              "return {kind:c.kind,text:c._nextText.get_text(),"
+              "swatch:c._swatch.visible,host:c._footerHost.visible,"
+              "buttons:c._ctlButtons.length,"
+              "adjust:c._adjustButtons?c._adjustButtons.length:0,"
+              "aux:!!c._aux};}))")
+next_bar = json.loads(next_bar)
+by_kind = {item["kind"]: item for item in next_bar}
+check("stopped timer counts down to the 60s stop",
+      by_kind.get("timer", {}).get("text") == "00:04:00",
+      repr(by_kind.get("timer")))
+check("stopped chrono counts down to the 1800s stop",
+      by_kind.get("chrono", {}).get("text") == "00:30:00",
+      repr(by_kind.get("chrono")))
+check("clock footer shows HH:MM:SS",
+      bool(re.match(r"^\d{2}:\d{2}:\d{2}$",
+                    str(by_kind.get("clock", {}).get("text", "")))),
+      repr(by_kind.get("clock")))
+check("footer clocks never say Next:",
+      all("Next:" not in str(item.get("text", "")) for item in next_bar),
+      repr(next_bar))
+check("timer hour/minute/second sit on the body",
+      by_kind.get("timer", {}).get("aux") is True
+      and by_kind.get("timer", {}).get("adjust") == 6,
+      repr(by_kind.get("timer")))
+hidden = js("D.showNextBar=false;D._rebuildCards();"
+            "JSON.stringify({clockHost:D._cards[0]._footerHost.visible,"
+            "timerHost:D._cards[1]._footerHost.visible,"
+            "chronoHost:D._cards[2]._footerHost.visible,"
+            "timerButtons:D._cards[1]._ctlButtons.length,"
+            "chronoButtons:D._cards[2]._ctlButtons.length,"
+            "timerNext:D._cards[1]._nextText.visible,"
+            "chronoNext:D._cards[2]._nextText.visible});")
+hidden = json.loads(hidden)
+check("hiding the next bar removes the clock footer",
+      not hidden["clockHost"], repr(hidden))
+check("timer and chrono keep controls when the next bar is hidden",
+      hidden["timerHost"] and hidden["chronoHost"]
+      and hidden["timerButtons"] >= 2 and hidden["chronoButtons"] >= 2
+      and not hidden["timerNext"] and not hidden["chronoNext"],
+      repr(hidden))
+js("D.showNextBar=true;D._rebuildCards();true")
 settle(0.3)
 
 suite("schedule paint")
@@ -641,12 +690,26 @@ check("expiry persisted",
       json.loads(js("JSON.stringify(D.settings.getValue('timer-state'))"))
       ["phase"] == "expired")
 
-suite("timer +/-60s gating")
-js("D._onControl('timer','reset'); D._onControl('timer','plus');"
-   "D._onControl('timer','plus')")
-check("plus works while stopped", js("D._timer.durationSec") == 420)
-js("D._onControl('timer','toggle'); D._onControl('timer','plus')")
-check("plus ignored while running", js("D._timer.durationSec") == 420)
+suite("timer +/- gating")
+js("D._onControl('timer','reset'); D._onControl('timer','plus-minute');"
+   "D._onControl('timer','plus-minute')")
+check("plus-minute works while stopped", js("D._timer.durationSec") == 420)
+js("D._onControl('timer','toggle'); D._onControl('timer','plus-minute')")
+check("plus-minute ignored while running", js("D._timer.durationSec") == 420)
+
+suite("chronometer lap")
+js("D._onControl('chrono','reset'); D._onControl('chrono','toggle'); true")
+time.sleep(0.4)
+js("D._onControl('chrono','lap'); true")
+lap_text = card("chrono", "_sub.get_text()") or ""
+check("lap while running updates the subtitle",
+      lap_text.startswith("Lap "), repr(lap_text))
+js("D._onControl('chrono','toggle'); D._onControl('chrono','lap'); true")
+check("lap ignored while paused",
+      (card("chrono", "_sub.get_text()") or "") == lap_text)
+js("D._onControl('chrono','reset'); true")
+check("reset clears the last lap",
+      (card("chrono", "_sub.get_text()") or "") == "")
 
 suite("chronometer state machine")
 js("D._onControl('chrono','toggle')")

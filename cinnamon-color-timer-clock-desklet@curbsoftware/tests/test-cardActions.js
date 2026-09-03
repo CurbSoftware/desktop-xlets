@@ -13,7 +13,7 @@ vm.runInContext(
     "DAY_SECONDS, parseColor, rgbaToCss, rgbaToKey, normalizeSchedule, evaluate," +
     "contrastColors, computeFittedFontSizes, computeCardInnerSize, computeResponsiveGrid," +
     "computeResponsiveHeight," +
-    "nextStop, nextColor," +
+    "nextStop, nextColor, secondsUntilStop," +
     "worstTimeSample, CARD_LAYOUT, DEFAULT_CLOCK_SCHEDULE" +
     "};",
     sandbox
@@ -60,7 +60,7 @@ const medium = A.computeResponsiveGrid(3, 600, 6);
 assert(medium.rows === 2 && medium.cols === 2, "footer-safe cards wrap at medium width");
 const narrow = A.computeResponsiveGrid(3, 200, 6);
 assert(narrow.rows === 3 && narrow.cols === 1, "narrow layout keeps all cards");
-assert(A.computeResponsiveHeight(3, 120, 6) === 416,
+assert(A.computeResponsiveHeight(3, 120, 6) === 512,
     "stacked layout gains safe height");
 
 const parsed = A.parseColor("#3949ab");
@@ -72,5 +72,9 @@ const color = A.evaluate(sched.stops, 12 * 3600, { wrap: true, smooth: true });
 assert(Array.isArray(color) && color.length === 4, "evaluate noon color");
 const next = A.nextStop(sched.stops, 13 * 3600, { wrap: true });
 assert(next.t === 18 * 3600 && Array.isArray(next.rgba), "next stop includes time and color");
+assert(A.secondsUntilStop(13 * 3600, next.t, { wrap: true }) === 5 * 3600,
+    "seconds until next clock stop");
+assert(A.secondsUntilStop(90, 60, { reverse: true }) === 30, "timer countdown");
+assert(A.secondsUntilStop(2000, 1800, {}) === null, "forward past last is null");
 
 console.log("cardActions tests passed");

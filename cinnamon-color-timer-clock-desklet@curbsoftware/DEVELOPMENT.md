@@ -13,9 +13,9 @@ The Color Timer Clock desklet shows up to three cards (Clock, Timer, Chronometer
 - Clock card: time-of-day color schedule wrapping over midnight, optional IANA timezone
 - Timer card: countdown by time-remaining schedule; `stopped|paused|running|expired` state machine with wall-clock `endMs`, persisted across restarts
 - Chronometer card: elapsed-time schedule; `accumMs` + `startMs` pause/resume, persisted across restarts
-- On-card `St.Button` controls (play/pause, reset, timer plus or minus 60 s while stopped). Buttons use normal Cinnamon event flow and never change private DND state
+- On-card `St.Button` controls (play/pause, reset, timer hour/minute/second under Ready, chronometer Lap). Buttons use normal Cinnamon event flow and never change private DND state
 - Responsive card grid that wraps every enabled card, centers incomplete rows and grows to a safe row-dependent minimum height
-- Context-menu schedule reload, labelled 20 px next-stop chips, accessible names and a useful all-cards-disabled state
+- Context-menu schedule reload, footer HH:MM:SS clocks with a go-next icon, accessible names and a useful all-cards-disabled state
 - Optional chronometer hundredths display: a 50 ms text-only tick armed only while the chronometer runs with the setting on
 - Adaptive text/border colors by measured WCAG contrast ratio (translucent colors are composited over the dark card backing first; mid-tones that fail AA with either softened candidate fall back to the solid extreme)
 - "Reset all schedules to defaults" settings button
@@ -78,11 +78,11 @@ CardWidget(kind)
     └── St.BoxLayout.ctc-card
             ├── title label
             ├── value label
-            ├── sub label
-            └── footer: controls pill plus labelled next-colour preview
+            ├── body row (timer h/m/s under Ready, or chrono Lap)
+            └── footer host: bar (play/reset + HH:MM:SS) with overlay swatch + go-next
 
 cardActions.js     parseColor, normalizeSchedule, evaluate, nextStop,
-                   responsive grid and text-fit helpers
+                   secondsUntilStop, responsive grid and text-fit helpers
 ```
 
 Modules are loaded lazily:
@@ -111,6 +111,7 @@ CardActions = dir.cardActions;
 | Key | Type | Default | Notes |
 |-----|------|---------|-------|
 | `show-clock` / `show-timer` / `show-chronometer` | checkbox | `true` | Visible cards |
+| `show-next-bar` | checkbox | `true` | Footer HH:MM:SS until next colour; timer/chrono controls stay |
 | `clock-timezone` | entry | `""` | Empty = local; invalid logs once and falls back |
 | `clock-schedule` | list | 06:00/12:00/18:00 ramp | `hour`, `minute`, `color` columns |
 | `timer-minutes` / `timer-seconds` | spinbutton | `5` / `0` | Default duration |
@@ -137,6 +138,7 @@ All functions are pure (no St/Clutter):
 - `normalizeSchedule(rows, maxT)` returns `{ stops, dropped }`
 - `evaluate(stops, t, { wrap, smooth })` returns rgba or `null` when no stops exist
 - `nextStop(stops, t, { wrap, reverse })` returns upcoming stop metadata
+- `secondsUntilStop(pos, nextT, { wrap, reverse })` returns seconds until that stop
 - `lerpRgba`, `luma`, `contrastColors(rgba)` return colour values
 - `computeResponsiveGrid`, `computeCardInnerSize`, `computeFittedFontSizes`: layout helpers
 

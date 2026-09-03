@@ -228,6 +228,22 @@ eq("clock wraps with stop metadata",
 eq("non-wrap schedule ends cleanly",
     CA.nextStop(stops([[0, RED], [1800, BLUE]]), 2000, {}), null);
 
+suite("secondsUntilStop");
+eq("forward countdown",
+    CA.secondsUntilStop(300, 1800, {}), 1500);
+eq("clock wrap over midnight",
+    CA.secondsUntilStop(68400, 21600, { wrap: true }), 39600);
+eq("clock wrap same instant is zero",
+    CA.secondsUntilStop(21600, 21600, { wrap: true }), 0);
+eq("timer reverse countdown",
+    CA.secondsUntilStop(90, 60, { reverse: true }), 30);
+eq("timer reverse past stop is null",
+    CA.secondsUntilStop(30, 60, { reverse: true }), null);
+eq("forward past last is null",
+    CA.secondsUntilStop(2000, 1800, {}), null);
+eq("invalid inputs are null",
+    CA.secondsUntilStop("nope", 10, {}), null);
+
 /* ------------------------------------------------------------------ *
  * Default schedules
  * ------------------------------------------------------------------ */
@@ -458,13 +474,13 @@ suite("computeResponsiveHeight");
 eq("one row preserves configured height",
     CA.computeResponsiveHeight(1, 260, 6), 260);
 eq("two rows gain safe height",
-    CA.computeResponsiveHeight(2, 120, 6), 280);
+    CA.computeResponsiveHeight(2, 120, 6), 344);
 eq("three rows gain safe height",
-    CA.computeResponsiveHeight(3, 120, 6), 416);
+    CA.computeResponsiveHeight(3, 120, 6), 512);
 eq("large configured height is preserved",
     CA.computeResponsiveHeight(3, 600, 6), 600);
 eq("invalid row count is safe",
-    CA.computeResponsiveHeight(0, 120, 6), 144);
+    CA.computeResponsiveHeight(0, 120, 6), 176);
 
 suite("desklet drag ownership contract");
 let deskletBytes = GLib.file_get_contents(DESKLET_DIR + "/desklet.js")[1];
@@ -475,24 +491,54 @@ check("desklet never synthesizes a DND release",
     deskletSource.indexOf("fakeRelease") === -1);
 check("desklet has ReloadXlet helper-cache fallbacks",
     deskletSource.indexOf("function _responsiveGrid") !== -1 &&
-    deskletSource.indexOf("function _nextScheduleStop") !== -1);
+    deskletSource.indexOf("function _nextScheduleStop") !== -1 &&
+    deskletSource.indexOf("function _secondsUntilStop") !== -1);
 
 suite("next-colour preview contract");
 let stylesheetBytes = GLib.file_get_contents(DESKLET_DIR + "/stylesheet.css")[1];
 let stylesheetSource = ByteArray.toString(stylesheetBytes);
-check("preview chip is 20px",
-    deskletSource.indexOf("this._swatch.set_width(20)") !== -1 &&
-    deskletSource.indexOf("this._swatch.set_height(20)") !== -1);
-check("every card uses the labelled preview footer",
-    deskletSource.indexOf('text: _("Next")') !== -1 &&
-    deskletSource.indexOf("bottom.add(this._nextPreview") !== -1);
-check("preview has two contrast rings",
-    deskletSource.indexOf("cr.setLineWidth(2)") !== -1 &&
-    deskletSource.indexOf("cr.setLineWidth(1.5)") !== -1);
-check("footer and chip have intentional surfaces",
+check("preview chip is 28px",
+    deskletSource.indexOf("const SWATCH_PX = 28") !== -1 &&
+    deskletSource.indexOf("this._swatch.set_width(SWATCH_PX)") !== -1 &&
+    deskletSource.indexOf("this._swatch.set_height(SWATCH_PX)") !== -1);
+check("footer uses go-next icon and HH:MM:SS, not Next: copy",
+    deskletSource.indexOf('text: _("Next")') === -1 &&
+    deskletSource.indexOf('_("Next: %s")') === -1 &&
+    deskletSource.indexOf("go-next-symbolic") !== -1 &&
+    deskletSource.indexOf("function _formatClock") !== -1 &&
+    deskletSource.indexOf("this._bottom.add(this._nextText") !== -1 &&
+    deskletSource.indexOf("this._swatchBox.add_child(this._nextIcon)") !== -1);
+check("show-next-bar is bound",
+    deskletSource.indexOf('bind("show-next-bar"') !== -1);
+check("swatch is fill-only, no contrast rings",
+    deskletSource.indexOf("cr.setLineWidth(2)") === -1 &&
+    deskletSource.indexOf("cr.setLineWidth(1.5)") === -1);
+check("swatch has a 1px footer-coloured border",
+    deskletSource.indexOf("cr.setLineWidth(1)") !== -1 &&
+    deskletSource.indexOf("10 / 255, 14 / 255, 18 / 255, 0.78") !== -1);
+check("swatch overlays the footer right edge",
+    deskletSource.indexOf("const SWATCH_HALF = 14") !== -1 &&
+    deskletSource.indexOf("Clutter.BinLayout") !== -1 &&
+    deskletSource.indexOf("margin-right: ") !== -1);
+check("timer adjusters are hour/minute/second on the card body",
+    deskletSource.indexOf('"minus-hour"') !== -1 &&
+    deskletSource.indexOf('"minus-minute"') !== -1 &&
+    deskletSource.indexOf('"minus-second"') !== -1 &&
+    deskletSource.indexOf('"plus-hour"') !== -1 &&
+    deskletSource.indexOf('"plus-minute"') !== -1 &&
+    deskletSource.indexOf('"plus-second"') !== -1 &&
+    deskletSource.indexOf("this._aux.add(this._ctlButton") !== -1);
+check("chronometer has an on-card lap action",
+    deskletSource.indexOf('"lap"') !== -1 &&
+    deskletSource.indexOf('_("Lap")') !== -1 &&
+    deskletSource.indexOf('_("Lap %s  %s")') !== -1);
+check("footer clock is tabular monospace",
+    deskletSource.indexOf('set_font_name("Monospace Bold 14")') !== -1 &&
+    stylesheetSource.indexOf("font-size: 14pt") !== -1);
+check("footer uses the unified opaque surface",
     stylesheetSource.indexOf(".ctc-card-bottom") !== -1 &&
-    stylesheetSource.indexOf(".ctc-next-preview") !== -1 &&
-    stylesheetSource.indexOf(".ctc-next-label") !== -1);
+    stylesheetSource.indexOf("rgba(10, 14, 18, 0.78)") !== -1 &&
+    stylesheetSource.indexOf("rgba(10, 14, 18, 0.24)") === -1);
 
 suite("module surface");
 check("lerpRgba exported", typeof CA.lerpRgba === "function");
