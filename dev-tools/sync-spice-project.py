@@ -472,8 +472,13 @@ def ensure_release(project: dict, target: Path) -> None:
     if origin.returncode != 0:
         return
     slug = remote_slug(origin.stdout.strip())
-    existing = run(["git", "ls-remote", "--tags", slug, tag], capture=True, check=False)
-    if existing.stdout.strip():
+    # Ask gh, not git: ls-remote wants a URL and silently fails on an
+    # owner/name slug, so this guard never fired and every run tried to create
+    # a release that already existed.
+    existing = run(["gh", "release", "view", tag, "--repo", slug],
+                   capture=True, check=False)
+    if existing.returncode == 0:
+        say("SKIP release " + slug + " " + tag + " (already published)")
         return
     with tempfile.TemporaryDirectory(prefix="spice-release-pkg-") as temporary_name:
         output = Path(temporary_name)
