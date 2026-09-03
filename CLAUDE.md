@@ -47,6 +47,10 @@ Cinnamon has no cross-xlet import path:
   verbatim from the world clock's `clockActions.js`); timer/chrono state
   persisted in hidden `generic` keys and survives reloads
 - Timer/chrono controls are on-card St.Buttons, not menus
+- Each card has an `HH:MM:SS` footer clock counting down to the next colour,
+  with a colour sample chip pinned to the bar's right edge; the `show-next-bar`
+  setting hides it without hiding the timer and chronometer controls. The timer
+  takes hour/minute/second buttons, the chronometer has a Lap button
 
 #### Panel Profiles Applet (`cinnamon-panel-profiles-applet@curbsoftware/`)
 - Saves the panel world and the desklet world as separate named profile
@@ -61,6 +65,14 @@ Cinnamon has no cross-xlet import path:
   (read-only display summary) and profilesManagerWidget.py (rename,
   duplicate, delete on the profile files)
 - State and profiles live under `~/.config/cinnamon-panel-profiles/`
+
+#### Command Launcher Applet (`command-launcher@curbsoftware/`)
+- Works, but is nearly identical to the existing `commandLauncher@scollins`
+  Spices entry, so it is blocked from new-spice submission. The release tooling
+  leaves it out of `all` automatically
+- Its directory name does not match its uuid
+  (`cinnamon-command-launcher-applet@curbsoftware`), which is fine only because
+  it never installs from here. Rename the directory before ever shipping it
 
 ### Reference Materials (`cinnamon-docs/`)
 - **cinnamon-developer-docs/**: Official Cinnamon developer documentation
@@ -109,7 +121,21 @@ python3 dev-tools/live-test-desklet.py     # live desklet edge-case matrix
 python3 dev-tools/live-test-applet.py      # live applet test (restores enabled-applets)
 python3 dev-tools/live-test-color-desklet.py # live color-timer clock matrix (restores settings)
 python3 dev-tools/live-test-panel-profiles.py # live panel-profiles acceptance matrix (restores settings)
+python3 dev-tools/live-test-xlet-smoke.py  # loads every xlet once, catches import-time breakage
 ```
+
+### Release and Publish
+```bash
+./dev-tools/release-spice.sh <alias>   # build one Spices tree + deterministic zip into dist/spices/
+python3 dev-tools/spices-release.py    # the builder itself: layout checks, gates, zip
+python3 dev-tools/sync-spice-project.py publish|prepare-pr|submit
+./dev-tools/publish-spices.sh          # wrapper: sync + commit + push + cut a release per xlet
+./dev-tools/submit-spice.sh <alias>    # wrapper: registry branch + PR for one spice
+```
+Other helpers: `dev-tools/make-icons.py` (regenerate the shared icon set),
+`dev-tools/start-sandbox.sh` (throwaway session), `dev-tools/vm-screenshot.sh`
+(capture the VM's screen), `dev-tools/pp-widget-lock-helper.py` (panel-profiles
+settings widget lock).
 The live drivers script the running desktop through `org.Cinnamon.Eval` (see
 `dev-tools/cinnamon_eval.py`). They only remove workspaces they created and
 assert the original workspace count, names, active index and panel layout are
@@ -185,6 +211,18 @@ cinnamon-settings desklets '<uuid>'        # open settings directly (or applets)
 - Live test drivers restore settings via `atexit` - kill them with anything
   but SIGTERM (a plain `timeout` skips the restore and contaminates the next
   run's saved "originals"; the drivers now route SIGTERM through sys.exit).
+- **Ship a functional change without bumping `metadata.json` `version` and a
+  stale install becomes indistinguishable from a fresh one.** This already bit
+  us: the color-timer footer work landed while the version stayed at 1.7.0, so
+  the published `releases/latest` zip and the source shared a version string and
+  different code. Reinstalling, removing and re-adding the desklet, and
+  restarting Cinnamon all reinstalled the same old bytes. `ensure_release()` in
+  `sync-spice-project.py` also skips a repo whose tag already exists, so no bump
+  means no new zip is ever cut. Symptom to recognise: file mtimes of
+  `1980-01-01` under `~/.local/share/cinnamon/` mean the files came out of a
+  release zip (`spices-release.py` stamps that epoch for reproducible builds),
+  not out of this repo. Develop with `install-extensions.sh -m symlink` and the
+  question never comes up.
 
 ## Spices Publication
 
@@ -192,10 +230,10 @@ The full submission manual is `docs/spices-publication.md` - follow it for
 new submissions. Summary of the flow:
 
 - This monorepo (flat layout) is the dev home; each shipped xlet ALSO has a
-  standalone repo under RobertAlexanderH holding the Spices layout
+  standalone repo under CurbSoftware holding the Spices layout
   (`info.json`, `screenshot.png`, `README.md`, `LICENSE` at root;
   `files/<uuid>/…` with everything Cinnamon installs). Generated copies live
-  in `/home/user/projects/cinnamon/<name>/` (one git repo per xlet, named
+  in `~/projects/cinnamon/<name>/` (one git repo per xlet, named
   like its GitHub repo); never edit them by hand, a `.monorepo-sync.json`
   manifest guards them.
 - `./dev-tools/publish-spices.sh` clones or creates each standalone repo,

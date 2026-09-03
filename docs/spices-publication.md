@@ -5,10 +5,10 @@ from it. Each candidate is submitted in its own pull request to either
 `linuxmint/cinnamon-spices-desklets` or `linuxmint/cinnamon-spices-applets`.
 
 The generated standalone repositories live together in the sibling directory
-`/home/user/projects/cinnamon/`. Each directory there (named like the GitHub
+`~/projects/cinnamon/`. Each directory there (named like the GitHub
 repo, for example `cinnamon-color-timer-clock-desklet`) is a separate Git
 repository mirroring its repo under
-`github.com/RobertAlexanderH`. Never develop in those generated copies. Make the
+`github.com/CurbSoftware`. Never develop in those generated copies. Make the
 change here, test it here, then sync it out.
 
 ## Current submission set
@@ -61,7 +61,7 @@ python3 dev-tools/spices-release.py test all --live
 ## Independent project repositories
 
 The one-shot path clones or creates each standalone GitHub repo (public,
-under `RobertAlexanderH`), adopts an existing clone by resetting its working tree
+under `CurbSoftware`), adopts an existing clone by resetting its working tree
 to the generated layout, then syncs, commits, and pushes to `origin main`:
 
 ```bash
@@ -77,7 +77,7 @@ Name spices to subset, or preview with `--dry-run`:
 The default layout is:
 
 ```text
-/home/user/projects/cinnamon/
+~/projects/cinnamon/
   cinnamon-world-clock-desklet/.git/
   cinnamon-color-timer-clock-desklet/.git/
   cinnamon-workspace-grid-desklet/.git/
@@ -99,7 +99,7 @@ python3 dev-tools/sync-spice-project.py sync all --commit
 python3 dev-tools/sync-spice-project.py sync workspace-grid --commit
 ```
 
-The remote template defaults to `git@github.com:RobertAlexanderH/{repo}.git` in
+The remote template defaults to `git@github.com:CurbSoftware/{repo}.git` in
 `publish`. The available template fields are `{alias}`, `{uuid}`, `{repo}`,
 `{kind}`, and `{source}`.
 

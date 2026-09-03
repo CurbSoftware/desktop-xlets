@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RELEASE_TOOL = ROOT / "dev-tools" / "spices-release.py"
 DEFAULT_PARENT = ROOT.parent / "cinnamon"
 RETIRED_PARENT = ROOT.parent / "cinnamon-projects.retired"
-DEFAULT_REMOTE_TEMPLATE = "git@github.com:RobertAlexanderH/{repo}.git"
+DEFAULT_REMOTE_TEMPLATE = "git@github.com:CurbSoftware/{repo}.git"
 MANIFEST = ".monorepo-sync.json"
 MANIFEST_SCHEMA = 1
 
@@ -443,6 +443,9 @@ def default_registry_checkout(kind: str) -> Path:
 def ensure_registry_checkout(kind: str, checkout: Path) -> None:
     # Shallow clone keeps this cheap; if git ever refuses a push from it,
     # delete the checkout and re-run with a full clone instead.
+    # This fork stays on the personal account even though the standalone spice
+    # repos live under CurbSoftware: Linux Mint expects the pull request to come
+    # from the human named in info.json, and you cannot authenticate as an org.
     fork = "RobertAlexanderH/" + default_registry_checkout(kind).name
     upstream = "linuxmint/" + default_registry_checkout(kind).name
     if not checkout.exists():

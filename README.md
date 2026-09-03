@@ -5,7 +5,7 @@ This is the **one development repo** for CurbSoftware Cinnamon desklets and appl
 Git remote: [CurbSoftware/cinnamon-monorepo](https://github.com/CurbSoftware/cinnamon-monorepo).
 
 Work here. Never develop in a generated copy. Per-spice repos under
-`/home/user/projects/cinnamon/` and the registry clones are publish targets
+`~/projects/cinnamon/` and the registry clones are publish targets
 only, produced by scripts, not a second product.
 
 New here? Start with [`docs/repo-guide.md`](docs/repo-guide.md), which walks
