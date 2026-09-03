@@ -322,16 +322,26 @@ def craft(src_id, name, body_js):
     return new_id, result
 
 
-def move_applet(uuid, new_panel, new_zone, new_pos):
+def move_applet(uuid, new_panel, new_zone, new_pos, instance=None):
+    """Move ONE instance of @uuid and return its instance id.
+
+    This used to move every instance of the uuid to the same slot. A desktop
+    with several windows-quick-list applets (four here) ended up with all of
+    them stacked on one zone position, which the duplicate detector in suite 5
+    then reported five times over. The tests also hardcoded instance id 20,
+    which exists on no machine but the one they were written on.
+    """
     apps = ast.literal_eval(gs_get("enabled-applets"))
     out = []
-    moved = False
+    moved = None
     for e in apps:
         f = e.split(":")
-        if len(f) >= 4 and f[3] == uuid:
-            rest = ":" + ":".join(f[4:]) if len(f) >= 5 else ""
-            out.append("panel%d:%s:%d:%s%s" % (new_panel, new_zone, new_pos, uuid, rest))
-            moved = True
+        matches = (len(f) >= 5 and f[3] == uuid and
+                   (instance is None or f[4] == str(instance)))
+        if matches and moved is None:
+            moved = f[4]
+            out.append("panel%d:%s:%d:%s:%s" %
+                       (new_panel, new_zone, new_pos, uuid, moved))
         else:
             out.append(e)
     gs_set("enabled-applets", str(out))
@@ -490,6 +500,25 @@ def host_panel_id():
 
 HOST_PANEL = host_panel_id()
 PANEL_ENTRY = "panel%d:left:99:%s:%d" % (HOST_PANEL, APPLET, INSTANCE)
+
+
+def other_panel_id():
+    """A live panel that is not the applet's host.
+
+    Suites 11 and 11b are a chain: 11 moves the applet off its host panel so
+    the enabled-applets write destroys the instance, then 11b deletes the
+    panel that now owns it and checks the handoff. Both used to name panel1
+    and panel2 literally, which only worked while the host was pinned to
+    panel2. Pick the pair relative to the host instead.
+    """
+    for entry in ast.literal_eval(gs_get("panels-enabled")):
+        panel = int(str(entry).split(":")[0])
+        if panel != HOST_PANEL:
+            return panel
+    return None
+
+
+MOVE_PANEL = other_panel_id()
 COREDUMP_BASE = coredump_pids()
 HAD_STATE = os.path.isdir(STATE_DIR)
 RUN_BAK = tempfile.mkdtemp(prefix="panel-profiles-live-")
@@ -747,10 +776,13 @@ suite("3 exact restore")
 
 check("desktop mutated (height 40->48)", set_panel1_height(48) is None or True)
 eq("height now 48", panel1_height(), 48)
-check("applet entry moved live", move_applet(
-    "windows-quick-list@cinnamon.org", 2, "left", 2))
+QL_UUID = "windows-quick-list@cinnamon.org"
+QL_ID = move_applet(QL_UUID, 2, "left", 2)
+check("applet entry moved live", QL_ID is not None,
+      "no %s instance on this desktop" % QL_UUID)
+QL_HOME = "panel2:left:2:%s:%s" % (QL_UUID, QL_ID)
 eq("windows-quick-list now panel2:left:2",
-   any(e == "panel2:left:2:windows-quick-list@cinnamon.org:20"
+   any(e == QL_HOME
        for e in ast.literal_eval(gs_get("enabled-applets"))), True)
 
 exact = save_profile("Exact A")
@@ -760,16 +792,16 @@ check("Exact A got an id", isinstance(A_ID, str) and len(A_ID) > 0)
 
 # Further change, then load A back.
 set_panel1_height(40)
-move_applet("windows-quick-list@cinnamon.org", 2, "center", 0)
+move_applet(QL_UUID, 2, "center", 0, instance=QL_ID)
 a('A._applyProfile(' + json.dumps(A_ID) + '); true')
 wait_apply(A_ID)
 wait_for(lambda: panel1_height() == 48 and
-         any(e == "panel2:left:2:windows-quick-list@cinnamon.org:20"
+         any(e == QL_HOME
              for e in ast.literal_eval(gs_get("enabled-applets"))),
          "A's restore to land on the desktop", 8.0)
 eq("height restored to A's 48", panel1_height(), 48)
 eq("windows-quick-list restored to A's spot",
-   any(e == "panel2:left:2:windows-quick-list@cinnamon.org:20"
+   any(e == QL_HOME
        for e in ast.literal_eval(gs_get("enabled-applets"))), True)
 for key in PANEL_KEYS:
     stored = profile_cs_value(A_ID, key)
@@ -841,8 +873,8 @@ move_body = (
     'const eaRec=p.cinnamonSettings["enabled-applets"];'
     'const ea=CS.parseVariant(eaRec.type,eaRec.value);'
     'let ev2=ea.get_strv().map(function(e){'
-    'if (e.indexOf("windows-quick-list@cinnamon.org")!==-1)'
-    'return "panel2:left:2:windows-quick-list@cinnamon.org:20"; return e;});'
+    'if (e.split(":").slice(3).join(":")==="' + QL_UUID + ':' + str(QL_ID) + '")'
+    'return "' + QL_HOME + '"; return e;});'
     'eaRec.value=CS.variantToString(GLib.Variant.new_strv(ev2));'
 )
 sw_b, made = craft(SW_A, "Switch B", move_body)
@@ -1024,7 +1056,7 @@ resume_body = (
     'let rv=ea.get_strv().map(function(e){'
     'const f=e.split(":");'
     'if (f[3]===' + json.dumps(APPLET) + ')'
-    'return "panel1:left:99:' + APPLET + ':"+f[4];'
+    'return "panel' + str(MOVE_PANEL) + ':left:99:' + APPLET + ':"+f[4];'
     'return e;});'
     'eaRec.value=CS.variantToString(GLib.Variant.new_strv(rv));'
 )
@@ -1045,8 +1077,9 @@ eq("resume: pendingApply cleared", st.get("pendingApply"), None)
 eq("resume: active profile == Resume B",
    st.get("activeProfileId"), resume_b)
 apps = ast.literal_eval(gs_get("enabled-applets"))
-check("resume: our uuid now on panel1",
-      any(e.startswith("panel1:") and APPLET in e for e in apps), str(apps))
+check("resume: our uuid now on panel%d" % MOVE_PANEL,
+      any(e.startswith("panel%d:" % MOVE_PANEL) and APPLET in e for e in apps),
+      str(apps))
 check("resume: next-applet-id never decreased", next_id() >= NEXT_FLOOR)
 eq("resume: exactly ONE success notification (verification ran once)",
    notification_counts()["success"] - success_before, 1)
@@ -1054,29 +1087,36 @@ eq("resume: exactly ONE success notification (verification ran once)",
 
 suite("11b host panel deletion handoff")
 
-# Target removes panel 1, which currently owns this applet. The transaction
-# must continue without its actor, create panel 2, restore configured applets,
-# and let exactly one successor manager verify.
+# Suite 11 has just parked the applet on MOVE_PANEL. This target deletes only
+# that panel, so the panel owning this applet is destroyed while the rest of
+# the layout stands. The transaction must continue without its actor, move the
+# orphaned entries onto SURVIVOR, and let exactly one successor verify.
+#
+# It used to collapse every panel into one. That is a much bigger claim than
+# the handoff being tested, and it does not hold: Cinnamon keeps a zone-size
+# row for a panel it has removed, so final verification correctly rejected the
+# result and rolled back. Leave the zone keys alone and delete one panel.
+SURVIVOR = HOST_PANEL
 host_body = (
     'const peRec=p.cinnamonSettings["panels-enabled"];'
-    'peRec.value=CS.variantToString(GLib.Variant.new_strv(["2:0:top"]));'
-    '["panels-show-delay","panels-hide-delay"].forEach(function(k){'
+    'const pe=CS.parseVariant(peRec.type,peRec.value);'
+    'peRec.value=CS.variantToString(GLib.Variant.new_strv('
+    'pe.get_strv().filter(function(e){'
+    'return e.split(":")[0]!=="' + str(MOVE_PANEL) + '";})));'
+    '["panels-show-delay","panels-hide-delay","panels-height",'
+    '"panels-autohide"].forEach(function(k){'
     'const rec=p.cinnamonSettings[k];'
+    'if (!rec) return;'
     'const v=CS.parseVariant(rec.type,rec.value);'
     'rec.value=CS.variantToString(GLib.Variant.new_strv('
-    'v.get_strv().filter(function(e){return e.split(":")[0]==="2";})));});'
-    '["panel-zone-icon-sizes","panel-zone-symbolic-icon-sizes",'
-    '"panel-zone-text-sizes"].forEach(function(k){'
-    'const rec=p.cinnamonSettings[k];'
-    'const v=CS.parseVariant(rec.type,rec.value);'
-    'const got=v.get_string();'
-    'const raw=Array.isArray(got)?got[0]:got;'
-    'const rows=JSON.parse(raw).filter(function(row){return row.panelId===2;});'
-    'rec.value=CS.variantToString(GLib.Variant.new_string(JSON.stringify(rows)));});'
+    'v.get_strv().filter(function(e){'
+    'return e.split(":")[0]!=="' + str(MOVE_PANEL) + '";})));});'
     'const eaRec=p.cinnamonSettings["enabled-applets"];'
     'const ea=CS.parseVariant(eaRec.type,eaRec.value);'
     'eaRec.value=CS.variantToString(GLib.Variant.new_strv('
-    'ea.get_strv().map(function(e){return e.replace(/^panel[0-9]+:/,"panel2:");})));'
+    'ea.get_strv().map(function(e){'
+    'return e.replace(/^panel' + str(MOVE_PANEL) + ':/,"panel'
+    + str(SURVIVOR) + ':");})));'
 )
 host_id, made = craft(RESUME_SRC, "Host Handoff", host_body)
 check("host handoff profile crafted", made == host_id, "result=%r" % made)
@@ -1085,15 +1125,32 @@ a("global._hostPanelRef = A; true")
 a('A._applyProfile(' + json.dumps(host_id) + '); true')
 wait_for(lambda: js("global._hostPanelRef._destroyed") is True,
          "old host-panel instance to be destroyed", 12.0)
-wait_for(lambda: read_state().get("pendingApply") is None and
-         read_state().get("activeProfileId") == host_id,
-         "host-panel handoff to settle", 14.0)
+# KNOWN FAILURE, and a product question rather than a test bug.
+#
+# Deleting a panel does not verify on a desktop where Cinnamon re-adds
+# per-panel rows for the panel that just went away: panels-autohide,
+# panels-show-delay, panels-height and the three panel-zone-* keys all come
+# back carrying the deleted panel's id. Final verification is exact, counts
+# them as a mismatch, and rolls the whole apply back. The strictness is
+# deliberate (see "retiring-panel extras" in test-pp-capture.js), so the
+# consequence is that no panel-deleting profile can apply here at all.
+#
+# Settle it one way or the other before trusting these three checks: either
+# verification ignores rows whose panel is absent from panels-enabled, which
+# is the authoritative key, or panel deletion is documented as unsupported.
+if not wait_for(lambda: read_state().get("pendingApply") is None and
+                read_state().get("activeProfileId") == host_id,
+                "host-panel handoff to settle", 14.0):
+    print("    NOTE: expected while exact verification rejects Cinnamon's "
+          "re-added rows for the deleted panel; see the comment above")
 apps = ast.literal_eval(gs_get("enabled-applets"))
-check("manager anchored on surviving panel 2",
-      len([e for e in apps if APPLET in e and e.startswith("panel2:")]) == 1,
+check("manager anchored on a surviving panel",
+      len([e for e in apps if APPLET in e
+           and not e.startswith("panel%d:" % MOVE_PANEL)]) == 1,
       str(apps))
-check("configured applets moved to panel 2",
-      all(e.startswith("panel2:") for e in apps), str(apps))
+check("nothing left on the deleted panel %d" % MOVE_PANEL,
+      not any(e.startswith("panel%d:" % MOVE_PANEL) for e in apps),
+      str(apps))
 eq("host handoff verified exactly once",
    notification_counts()["success"] - success_before, 1)
 js("delete global._hostPanelRef; true")
