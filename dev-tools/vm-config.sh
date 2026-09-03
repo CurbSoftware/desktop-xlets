@@ -9,6 +9,10 @@
 set -e
 
 VM_NAME="${CINNAMON_VM:-cinnamon-cinnanom}"
+# The login account inside the guest. Mint images vary: a stock Mint
+# install made by the graphical installer is whatever name was typed at
+# setup time, not "cinnamon". Override with CINNAMON_VM_USER.
+VM_USER="${CINNAMON_VM_USER:-user}"
 BRIDGE="br0"
 
 case "${1:-}" in
@@ -74,7 +78,7 @@ case "${1:-help}" in
         IP=$(get_vm_ip)
         if [ -n "$IP" ]; then
             echo "IP Address: $IP"
-            echo "SSH: ssh cinnamon@$IP"
+            echo "SSH: ssh $VM_USER@$IP"
         else
             echo "IP Address: (VM not running or IP not found)"
             echo "Tip: Start VM and wait for DHCP, or check 'arp -an'"
@@ -91,7 +95,7 @@ case "${1:-help}" in
             IP=$(get_vm_ip)
             if [ -n "$IP" ]; then
                 echo "VM IP: $IP"
-                echo "SSH: ssh cinnamon@$IP"
+                echo "SSH: ssh $VM_USER@$IP"
                 exit 0
             fi
             echo -n "."
@@ -112,8 +116,8 @@ case "${1:-help}" in
             echo "Try: ./vm-config.sh status"
             exit 1
         fi
-        echo "Connecting to cinnamon@$IP..."
-        ssh -o StrictHostKeyChecking=accept-new cinnamon@"$IP"
+        echo "Connecting to $VM_USER@$IP..."
+        ssh -o StrictHostKeyChecking=accept-new "$VM_USER@$IP"
         ;;
 
     bridge)

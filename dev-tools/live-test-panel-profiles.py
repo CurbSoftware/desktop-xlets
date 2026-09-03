@@ -354,12 +354,32 @@ def next_id():
     return int(ast.literal_eval(gs_get("next-applet-id")))
 
 
+def wait_for_applet(timeout=20.0):
+    """Block until appletManager hands back a live instance again.
+
+    Applying a panel profile rewrites enabled-applets, which destroys and
+    re-creates this applet. get_object_for_uuid returns null in the gap, so
+    anything touching A.menu straight after an apply throws a bare JS error
+    that says nothing about the real cause.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if a("!!A") is True:
+                return True
+        except RuntimeError:
+            pass
+        time.sleep(0.1)
+    return False
+
+
 def add_applet():
     apps = ast.literal_eval(gs_get("enabled-applets"))
     if any(APPLET in e for e in apps):
         return
     gs_set("enabled-applets", str(apps + [PANEL_ENTRY]))
-    wait_for(lambda: a("!!A") is True, "applet to appear")
+    check("applet appeared on panel%d" % HOST_PANEL,
+          wait_for_applet(), "appletManager still returns null")
 
 
 def remove_applet():
@@ -406,6 +426,7 @@ def duplicate_pairs():
 
 
 def menu_labels():
+    wait_for_applet()
     return a('A.updateMenu();'
              '(function(){let out=[];let P=imports.ui.popupMenu;'
              'function walk(m){m._getMenuItems().forEach(function(i){'
@@ -429,7 +450,46 @@ ORIG_NEXT_ID = gs_get("next-applet-id")
 ORIG_NEXT_DESKLET_ID = gs_get("next-desklet-id")
 ORIG_PANEL = {key: gs_get(key) for key in PANEL_KEYS + DESKLET_KEYS}
 INSTANCE = int(ast.literal_eval(ORIG_NEXT_ID))
-PANEL_ENTRY = "panel2:left:99:%s:%d" % (APPLET, INSTANCE)
+
+
+def host_panel_id():
+    """A panel that actually exists to park the applet on.
+
+    This was pinned to panel2. A desktop without a panel2, or one where an
+    earlier apply left panel2 out of the live set, accepts the enabled-applets
+    entry and then never instantiates the applet, so the run dies at
+    "waited for applet to appear" with nothing to show for it. Prefer a panel
+    that is both configured and live.
+    """
+    configured = []
+    try:
+        for entry in ast.literal_eval(gs_get("panels-enabled")):
+            configured.append(int(str(entry).split(":")[0]))
+    except (ValueError, SyntaxError, IndexError):
+        pass
+    live = []
+    try:
+        ok, value = ev('let pm=imports.ui.main.panelManager;'
+                       'let out=[];'
+                       'for (let i=0;i<pm.panels.length;i++){'
+                       '  let p=pm.panels[i]; if (p) out.push(p.panelId); }'
+                       'out.join(",")')
+        if ok:
+            live = [int(v) for v in str(value).strip('"').split(",") if v]
+    except Exception:  # noqa: BLE001
+        pass
+    for panel in configured:
+        if panel in live:
+            return panel
+    if live:
+        return live[0]
+    if configured:
+        return configured[0]
+    raise SystemExit("no Cinnamon panel to host the applet; is Cinnamon running?")
+
+
+HOST_PANEL = host_panel_id()
+PANEL_ENTRY = "panel%d:left:99:%s:%d" % (HOST_PANEL, APPLET, INSTANCE)
 COREDUMP_BASE = coredump_pids()
 HAD_STATE = os.path.isdir(STATE_DIR)
 RUN_BAK = tempfile.mkdtemp(prefix="panel-profiles-live-")
@@ -1110,6 +1170,10 @@ check("menu lists combined profile",
       any(l == "Panels and Desklets" for l in labels), str(labels))
 
 def activate_menu_item(label):
+    if not wait_for_applet():
+        check("applet available for menu action " + label, False,
+              "appletManager still returns null after 20s")
+        return False
     return a('(function(){let P=imports.ui.popupMenu;'
              'function walk(m){let items=m._getMenuItems();'
              'for (let i=0;i<items.length;i++){'

@@ -36,7 +36,15 @@ This is fast and works for 90% of changes.
 - **Domain name**: host-specific. `vm-config.sh` defaults to `cinnamon-cinnanom`
   and exits with the list of available domains if it does not exist. Override with
   `export CINNAMON_VM=<name>`, then run `virsh list --all` to see what you have.
-- **Credentials**: `cinnamon` / `cinnamon`
+  On this host it is `mint.curb`.
+- **Login**: also host-specific, and not necessarily `cinnamon`. A Mint image
+  installed graphically carries whatever account name was typed at setup; on
+  `mint.curb` that is `user`. Override with `export CINNAMON_VM_USER=<name>`.
+  Read the guest's own `/etc/passwd` rather than guessing:
+  `sudo virt-cat -a <disk>.qcow2 /etc/passwd` with the VM shut down.
+- **Auth**: run `ssh-copy-id <user>@<ip>` once. Password auth needs a TTY, and
+  the guest's sshd starts refusing connections after a few failed attempts,
+  which reads like the VM being down when it is not.
 - **Network**: Bridged (br0) for direct SSH access
 
 #### Quick Start with VM
@@ -50,7 +58,7 @@ This is fast and works for 90% of changes.
 # Note the IP address shown
 
 # 3. Deploy extensions: SSH in and run the installer on the VM
-ssh cinnamon@<vm-ip>
+ssh <user>@<vm-ip>
 #   then on the VM: cd <repo> && ./dev-tools/install-extensions.sh -y
 ```
 
@@ -73,11 +81,11 @@ installer, or use rsync directly. See `install-extensions.sh --help`.
 
 ```bash
 # Run the installer inside the VM (recommended)
-ssh cinnamon@<vm-ip> 'cd <repo> && ./dev-tools/install-extensions.sh -y --reload'
+ssh <user>@<vm-ip> 'cd <repo> && ./dev-tools/install-extensions.sh -y --reload'
 
 # Or one-off rsync of a single extension
 rsync -avz --delete --exclude='.git' \
-    ../<ext-dir>/ cinnamon@<vm-ip>:~/.local/share/cinnamon/desklets/<uuid>/
+    ../<ext-dir>/ <user>@<vm-ip>:~/.local/share/cinnamon/desklets/<uuid>/
 ```
 
 To replicate the old watch mode, use a file watcher that re-runs rsync:
@@ -117,7 +125,7 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | Script | Purpose |
 |--------|---------|
 | `install-extensions.sh` | Install/uninstall desklets & applets to `~/.local/share/cinnamon/...` (copy or symlink; auto-discovers extensions) |
-| `vm-config.sh` | Manage VM (start, stop, SSH, network config). Override the domain with `CINNAMON_VM=` |
+| `vm-config.sh` | Manage VM (start, stop, SSH, network config). Override the domain with `CINNAMON_VM=` and the guest login with `CINNAMON_VM_USER=` |
 | `start-sandbox.sh` | Xephyr options (limited, run with --help) |
 | `cinnamon_eval.py` | Run JavaScript inside the live Cinnamon process over DBus |
 | `screenshot.sh` | Capture the host X11 session (whole screen or a crop box) |

@@ -147,10 +147,15 @@ restored. `St` cannot be loaded outside the Cinnamon process, so widget
 behaviour is only testable live.
 
 ### VM Testing (Crash Isolation)
-Credentials `cinnamon/cinnamon`. The domain name is host-specific - run
-`virsh list --all` first and override if needed:
+Both the domain name and the guest login are host-specific. Run
+`virsh list --all` first, and check the account inside the guest before
+assuming it is `cinnamon`; a Mint image built by the graphical installer uses
+whatever name was typed at setup. On this host the domain is `mint.curb` and
+the account is `user`. Key auth beats passwords: `ssh-copy-id <user>@<ip>`
+once, then everything else is non-interactive.
 ```bash
-export CINNAMON_VM=linuxmint-user  # default is 'cinnamon-cinnanom'
+export CINNAMON_VM=mint.curb          # default is 'cinnamon-cinnanom'
+export CINNAMON_VM_USER=user          # default is 'user'
 ./dev-tools/vm-config.sh bridge   # One-time: switch to bridged network
 ./dev-tools/vm-config.sh start    # Start VM (shows IP)
 ./dev-tools/vm-config.sh ssh      # SSH into VM, then run install-extensions.sh there
