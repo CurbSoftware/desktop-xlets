@@ -467,9 +467,12 @@ check("readback mismatch warns", restored.warnings.some(function (w) {
     return w.indexOf("panels-autohide") !== -1;
 }));
 
-/* Cinnamon retains rows for a live panel until panels-enabled removes it.
- * Pre-deletion readback accepts only those retiring-panel extras. Final
- * verification remains exact and still sees them if Cinnamon keeps them. */
+/* Cinnamon retains rows for a live panel until panels-enabled removes it,
+ * and on some desktops re-creates them afterwards. Pre-deletion readback
+ * accepts retiring-panel extras. Final verification judges the per-panel
+ * keys only for panels each side declares in panels-enabled, so extras for
+ * a panel that really went away are ignored, while a panel that was meant
+ * to go and did not still fails on panels-enabled itself. */
 (function () {
     const target = JSON.parse(JSON.stringify(cap));
     function setValue(key, text) {
@@ -510,10 +513,39 @@ check("readback mismatch warns", restored.warnings.some(function (w) {
     check("retiring-panel extras pass pre-deletion readback", transition.ok,
         JSON.stringify(transition.warnings));
     const finalVerdict = CS.verifyAgainst(target);
-    check("final verification still rejects retiring-panel extras",
-        finalVerdict.ok === false &&
-        finalVerdict.mismatchedKeys.indexOf("panels-height") !== -1 &&
-        finalVerdict.mismatchedKeys.indexOf("panel-zone-icon-sizes") !== -1);
+    check("final verification ignores rows for a panel that is really gone",
+        finalVerdict.ok === true, JSON.stringify(finalVerdict));
+
+    /* The safety property that matters survives: if the panel is still in
+     * panels-enabled after the apply, the apply failed and must say so. */
+    const stubborn = fakeProvider(baseState(), { readbackOverrides: {
+        "panels-enabled": "['2:1:bottom', '1:0:bottom']",
+        "panels-height": "['2:30', '1:28']"
+    }});
+    inject(stubborn);
+    CS.restoreSettingsExceptEnabledApplets(target);
+    const stubbornVerdict = CS.verifyAgainst(target);
+    check("a panel that refused to go still fails verification",
+        stubbornVerdict.ok === false &&
+        stubbornVerdict.mismatchedKeys.indexOf("panels-enabled") !== -1 &&
+        stubbornVerdict.mismatchedKeys.indexOf("panels-height") !== -1,
+        JSON.stringify(stubbornVerdict));
+
+    /* Fingerprints follow the same rule, or a deleting profile would verify
+     * and then show as modified the moment Cinnamon re-added its rows. */
+    const orphaned = JSON.parse(JSON.stringify(target));
+    orphaned.cinnamonSettings["panels-height"].value =
+        CS.variantToString(V("['2:30', '1:28']"));
+    orphaned.cinnamonSettings["panel-zone-icon-sizes"].value =
+        CS.variantToString(V("'[{\"panelId\":2,\"left\":0,\"center\":0,\"right\":0}," +
+            "{\"panelId\":1,\"left\":0,\"center\":0,\"right\":0}]'"));
+    eq("fingerprint ignores rows for panels the snapshot does not declare",
+        CS.fingerprintSettingsPart(orphaned), CS.fingerprintSettingsPart(target));
+    const changed = JSON.parse(JSON.stringify(target));
+    changed.cinnamonSettings["panels-height"].value =
+        CS.variantToString(V("['2:31']"));
+    check("fingerprint still sees a change on a declared panel",
+        CS.fingerprintSettingsPart(changed) !== CS.fingerprintSettingsPart(target));
 })();
 
 /* Write ordering: panels-enabled last, everything else before it. */

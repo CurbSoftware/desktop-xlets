@@ -970,27 +970,34 @@ anchor_body = (
 )
 anchorless_id, made = craft(SW_A, "Anchorless", anchor_body)
 check("Anchorless profile crafted", made == anchorless_id, "result=%r" % made)
+live_before = [e for e in ast.literal_eval(gs_get("enabled-applets")) if APPLET in e]
+target_panels = [int(str(e).split(":")[0]) for e in ast.literal_eval(gs_get("panels-enabled"))]
 a('A._applyProfile(' + json.dumps(anchorless_id) + '); true')
 wait_apply(anchorless_id)
 check("applet survived the anchorless load", a("!!A") is True)
 apps = ast.literal_eval(gs_get("enabled-applets"))
 self_entries = [e for e in apps if APPLET in e]
 eq("exactly one self entry after repair", len(self_entries), 1, str(self_entries))
-if len(self_entries) == 1:
+if len(self_entries) == 1 and len(live_before) == 1:
+    # ensureManagerAnchor's contract: keep the live placement when its panel
+    # survives in the target, otherwise the lowest panel on the primary
+    # monitor. This used to demand the primary panel unconditionally, which
+    # is wrong whenever the applet already had a home that survived.
     panel_id = int(self_entries[0].split(":")[0][len("panel"):])
+    live_panel = int(live_before[0].split(":")[0][len("panel"):])
     pe = ast.literal_eval(gs_get("panels-enabled"))
-    monitor = None
-    for p in pe:
-        f = p.split(":")
-        if int(f[0]) == panel_id:
-            monitor = int(f[1])
     primary = js("imports.ui.main.layoutManager.primaryIndex")
-    on_primary = any(int(p.split(":")[1]) == primary for p in pe)
-    if on_primary:
-        eq("self entry sits on the primary monitor's panel",
-           monitor, primary)
+    if live_panel in target_panels:
+        expected = live_panel
+        why = "live placement panel%d survives in the target" % live_panel
     else:
-        check("self entry sits on an existing panel", monitor is not None)
+        on_primary = sorted(int(x.split(":")[0]) for x in pe
+                            if int(x.split(":")[1]) == primary)
+        expected = on_primary[0] if on_primary else None
+        why = "live panel%d gone, lowest panel on primary monitor %d" % (live_panel, primary)
+    eq("self entry lands where the anchor contract says (%s)" % why,
+       panel_id, expected,
+       "before=%s after=%s panels-enabled=%s" % (live_before[0], self_entries[0], pe))
 
 # ------------------------------------------------------------------ #
 suite("9 corrupt profile + corrupt state.json")
@@ -1125,24 +1132,9 @@ a("global._hostPanelRef = A; true")
 a('A._applyProfile(' + json.dumps(host_id) + '); true')
 wait_for(lambda: js("global._hostPanelRef._destroyed") is True,
          "old host-panel instance to be destroyed", 12.0)
-# KNOWN FAILURE, and a product question rather than a test bug.
-#
-# Deleting a panel does not verify on a desktop where Cinnamon re-adds
-# per-panel rows for the panel that just went away: panels-autohide,
-# panels-show-delay, panels-height and the three panel-zone-* keys all come
-# back carrying the deleted panel's id. Final verification is exact, counts
-# them as a mismatch, and rolls the whole apply back. The strictness is
-# deliberate (see "retiring-panel extras" in test-pp-capture.js), so the
-# consequence is that no panel-deleting profile can apply here at all.
-#
-# Settle it one way or the other before trusting these three checks: either
-# verification ignores rows whose panel is absent from panels-enabled, which
-# is the authoritative key, or panel deletion is documented as unsupported.
-if not wait_for(lambda: read_state().get("pendingApply") is None and
-                read_state().get("activeProfileId") == host_id,
-                "host-panel handoff to settle", 14.0):
-    print("    NOTE: expected while exact verification rejects Cinnamon's "
-          "re-added rows for the deleted panel; see the comment above")
+wait_for(lambda: read_state().get("pendingApply") is None and
+         read_state().get("activeProfileId") == host_id,
+         "host-panel handoff to settle", 14.0)
 apps = ast.literal_eval(gs_get("enabled-applets"))
 check("manager anchored on a surviving panel",
       len([e for e in apps if APPLET in e
