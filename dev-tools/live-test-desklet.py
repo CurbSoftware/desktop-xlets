@@ -190,8 +190,25 @@ def showing_desktop():
     return bool(int(match.group(1))) if match else False
 
 
-def set_showing_desktop(show):
-    subprocess.run(["wmctrl", "-k", "on" if show else "off"], check=True)
+def set_showing_desktop(show, timeout=3.0):
+    """Show or unshow the desktop, and wait until the WM agrees.
+
+    wmctrl exits 0 whether or not the window manager acted on the hint. When
+    it silently does nothing, every pointer probe in the drag suite lands on
+    whatever window is on top instead of the desklet, and the suite reports
+    itself environment-blocked for no visible reason. Poll the hint, retry
+    once, and say so out loud if it never takes.
+    """
+    for _ in range(2):
+        subprocess.run(["wmctrl", "-k", "on" if show else "off"], check=True)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if showing_desktop() == show:
+                return True
+            time.sleep(0.1)
+    print("WARNING: the window manager ignored show-desktop "
+          + ("on" if show else "off"), file=sys.stderr)
+    return False
 
 
 def actor_position():
@@ -211,6 +228,23 @@ def tile_point(index):
 
 
 def xdotool_screen():
+    """The full X screen xdotool can actually address, not one monitor.
+
+    `xdotool getdisplaygeometry` reports the current monitor, so on a
+    multi-head desktop it hands back 1920x1080 while the X screen (and the
+    Cinnamon stage) is 7680x1080. Believing it made every tile past the first
+    monitor look unreachable, and the drag suite blocked itself on a desktop
+    where pointer injection works fine. xrandr knows the real size; fall back
+    to xdotool when it is not there.
+    """
+    try:
+        out = subprocess.check_output(["xrandr", "--current"], text=True)
+        match = re.search(r"^Screen \d+:.*current\s+(\d+)\s*x\s*(\d+)", out,
+                          re.MULTILINE)
+        if match:
+            return int(match.group(1)), int(match.group(2))
+    except (OSError, subprocess.CalledProcessError):
+        pass
     out = subprocess.check_output(["xdotool", "getdisplaygeometry"], text=True)
     width, height = out.split()
     return int(width), int(height)

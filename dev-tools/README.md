@@ -5,8 +5,15 @@ Tools for developing and testing Cinnamon desklets and applets.
 ## Prerequisites
 
 ```bash
-sudo apt install xserver-xephyr
+sudo apt install xserver-xephyr xdotool wmctrl
 ```
+
+`xdotool` and `wmctrl` are what the live drivers use to drive the desktop:
+`xdotool` injects the pointer events for the drag-and-drop suites, `wmctrl`
+clears the desktop first so those events reach the desklet instead of
+whatever window happens to be on top. Without `xdotool` the drag suite skips
+itself and reports as environment-blocked, which reads like a real failure
+and is not one.
 
 ## Development Approaches
 

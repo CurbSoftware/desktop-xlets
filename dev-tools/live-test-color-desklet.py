@@ -146,9 +146,25 @@ def showing_desktop():
     return bool(int(match.group(1))) if match else False
 
 
-def set_showing_desktop(show):
-    subprocess.run(
-        ["wmctrl", "-k", "on" if show else "off"], check=True)
+def set_showing_desktop(show, timeout=3.0):
+    """Show or unshow the desktop, and wait until the WM agrees.
+
+    wmctrl exits 0 whether or not the window manager acted on the hint. When
+    it silently does nothing, every pointer probe in the drag suite lands on
+    whatever window is on top instead of the desklet, and the suite reports
+    itself environment-blocked for no visible reason. Poll the hint, retry
+    once, and say so out loud if it never takes.
+    """
+    for _ in range(2):
+        subprocess.run(["wmctrl", "-k", "on" if show else "off"], check=True)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if showing_desktop() == show:
+                return True
+            time.sleep(0.1)
+    print("WARNING: the window manager ignored show-desktop "
+          + ("on" if show else "off"), file=sys.stderr)
+    return False
 
 
 def actor_position():

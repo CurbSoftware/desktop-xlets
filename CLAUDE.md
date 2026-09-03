@@ -110,6 +110,10 @@ gdbus call --session --dest org.Cinnamon --object-path /org/Cinnamon \
 ```
 
 ### Testing
+The live drivers need `xdotool` and `wmctrl` (`sudo apt install xdotool wmctrl`).
+`xdotool` injects the pointer events for the drag suites and `wmctrl` clears the
+desktop so they land on the desklet, not on whatever window is on top. Missing
+either one shows up as an environment-blocked check, not a code failure.
 ```bash
 gjs dev-tools/test-workspace-actions.js    # headless unit tests, no Cinnamon needed
 gjs dev-tools/test-clock-actions.js        # world-clock helpers (headless)

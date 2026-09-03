@@ -21,6 +21,7 @@ Exit non-zero on any failing assertion.
 import ast
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -38,8 +39,12 @@ STATE_DIR = os.path.expanduser("~/.config/cinnamon-panel-profiles")
 CFG_FILE = os.path.expanduser(
     "~/.config/cinnamon/spices/" + APPLET + "/" + APPLET + ".json")
 CAL_DIR = os.path.expanduser("~/.config/cinnamon/spices/calendar@cinnamon.org")
-CAL_13 = os.path.join(CAL_DIR, "13.json")
-CAL_16 = os.path.join(CAL_DIR, "16.json")
+# Instance config files, discovered below. These were pinned to 13.json and
+# 16.json, which are just the ids one dev machine happened to hand out.
+# Cinnamon assigns instance ids per install, so on any other desktop this
+# suite died with FileNotFoundError before it asserted anything.
+CAL_LIVE = None
+CAL_ALT = None
 # Canonical Cinnamon stderr is ~/.xsession-errors, but a Cinnamon restarted
 # from a terminal or test tooling logs wherever its stderr points (commonly
 # /tmp/*cinnamon*.log). CINNAMON_LOG overrides; otherwise we follow the live
@@ -125,6 +130,23 @@ def a(code):
 def gs_get(key):
     return subprocess.run(["gsettings", "get", SCHEMA, key],
                           capture_output=True, text=True).stdout.strip()
+
+
+def calendar_configs():
+    """The calendar@cinnamon.org instance configs on this desktop.
+
+    Primary is the instance actually on a panel, which is the one the
+    config-persistence suite tweaks. Secondary is any other instance config
+    lying around, kept only so the run backs it up and puts it back.
+    """
+    live = re.findall(r"calendar@cinnamon\.org:(\d+)", gs_get("enabled-applets"))
+    on_disk = []
+    if os.path.isdir(CAL_DIR):
+        on_disk = sorted(name[:-len(".json")] for name in os.listdir(CAL_DIR)
+                         if name.endswith(".json"))
+    ordered = [i for i in live if i in on_disk] + [i for i in on_disk if i not in live]
+    paths = [os.path.join(CAL_DIR, i + ".json") for i in ordered]
+    return (paths[0] if paths else None, paths[1] if len(paths) > 1 else None)
 
 
 def gs_set(key, value):
@@ -414,8 +436,9 @@ RUN_BAK = tempfile.mkdtemp(prefix="panel-profiles-live-")
 STATE_BAK = os.path.join(RUN_BAK, "state")
 HAD_CFG = os.path.isfile(CFG_FILE)
 CFG_BAK = os.path.join(RUN_BAK, "applet-config.json")
-HAD_CAL13 = os.path.isfile(CAL_13)
-HAD_CAL16 = os.path.isfile(CAL_16)
+CAL_LIVE, CAL_ALT = calendar_configs()
+HAD_CAL13 = CAL_LIVE is not None and os.path.isfile(CAL_LIVE)
+HAD_CAL16 = CAL_ALT is not None and os.path.isfile(CAL_ALT)
 CAL_BAK = os.path.join(RUN_BAK, "calendar")
 if HAD_STATE:
     shutil.copytree(STATE_DIR, STATE_BAK)
@@ -424,9 +447,9 @@ if HAD_CFG:
 if HAD_CAL13 or HAD_CAL16:
     os.makedirs(CAL_BAK, exist_ok=True)
     if HAD_CAL13:
-        shutil.copy2(CAL_13, os.path.join(CAL_BAK, "13.json"))
+        shutil.copy2(CAL_LIVE, os.path.join(CAL_BAK, os.path.basename(CAL_LIVE)))
     if HAD_CAL16:
-        shutil.copy2(CAL_16, os.path.join(CAL_BAK, "16.json"))
+        shutil.copy2(CAL_ALT, os.path.join(CAL_BAK, os.path.basename(CAL_ALT)))
 
 LOG_START = log_size()
 print("baseline: next-applet-id=%s, %d panel keys, %d coredumps already present"
@@ -469,15 +492,15 @@ def _restore():
     elif os.path.isfile(CFG_FILE):
         os.unlink(CFG_FILE)
     if HAD_CAL13:
-        os.makedirs(os.path.dirname(CAL_13), exist_ok=True)
-        shutil.copy2(os.path.join(CAL_BAK, "13.json"), CAL_13)
-    elif os.path.isfile(CAL_13):
-        os.unlink(CAL_13)
+        os.makedirs(os.path.dirname(CAL_LIVE), exist_ok=True)
+        shutil.copy2(os.path.join(CAL_BAK, os.path.basename(CAL_LIVE)), CAL_LIVE)
+    elif CAL_LIVE and os.path.isfile(CAL_LIVE):
+        os.unlink(CAL_LIVE)
     if HAD_CAL16:
-        os.makedirs(os.path.dirname(CAL_16), exist_ok=True)
-        shutil.copy2(os.path.join(CAL_BAK, "16.json"), CAL_16)
-    elif os.path.isfile(CAL_16):
-        os.unlink(CAL_16)
+        os.makedirs(os.path.dirname(CAL_ALT), exist_ok=True)
+        shutil.copy2(os.path.join(CAL_BAK, os.path.basename(CAL_ALT)), CAL_ALT)
+    elif CAL_ALT and os.path.isfile(CAL_ALT):
+        os.unlink(CAL_ALT)
     shutil.rmtree(RUN_BAK, ignore_errors=True)
     RESTORE_DONE = True
     print("restored enabled-applets, panel keys, next-applet-id, "
@@ -703,20 +726,21 @@ for key in PANEL_KEYS:
 suite("4 applet-config persistence")
 # ------------------------------------------------------------------ #
 
-check("calendar 13.json present for test", HAD_CAL13)
+check("a calendar applet config is present for the test", HAD_CAL13,
+      "no calendar@cinnamon.org instance config under " + CAL_DIR)
 
 
 def tweak_calendar(show_week, show_events):
-    with open(CAL_13) as fh:
+    with open(CAL_LIVE) as fh:
         d = json.load(fh)
     d["show-week-numbers"]["value"] = show_week
     d["show-events"]["value"] = show_events
-    with open(CAL_13, "w") as fh:
+    with open(CAL_LIVE, "w") as fh:
         json.dump(d, fh, indent=4)
 
 
 def cal_values():
-    with open(CAL_13) as fh:
+    with open(CAL_LIVE) as fh:
         d = json.load(fh)
     return (d["show-week-numbers"]["value"], d["show-events"]["value"])
 
@@ -738,9 +762,9 @@ wait_apply(CFG_B_ID)
 eq("load B -> config B", cal_values(), (False, False))
 # Restore the original calendar config now so later phases start clean.
 if HAD_CAL13:
-    shutil.copy(os.path.join(CAL_BAK, "13.json"), CAL_13)
+    shutil.copy(os.path.join(CAL_BAK, os.path.basename(CAL_LIVE)), CAL_LIVE)
 if HAD_CAL16:
-    shutil.copy(os.path.join(CAL_BAK, "16.json"), CAL_16)
+    shutil.copy(os.path.join(CAL_BAK, os.path.basename(CAL_ALT)), CAL_ALT)
 
 # ------------------------------------------------------------------ #
 suite("5 five-cycle A/B switch, no duplicates")
