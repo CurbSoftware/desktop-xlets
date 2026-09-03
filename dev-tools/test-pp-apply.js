@@ -2126,6 +2126,63 @@ eq("desklet allocator advances past restored id zero", CS.readNextDeskletId(), 1
 
 
 /* ------------------------------------------------------------------ *
+ * Controller: verification failure with the rollback file gone
+ * ------------------------------------------------------------------ */
+
+/* The apply captures a rollback bundle in memory, writes it to
+ * backups/last-good.json, then drops the in-memory copy. Verification runs
+ * later off a timer and re-reads the file. If anything removed it in the
+ * meantime the rollback has nothing to restore from, and the layout is left
+ * on the half-applied profile with only a log line to say so. Seen for real:
+ * "automatic rollback failed: rollback snapshot unavailable". */
+
+suite("verification failure with no rollback file");
+
+resetAppState();
+writeConfigFiles(CONTENT_A);
+const goneProvider = injectProvider(stateA());
+PS.init();
+harness = wireController({});
+const orphan = AC.beginSaveNew("Orphan").profile;
+goneProvider.setValues(stateB());
+EVENTS.length = 0;
+harness.states.length = 0;
+applyResult = AC.beginApply(orphan.id, { reason: "user" });
+eq("rollback file was written by the apply",
+    exists(BACKUPS_DIR + "/last-good.json"), true);
+
+/* Something eats the snapshot between the write and the settle timer. */
+try {
+    Gio.File.new_for_path(BACKUPS_DIR + "/last-good.json").delete(null);
+} catch (ignored) {
+    /* already gone is fine */
+}
+eq("rollback file is gone before verification",
+    exists(BACKUPS_DIR + "/last-good.json"), false);
+
+/* Same drift as the suite above, so verification is guaranteed to fail. */
+goneProvider._values["panels-height"] = V("['1:99']");
+harness.clock.advance(CONSTANTS.VERIFY_SETTLE_MS);
+harness.clock.advance(CONSTANTS.VERIFY_SETTLE_MS);
+
+check("rollback still runs from the in-memory bundle",
+    harness.states.indexOf("COMPLETE") !== -1,
+    "states: " + JSON.stringify(harness.states));
+eq("settles to IDLE and releases the lock",
+    [AC.getState(), AC.isBusy()], ["IDLE", false]);
+/* The rollback bundle captures the live desktop at apply time, which is
+ * stateB here, not the profile's stateA. */
+eq("panels-height is restored, not left on the drifted value",
+    strvOf(goneProvider._values["panels-height"]),
+    strvOf(stateB()["panels-height"]));
+check("failure is not reported as an unavailable snapshot",
+    !(PS.getState().lastFailure &&
+      String(PS.getState().lastFailure.message)
+          .indexOf("rollback snapshot unavailable") !== -1),
+    JSON.stringify(PS.getState().lastFailure));
+
+
+/* ------------------------------------------------------------------ *
  * Summary
  * ------------------------------------------------------------------ */
 
