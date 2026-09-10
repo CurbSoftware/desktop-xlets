@@ -35,3 +35,6 @@ Thumbs.db
 # Project-specific
 internet-indicator@sangorys/files/internet-indicator@sangorys/icons/no-internet2.jpg
 internet-indicator@sangorys/files/internet-indicator@sangorys/icons/wifi-icon-off.png
+
+# Build tool cache (appimagetool download)
+/dev-tools/cache/

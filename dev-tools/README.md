@@ -142,6 +142,13 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | `sync-spice-project.py` | Sync standalone per-spice Git repos and prepare one-spice registry branches |
 | `publish-spices.sh` | Clone or create each standalone repo, then sync, commit, and push to origin main |
 | `submit-spice.sh` | Fork and clone the registry on demand, run all gates, push the branch, open the PR |
+| `ports-release.py` | Check, test, build the GNOME and KDE ports, and assemble the bundle AppImage |
+| `bundle-installer.py` | The installer inside the AppImage (detect desktop, install, enable, uninstall, status) |
+| `gen-tz-table.py` | Generate the KDE timezone table from the host zoneinfo database |
+| `test-tz-table.py` | Ground-truth tests for the generated timezone table |
+| `esm-harness.js` | Shared assertion harness for the GNOME ESM tests |
+| `test-gnome-*.js` | Headless tests for the GNOME port trees (`gjs -m`) |
+| `make-icons.py` | Regenerate the shared icon set plus the bundle AppImage icon |
 
 ## Testing
 
@@ -294,6 +301,45 @@ tail -f ~/.xsession-errors | grep -i cinnamon
 - Check `~/.xsession-errors` for the error
 - Use a VM to test risky changes
 - Wrap initialization code in try/catch
+
+## GNOME and KDE port tools
+
+The `gnome-*@curbsoftware/` and `kde-*/` trees build with `ports-release.py`,
+which parallels `spices-release.py` (same subcommands, same gates) for the
+two other desktops:
+
+```bash
+python3 dev-tools/ports-release.py list                    # status per desktop
+python3 dev-tools/ports-release.py check                   # layout and metadata gates
+python3 dev-tools/ports-release.py test                    # headless test gates
+python3 dev-tools/ports-release.py build                   # stage into dist/ports/
+python3 dev-tools/ports-release.py bundle                  # build all, then the AppImage
+```
+
+Selection takes an alias (`world-clock`), an alias plus desktop
+(`world-clock@kde`), a uuid, or a package id. `bundle` also stages the flat
+Cinnamon payload and produces `dist/ports/curb-desktop-widgets-x86_64.AppImage`
+via appimagetool (downloaded once into `dev-tools/cache/`, or pass
+`--appimagetool`). The AppImage is an installer: desktop shells load widgets
+from fixed user directories, so it detects the running desktop and installs
+plus enables the matching variants. Run it with `APPIMAGE_EXTRACT_AND_RUN=1`
+on hosts without FUSE.
+
+Headless test commands per port:
+
+```bash
+gjs -m dev-tools/test-gnome-world-clock.js            # GNOME ports, engine plus store
+node kde-world-clock/tests/test-tz.js                 # KDE timezone lookup against Intl
+node kde-color-clock/tests/test-color-engine.js       # KDE color engine
+node kde-panel-profiles/tests/test-layouts.js         # KDE layout bookkeeping
+python3 dev-tools/test-tz-table.py                    # table generator ground truth
+```
+
+Per-port live checklists live in each tree's `DEVELOPMENT.md`; the
+plasmoid ones need a real Plasma 6 session (verify the
+virtualdesktops dataengine and the executable engine assumptions
+there). GNOME and KDE VMs reuse `vm-config.sh` through `CINNAMON_VM=`
+(the env var name is historical).
 
 ## Resources
 

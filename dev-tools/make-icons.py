@@ -130,6 +130,33 @@ def command_launcher():
     return image
 
 
+def desktop_widgets():
+    """The bundle AppImage icon: widget tiles above a panel bar."""
+    image, draw = base()
+    gap, top, height = 26, 96, 150
+    width = (SIZE - 2 * 96 - 2 * gap) // 3
+    for index in range(3):
+        x = 96 + index * (width + gap)
+        if index == 1:
+            rounded(draw, [x, top, x + width, top + height], outline=AMBER_LIGHT)
+        elif index == 2:
+            rounded(draw, [x, top, x + width, top + height], outline=AMBER_DEEP)
+        else:
+            rounded(draw, [x, top, x + width, top + height], fill=AMBER)
+    bar_top, bar_bottom = 316, 416
+    rounded(draw, [88, bar_top, SIZE - 88, bar_bottom], outline=AMBER, width=STROKE)
+    chip_gap, chip_pad = 20, 22
+    inner_left, inner_right = 88 + chip_pad, SIZE - 88 - chip_pad
+    chip_width = (inner_right - inner_left - chip_gap) // 2
+    draw.rounded_rectangle(
+        [inner_left, bar_top + chip_pad, inner_left + chip_width, bar_bottom - chip_pad],
+        14, fill=AMBER_DEEP)
+    draw.rounded_rectangle(
+        [inner_right - chip_width, bar_top + chip_pad, inner_right, bar_bottom - chip_pad],
+        14, fill=AMBER)
+    return image
+
+
 ICONS = {
     "cinnamon-world-clock-desklet@curbsoftware": world_clock,
     "cinnamon-color-timer-clock-desklet@curbsoftware": color_timer_clock,
@@ -146,6 +173,10 @@ def main():
         image = glyph().resize((128, 128), Image.LANCZOS)
         image.save(target)
         print("wrote", target)
+    bundle = ROOT / "dev-tools" / "appimage" / "curb-desktop-widgets.png"
+    bundle.parent.mkdir(parents=True, exist_ok=True)
+    desktop_widgets().resize((256, 256), Image.LANCZOS).save(bundle)
+    print("wrote", bundle)
 
 
 if __name__ == "__main__":

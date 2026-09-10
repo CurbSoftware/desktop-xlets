@@ -1,0 +1,46 @@
+.curb-workspace-names-box {
+    spacing: 2px;
+}
+
+.curb-workspace-names-button {
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 0 8px;
+    color: inherit;
+    transition-duration: 120ms;
+}
+
+.curb-workspace-names-button:hover {
+    background-color: rgba(0, 0, 0, 0.32);
+}
+
+.curb-workspace-names-button:outlined {
+    border-width: 2px;
+    border-color: #4aa3ff;
+    background-color: rgba(74, 163, 255, 0.12);
+}
+
+.curb-workspace-names-label {
+    text-align: center;
+}
+
+.curb-workspace-names-add-button {
+    border-radius: 6px;
+    padding: 0 4px;
+    color: inherit;
+}
+
+.curb-rename-box {
+    spacing: 10px;
+    padding: 8px;
+}
+
+.curb-rename-label {
+    font-weight: 600;
+}
+
+.curb-rename-entry {
+    min-width: 260px;
+    padding: 6px 8px;
+}

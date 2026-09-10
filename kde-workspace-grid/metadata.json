@@ -1,0 +1,16 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "com.curbsoftware.workspacegrid",
+    "Name": "Workspace Grid",
+    "Description": "A clickable grid of the virtual desktops on the desktop or in a panel",
+    "Version": "1.0.0",
+    "Category": "Windows and Tasks",
+    "License": "GPL-2.0+",
+    "Authors": [
+      {
+        "Name": "CurbSoftware"
+      }
+    ]
+  }
+}

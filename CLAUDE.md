@@ -233,6 +233,47 @@ cinnamon-settings desklets '<uuid>'        # open settings directly (or applets)
   not out of this repo. Develop with `install-extensions.sh -m symlink` and the
   question never comes up.
 
+## GNOME and KDE Ports
+
+The same xlet families ship as GNOME Shell extensions
+(`gnome-<family>@curbsoftware/`) and KDE Plasma plasmoids
+(`kde-<family>/`). Separate codebases per desktop, by decision.
+
+Rules for the port trees:
+
+- GNOME: Shell 45+ ESM only (`import St from 'gi://St'`,
+  `resource:///org/gnome/shell/...`). GObject subclasses
+  (PanelMenu.Button, ModalDialog) MUST go through
+  `GObject.registerClass`, or they crash on construction, not on
+  load. Settings are JSON in `~/.config/<uuid>/settings.json` via the
+  tree's `lib/store.js`, never gschema.
+- Pure logic lives in `lib/` (GNOME, ESM) or `contents/ui/lib/*.js`
+  (KDE, `.pragma library`) and is copied into each tree, never
+  imported across trees. Parallel headless tests keep the copies
+  honest; changing a pure module means changing every copy plus its
+  tests.
+- KDE: timezone offsets come from the generated table
+  (`dev-tools/gen-tz-table.py --out <tree>/contents/ui/lib/tzdata.js`),
+  never hand written; the table covers 2020 to 2050 and clamps past
+  it. QML cannot spawn commands or write files; anything needing that
+  goes through a documented seam and degrades with an explanation.
+- Version discipline mirrors Cinnamon: bump `metadata.json` `version`
+  (GNOME) or `KPlugin.Version` (KDE) on every functional change.
+- No em-dashes and no emojis anywhere; `ports-release.py check` gates
+  every port tree for them.
+
+Commands:
+
+```bash
+python3 dev-tools/ports-release.py list | check | test | build | bundle
+```
+
+`bundle` also stages the Cinnamon payload and builds
+`dist/ports/curb-desktop-widgets-x86_64.AppImage`, the one-download
+installer for all three desktops (`--list`, `--dry-run`, `status`,
+`uninstall`; refuses to run as root). The Cinnamon Spices pipeline is
+untouched by the ports. Full reference: `docs/ports-guide.md`.
+
 ## Spices Publication
 
 The full submission manual is `docs/spices-publication.md` - follow it for

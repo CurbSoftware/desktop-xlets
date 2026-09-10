@@ -1,6 +1,7 @@
 # Cinnamon extensions (CurbSoftware)
 
-This is the **one development repo** for CurbSoftware Cinnamon desklets and applets.
+This is the **one development repo** for CurbSoftware desklets and
+applets, and their ports to GNOME Shell and KDE Plasma.
 
 Git remote: [CurbSoftware/cinnamon-monorepo](https://github.com/CurbSoftware/cinnamon-monorepo).
 
@@ -13,6 +14,11 @@ the whole repo: every extension, every dev tool, and how releases ship.
 
 ## Extensions
 
+Every xlet family now ships for three desktops: the Cinnamon original,
+a GNOME Shell extension (`gnome-<family>@curbsoftware/`), and a KDE
+Plasma plasmoid (`kde-<family>/`). Separate codebases per desktop, by
+decision; the same xlet, three runtimes.
+
 | Directory | UUID | Kind |
 |---|---|---|
 | `cinnamon-world-clock-desklet@curbsoftware/` | World Clock | desklet |
@@ -21,8 +27,26 @@ the whole repo: every extension, every dev tool, and how releases ship.
 | `cinnamon-workspace-names-applet@curbsoftware/` | In Panel Workspace Name | applet |
 | `cinnamon-panel-profiles-applet@curbsoftware/` | Panel Profiles | applet |
 | `command-launcher@curbsoftware/` | Command Launcher | applet |
+| `gnome-world-clock@curbsoftware/` | World Clock | GNOME extension |
+| `gnome-color-clock@curbsoftware/` | Color Timer Clock | GNOME extension |
+| `gnome-workspace-grid@curbsoftware/` | Workspace Grid | GNOME extension |
+| `gnome-workspace-names@curbsoftware/` | Workspace Names | GNOME extension |
+| `gnome-command-launcher@curbsoftware/` | Command Launcher | GNOME extension |
+| `gnome-panel-profiles@curbsoftware/` | Desktop Profiles | GNOME extension |
+| `kde-world-clock/` | World Clock | Plasma plasmoid |
+| `kde-color-clock/` | Color Timer Clock | Plasma plasmoid |
+| `kde-workspace-grid/` | Workspace Grid | Plasma plasmoid |
+| `kde-workspace-names/` | Workspace Names | Plasma plasmoid |
+| `kde-command-launcher/` | Command Launcher | Plasma plasmoid |
+| `kde-panel-profiles/` | Plasma Layouts | Plasma plasmoid |
 
-Each directory name must match `metadata.json` `uuid` or Cinnamon refuses to load it.
+Each Cinnamon directory name must match `metadata.json` `uuid` or
+Cinnamon refuses to load it; the GNOME uuids follow the same rule, and
+the plasmoid ids live in `KPlugin.Id`.
+
+The GNOME and KDE ports are documented in
+[`docs/ports-guide.md`](docs/ports-guide.md), including the honest
+scope notes (what each port covers and what it deliberately does not).
 
 `cinnamon-docs/` is reference material (official docs and Spices examples), not an extension.
 
@@ -54,3 +78,24 @@ Linux Mint wants **one spice per pull request** against
 or `-applets`.
 
 Full path: [`docs/spices-publication.md`](docs/spices-publication.md).
+
+## GNOME and KDE ports
+
+The Cinnamon pipeline above is unchanged. The ports have their own
+builder, tests, and gates:
+
+```bash
+python3 dev-tools/ports-release.py list              # what ships for each desktop
+python3 dev-tools/ports-release.py check             # layout and metadata gates
+python3 dev-tools/ports-release.py test              # headless test gates
+python3 dev-tools/ports-release.py bundle            # build all, then the AppImage
+```
+
+The bundle produces `dist/ports/curb-desktop-widgets-x86_64.AppImage`:
+one download carrying every variant for all three desktops. Running it
+detects the current desktop, installs and enables the matching
+widgets, and supports `uninstall`, `status`, `--dry-run` and `--list`.
+Desktop shells load widgets from fixed user directories, so the
+AppImage is an installer, not a runtime.
+
+Guide: [`docs/ports-guide.md`](docs/ports-guide.md).

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="displayMode" type="String">
+      <label>Button text: name, number, or both</label>
+      <default>name</default>
+    </entry>
+    <entry name="maximumLabelWidth" type="Int">
+      <label>Maximum label width in pixels</label>
+      <default>140</default>
+    </entry>
+  </group>
+</kcfg>

@@ -1,0 +1,16 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "com.curbsoftware.colorclock",
+    "Name": "Color Timer Clock",
+    "Description": "Clock, timer and chronometer cards whose colors ramp along per-card schedules",
+    "Version": "1.0.0",
+    "Category": "Date and Time",
+    "License": "GPL-2.0+",
+    "Authors": [
+      {
+        "Name": "CurbSoftware"
+      }
+    ]
+  }
+}

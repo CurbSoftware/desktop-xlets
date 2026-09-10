@@ -1,0 +1,16 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "com.curbsoftware.commandlauncher",
+    "Name": "Command Launcher",
+    "Description": "A button that launches a configured application or .desktop entry",
+    "Version": "1.0.0",
+    "Category": "Application Launchers",
+    "License": "GPL-2.0+",
+    "Authors": [
+      {
+        "Name": "CurbSoftware"
+      }
+    ]
+  }
+}

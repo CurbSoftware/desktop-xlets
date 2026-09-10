@@ -1,0 +1,6 @@
+#!/bin/sh
+# AppRun for the CurbSoftware desktop widgets bundle installer.
+# The installer is plain Python 3 stdlib; every target desktop ships it,
+# so there is no runtime to bundle.
+APPDIR="$(dirname "$(readlink -f "$0")")"
+exec /usr/bin/python3 "$APPDIR/usr/bin/bundle-installer.py" "$@"

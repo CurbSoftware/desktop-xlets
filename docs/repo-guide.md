@@ -1,9 +1,10 @@
 # How this repo works
 
-One repo holds every CurbSoftware Cinnamon extension plus all the development
-tooling. You develop here, test here, and push generated copies out to
-per-spice repositories when a release is ready. Nothing ships straight from a
-lone folder on your desktop. One home, one history.
+One repo holds every CurbSoftware Cinnamon extension, their GNOME Shell and
+KDE Plasma ports, and all the development tooling. You develop here, test
+here, and push generated copies out to per-spice repositories when a release
+is ready. Nothing ships straight from a lone folder on your desktop. One
+home, one history.
 
 Remote: [CurbSoftware/cinnamon-monorepo](https://github.com/CurbSoftware/cinnamon-monorepo).
 
@@ -17,8 +18,10 @@ cinnamon-monorepo/
   cinnamon-workspace-names-applet@curbsoftware/      applet, ship
   cinnamon-panel-profiles-applet@curbsoftware/      applet, ship
   command-launcher@curbsoftware/                    applet, blocked from Spices
-  dev-tools/                                        install, test, build, publish
-  docs/                                             this guide and the release manual
+  gnome-<family>@curbsoftware/                      GNOME Shell ports (six trees)
+  kde-<family>/                                     Plasma plasmoid ports (six trees)
+  dev-tools/                                        install, test, build, publish, bundle
+  docs/                                             guides and release manuals
   cinnamon-docs/                                    official Cinnamon docs and Spices examples (reference only)
   CLAUDE.md / AGENTS.md / README.md                 orientation
 ```
@@ -31,6 +34,33 @@ Each xlet directory is a flat Cinnamon extension: `metadata.json`, the main
 
 The directory name must equal the `uuid` inside `metadata.json` or Cinnamon
 refuses to load the xlet. No exceptions.
+
+## The ports (GNOME Shell and KDE Plasma)
+
+Every family also ships as a GNOME extension (`gnome-<family>@curbsoftware/`)
+and a Plasma plasmoid (`kde-<family>/`). Ports are separate codebases per
+desktop, by decision: same xlet, three runtimes, no shared-source build
+step and no cross-tree imports. Pure logic is copied into each tree and
+guarded by parallel headless tests, extending the copy-and-diverge
+convention the Cinnamon side already uses.
+
+- GNOME ports: Shell 45+ ESM, JSON settings in `~/.config/`
+  (no gschema, deliberately), desktop widgets on the background group
+  with Alt+drag movement, editing through libadwaita preferences
+  windows. Panel Profiles becomes Desktop Profiles (extensions and
+  monitor layouts, a different domain on GNOME).
+- KDE ports: Plasma 6 QML. One plasmoid serves panel and desktop.
+  Timezone maths runs on a generated table (window 2020 to 2050,
+  rebuilt by `dev-tools/gen-tz-table.py`). Panel Profiles becomes
+  Plasma Layouts, with apply capability-probed against the executable
+  dataengine.
+
+The ports build with `python3 dev-tools/ports-release.py` (list, check,
+test, build, bundle) into `dist/ports/`, including the
+`curb-desktop-widgets` bundle AppImage that installs the matching
+variants on Cinnamon, GNOME or KDE. The Cinnamon Spices pipeline is
+untouched by all of this. Full reference:
+[`docs/ports-guide.md`](ports-guide.md).
 
 ## The extensions
 

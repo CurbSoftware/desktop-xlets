@@ -2,20 +2,8 @@
 
 This file provides guidance to agents when working with code in this repository.
 
----
-Do NOT use em-dashes nor emojis unless explicitly instructed to do so, ever.  Do not use "\u2014" symbol anywhere, change and code or text copy found during tasks to remove them.
-Write all user facing text in a human-friendly way. Humanize writing by:
-- using natural working voice: direct, clear, slightly informal. 
-- cutting any sentence that doesn't add new information. 
-- using short punchy sentences, rhetorical fragments, and analogies.
-- avoiding overly promotional words like 'game-changing' or 'unlock.'
-- including personal anecdotes where appropriate.
----
+Do NOT use em-dashes ever. Do not use the "—" symbol anywhere. Change code or text found in tasks to remove it. Write in a humanistic way.
 
-
-Development lives in this repository (`~/projects/cinnamon-monorepo`).
-Generated per-spice repos under `~/projects/cinnamon/` are publish
-targets only; never edit them by hand.
 
 ## Critical Commands
 
@@ -28,6 +16,7 @@ targets only; never edit them by hand.
 - Reload Cinnamon: `cinnamon --replace &`
 - View logs: `tail -f ~/.xsession-errors`
 - Open settings: `cinnamon-settings desklets extension-uuid`
+- GNOME and KDE ports: `python3 dev-tools/ports-release.py list|check|test|build|bundle`
 
 ## Memory Leak Prevention
 
@@ -56,3 +45,19 @@ targets only; never edit them by hand.
 - Extension directory format: `UUID@domain` (e.g., `cinnamon-workspace-grid-desklet@curbsoftware`). `metadata.json` `uuid` MUST equal the directory name or Cinnamon refuses to load it
 - Mainloop timeout callback MUST return `false` to prevent repeat execution
 - `global.workspace_manager.get_active_workspace_index()` returns 0-based index
+
+## GNOME and KDE Ports
+
+- Trees: `gnome-<family>@curbsoftware/` (GNOME Shell 45+ ESM) and
+  `kde-<family>/` (Plasma 6 QML). Separate codebases per desktop; pure
+  logic is copied per tree with parallel tests, never imported across
+  trees.
+- GNOME GObject subclasses MUST use `GObject.registerClass`.
+- GNOME settings: JSON in `~/.config/<uuid>/settings.json` via the
+  tree's `lib/store.js`; no gschema.
+- KDE timezone data: only from `dev-tools/gen-tz-table.py` output
+  (`tzdata.js`), never hand written. QML cannot spawn commands or
+  write files; document the seam and degrade with an explanation.
+- Version bump on every functional change: `metadata.json` `version`
+  (GNOME) or `KPlugin.Version` (KDE).
+- No em-dashes, no emojis; `ports-release.py check` enforces it.

@@ -1,0 +1,16 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "com.curbsoftware.worldclock",
+    "Name": "World Clock",
+    "Description": "A grid of world timezone clocks; at home on the panel and on the desktop",
+    "Version": "1.0.0",
+    "Category": "Date and Time",
+    "License": "GPL-2.0+",
+    "Authors": [
+      {
+        "Name": "CurbSoftware"
+      }
+    ]
+  }
+}
