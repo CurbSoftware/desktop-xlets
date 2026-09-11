@@ -14,6 +14,10 @@ System Settings, which is KDE's native flow.
 kpackagetool6 --type=Plasma/Applet --install kde-workspace-names
 ```
 
+To install every CurbSoftware widget for this desktop (and Cinnamon or
+GNOME) in one download, use the bundle AppImage:
+https://github.com/CurbSoftware/curb-desktop-widgets/releases/latest
+
 ## Development
 
 See `DEVELOPMENT.md`.

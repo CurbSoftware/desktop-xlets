@@ -140,10 +140,13 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 | `spices-release.py` | Check, test, build, and officially validate independent Spices submissions |
 | `release-spice.sh` | One-spice wrapper around the complete release gate |
 | `sync-spice-project.py` | Sync standalone per-spice Git repos and prepare one-spice registry branches |
-| `publish-spices.sh` | Clone or create each standalone repo, then sync, commit, and push to origin main |
+| `publish-spices.sh` | Clone or create each standalone repo under `../xlets`, then sync, commit, and push to origin main |
 | `submit-spice.sh` | Fork and clone the registry on demand, run all gates, push the branch, open the PR |
 | `ports-release.py` | Check, test, build the GNOME and KDE ports, and assemble the bundle AppImage |
-| `bundle-installer.py` | The installer inside the AppImage (detect desktop, install, enable, uninstall, status) |
+| `sync-port-project.py` | Sync standalone GNOME/KDE repos and the AppImage product repo |
+| `publish-ports.sh` | Clone or create each port repo under `../ports`, then sync, commit, and push |
+| `bundle-installer.py` | AppImage manager: detect desktop, install, place instances, uninstall, self-update |
+| `test-bundle-installer.py` | Headless tests for the manager helpers |
 | `gen-tz-table.py` | Generate the KDE timezone table from the host zoneinfo database |
 | `test-tz-table.py` | Ground-truth tests for the generated timezone table |
 | `esm-harness.js` | Shared assertion harness for the GNOME ESM tests |
@@ -157,6 +160,7 @@ Then run test apps with `DISPLAY=:10 your-test-app`.
 gjs dev-tools/test-workspace-actions.js
 gjs dev-tools/test-clock-actions.js
 gjs dev-tools/test-card-actions.js
+python3 dev-tools/test-bundle-installer.py
 
 # Live: drives the running desktop through org.Cinnamon.Eval
 python3 dev-tools/live-test-desklet.py
@@ -314,20 +318,24 @@ python3 dev-tools/ports-release.py check                   # layout and metadata
 python3 dev-tools/ports-release.py test                    # headless test gates
 python3 dev-tools/ports-release.py build                   # stage into dist/ports/
 python3 dev-tools/ports-release.py bundle                  # build all, then the AppImage
+./dev-tools/publish-ports.sh --dry-run                     # list standalone GNOME/KDE/AppImage repos
 ```
 
 Selection takes an alias (`world-clock`), an alias plus desktop
 (`world-clock@kde`), a uuid, or a package id. `bundle` also stages the flat
 Cinnamon payload and produces `dist/ports/curb-desktop-widgets-x86_64.AppImage`
 via appimagetool (downloaded once into `dev-tools/cache/`, or pass
-`--appimagetool`). The AppImage is an installer: desktop shells load widgets
-from fixed user directories, so it detects the running desktop and installs
-plus enables the matching variants. Run it with `APPIMAGE_EXTRACT_AND_RUN=1`
-on hosts without FUSE.
+`--appimagetool`). The AppImage is a manager: desktop shells load widgets
+from fixed user directories, so it detects the running desktop, installs
+the matching variants, places them on the panel or desktop, and can
+update itself from GitHub Releases. Double-click opens the GTK window
+when `python3-gi` is installed; pass `install`/`status`/`--list` for CLI.
+Run it with `APPIMAGE_EXTRACT_AND_RUN=1` on hosts without FUSE.
 
 Headless test commands per port:
 
 ```bash
+python3 dev-tools/test-bundle-installer.py            # manager helpers, no desktop needed
 gjs -m dev-tools/test-gnome-world-clock.js            # GNOME ports, engine plus store
 node kde-world-clock/tests/test-tz.js                 # KDE timezone lookup against Intl
 node kde-color-clock/tests/test-color-engine.js       # KDE color engine

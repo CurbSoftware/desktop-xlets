@@ -16,6 +16,10 @@ helper) and per-card smooth toggles (QML animates ramps globally).
 kpackagetool6 --type=Plasma/Applet --install kde-color-clock
 ```
 
+To install every CurbSoftware widget for this desktop (and Cinnamon or
+GNOME) in one download, use the bundle AppImage:
+https://github.com/CurbSoftware/curb-desktop-widgets/releases/latest
+
 ## Development
 
 See `DEVELOPMENT.md`. Headless tests:

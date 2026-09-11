@@ -5,11 +5,12 @@ from it. Each candidate is submitted in its own pull request to either
 `linuxmint/cinnamon-spices-desklets` or `linuxmint/cinnamon-spices-applets`.
 
 The generated standalone repositories live together in the sibling directory
-`~/projects/cinnamon/`. Each directory there (named like the GitHub
+`~/projects/cinnamon/xlets/`. Each directory there (named like the GitHub
 repo, for example `cinnamon-color-timer-clock-desklet`) is a separate Git
 repository mirroring its repo under
-`github.com/CurbSoftware`. Never develop in those generated copies. Make the
-change here, test it here, then sync it out.
+`github.com/CurbSoftware`. GNOME and KDE pick-and-choose repos live next
+door in `~/projects/cinnamon/ports/`. Never develop in those generated
+copies. Make the change here, test it here, then sync it out.
 
 ## Current submission set
 
@@ -77,7 +78,7 @@ Name spices to subset, or preview with `--dry-run`:
 The default layout is:
 
 ```text
-~/projects/cinnamon/
+~/projects/cinnamon/xlets/
   cinnamon-world-clock-desklet/.git/
   cinnamon-color-timer-clock-desklet/.git/
   cinnamon-workspace-grid-desklet/.git/

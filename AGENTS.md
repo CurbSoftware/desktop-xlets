@@ -17,6 +17,7 @@ Do NOT use em-dashes ever. Do not use the "—" symbol anywhere. Change code or 
 - View logs: `tail -f ~/.xsession-errors`
 - Open settings: `cinnamon-settings desklets extension-uuid`
 - GNOME and KDE ports: `python3 dev-tools/ports-release.py list|check|test|build|bundle`
+- Publish GNOME/KDE/AppImage repos: `./dev-tools/publish-ports.sh` (parent `~/projects/cinnamon/ports/`)
 
 ## Memory Leak Prevention
 
@@ -61,3 +62,4 @@ Do NOT use em-dashes ever. Do not use the "—" symbol anywhere. Change code or 
 - Version bump on every functional change: `metadata.json` `version`
   (GNOME) or `KPlugin.Version` (KDE).
 - No em-dashes, no emojis; `ports-release.py check` enforces it.
+- Standalone port repos: `./dev-tools/publish-ports.sh` into `~/projects/cinnamon/ports/`.

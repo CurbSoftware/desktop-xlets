@@ -22,6 +22,10 @@ gnome-extensions enable gnome-color-clock@curbsoftware
 On Wayland the extension loads after the next login; on X11 Alt+F2 then
 `r` restarts the shell immediately.
 
+To install every CurbSoftware widget for this desktop (and Cinnamon or
+Plasma) in one download, use the bundle AppImage:
+https://github.com/CurbSoftware/curb-desktop-widgets/releases/latest
+
 ## Development
 
 See `DEVELOPMENT.md`. Headless tests:

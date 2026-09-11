@@ -15,6 +15,10 @@ the virtualdesktops dataengine. Live window previews are not ported.
 kpackagetool6 --type=Plasma/Applet --install kde-workspace-grid
 ```
 
+To install every CurbSoftware widget for this desktop (and Cinnamon or
+GNOME) in one download, use the bundle AppImage:
+https://github.com/CurbSoftware/curb-desktop-widgets/releases/latest
+
 ## Development
 
 See `DEVELOPMENT.md`.

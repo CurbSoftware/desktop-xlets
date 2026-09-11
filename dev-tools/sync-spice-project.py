@@ -18,7 +18,7 @@ import time
 
 ROOT = Path(__file__).resolve().parent.parent
 RELEASE_TOOL = ROOT / "dev-tools" / "spices-release.py"
-DEFAULT_PARENT = ROOT.parent / "cinnamon"
+DEFAULT_PARENT = ROOT.parent / "xlets"
 RETIRED_PARENT = ROOT.parent / "cinnamon-projects.retired"
 DEFAULT_REMOTE_TEMPLATE = "git@github.com:CurbSoftware/{repo}.git"
 MANIFEST = ".monorepo-sync.json"

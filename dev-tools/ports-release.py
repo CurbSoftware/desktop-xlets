@@ -525,6 +525,27 @@ APPIMAGE_ASSETS = ROOT / "dev-tools" / "appimage"
 BUNDLE_NAME = "curb-desktop-widgets"
 APPIMAGETOOL_URL = ("https://github.com/AppImage/appimagetool/releases/download/"
                     "continuous/appimagetool-x86_64.AppImage")
+PANEL_ALIASES = {"workspace-names", "command-launcher", "panel-profiles"}
+
+
+def widget_surface(alias: str) -> str:
+    return "panel" if alias in PANEL_ALIASES else "desktop"
+
+
+def port_repo_name(item: dict) -> str:
+    if item.get("repo"):
+        return item["repo"]
+    if item["desktop"] == "gnome":
+        return item["uuid"].split("@")[0]
+    return item["source"]
+
+
+def bundle_version() -> str:
+    path = APPIMAGE_ASSETS / "VERSION"
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return "0.0.0"
 
 
 def read_metadata(source: Path) -> dict:
@@ -541,11 +562,13 @@ def build_manifest(output_dir: Path) -> Path | None:
     for item in SR.EXTENSIONS:
         metadata = read_metadata(ROOT / item["source"])
         desktops["cinnamon"].append({
+            "alias": item["alias"],
             "uuid": item["uuid"],
             "kind": item["kind"],
             "name": metadata.get("name", item["alias"]),
             "version": str(metadata.get("version", "")),
             "dir": "cinnamon/" + item["uuid"],
+            "surface": widget_surface(item["alias"]),
         })
     for item in PORTS:
         if item.get("blocked"):
@@ -553,22 +576,26 @@ def build_manifest(output_dir: Path) -> Path | None:
         metadata = read_metadata(ROOT / item["source"])
         if item["desktop"] == "gnome":
             desktops["gnome"].append({
+                "alias": item["alias"],
                 "uuid": item["uuid"],
                 "name": metadata.get("name", item["alias"]),
                 "version": str(metadata.get("version", "")),
                 "zip": "gnome/%s.zip" % item["uuid"],
+                "surface": widget_surface(item["alias"]),
             })
         else:
             plugin = metadata.get("KPlugin", {})
             desktops["kde"].append({
+                "alias": item["alias"],
                 "package_id": item["package_id"],
                 "name": plugin.get("Name", item["alias"]),
                 "version": str(plugin.get("Version", "")),
                 "dir": "kde/" + item["package_id"],
+                "surface": widget_surface(item["alias"]),
             })
 
     manifest = {
-        "bundle": {"name": "CurbSoftware Desktop Widgets", "version": "1.0.0"},
+        "bundle": {"name": "CurbSoftware Desktop Widgets", "version": bundle_version()},
         "desktops": desktops,
     }
     path = output_dir / "manifest.json"
@@ -704,6 +731,8 @@ def main() -> int:
                 "uuid": item.get("uuid"),
                 "package_id": item.get("package_id"),
                 "source": item["source"],
+                "repo": port_repo_name(item),
+                "surface": widget_surface(item["alias"]),
                 "status": "blocked" if item.get("blocked") else "candidate",
                 "reason": item.get("blocked"),
             } for item in items]

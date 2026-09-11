@@ -19,7 +19,8 @@ kpackagetool6 --type=Plasma/Applet --install kde-world-clock
 ```
 
 Then right-click the panel or desktop, choose Add Widgets, and place it.
-The bundle AppImage installs it the same way.
+The bundle AppImage can install and place it for you:
+https://github.com/CurbSoftware/curb-desktop-widgets/releases/latest
 
 ## Development
 

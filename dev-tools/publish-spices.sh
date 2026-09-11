@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ensure each standalone spice repo exists under ../cinnamon (clone or create
+# Ensure each standalone spice repo exists under ../xlets (clone or create
 # on GitHub under CurbSoftware), then sync, commit, and push to origin main.
 set -euo pipefail
 

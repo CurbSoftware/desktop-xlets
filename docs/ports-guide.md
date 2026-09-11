@@ -107,17 +107,48 @@ Mechanisms:
 ## Bundle AppImage
 
 Desktop shells load widgets from fixed user directories, so the AppImage
-is an installer, not a runtime. It bundles every variant, detects the
+is a manager, not a runtime. It bundles every variant, detects the
 desktop (XDG_CURRENT_DESKTOP, then XDG_SESSION_DESKTOP, then shell
-binaries on PATH), installs and enables the matching variants, and
-supports uninstall, status, and dry runs. Everything is HOME scoped.
+binaries on PATH) and the OS pretty name, and lists only the matching
+widgets. The GTK window (python3-gi) can install or uninstall files,
+add or remove instances on the panel or the desktop, and update the
+AppImage itself from GitHub Releases. CLI actions still work: `install`,
+`uninstall`, `status`, `add-instance`, `remove-instance`, `update-check`,
+`update`, plus `--only`, `--dry-run` and `--list`. Everything is HOME
+scoped.
+
+Each widget has a `surface` in `payload/manifest.json`: clocks and the
+workspace grid default to the desktop, workspace names, command launcher
+and panel profiles default to the panel. KDE still ships one plasmoid
+per family; surface is only the default placement.
 
 Build: `python3 dev-tools/ports-release.py bundle` builds every
 unblocked port, stages the Cinnamon payload, assembles the AppDir and
 runs appimagetool (downloaded once into `dev-tools/cache/`, or pass
-`--appimagetool`). The payload manifest (`payload/manifest.json`) is
-the single source of truth for what installs where and how each
-desktop enables it.
+`--appimagetool`). Bundle version lives in `dev-tools/appimage/VERSION`.
+The payload manifest (`payload/manifest.json`) is the single source of
+truth for what installs where and how each desktop enables it.
+
+Published AppImage releases live on
+`CurbSoftware/curb-desktop-widgets`.
+
+## Standalone port repos
+
+Users who want one widget, not the bundle, get a generated GitHub repo
+per GNOME extension and per Plasma plasmoid. Layout is the installable
+tree (zip/tarball contents at repo root) plus README and LICENSE. They
+live under `~/projects/cinnamon/ports/` (sibling of the Cinnamon
+`xlets/` clones), not inside this monorepo.
+
+```bash
+./dev-tools/publish-ports.sh --dry-run
+./dev-tools/publish-ports.sh
+```
+
+Repo names: `gnome-world-clock`, `kde-world-clock`, and the same pattern
+for the other families, plus `curb-desktop-widgets` for the AppImage.
+Command Launcher is published here; the Spices block is Cinnamon-only.
+
 
 ## Testing rules
 

@@ -126,6 +126,7 @@ python3 dev-tools/live-test-applet.py      # live applet test (restores enabled-
 python3 dev-tools/live-test-color-desklet.py # live color-timer clock matrix (restores settings)
 python3 dev-tools/live-test-panel-profiles.py # live panel-profiles acceptance matrix (restores settings)
 python3 dev-tools/live-test-xlet-smoke.py  # loads every xlet once, catches import-time breakage
+python3 dev-tools/test-bundle-installer.py # AppImage manager helpers (headless)
 ```
 
 ### Release and Publish
@@ -134,6 +135,7 @@ python3 dev-tools/live-test-xlet-smoke.py  # loads every xlet once, catches impo
 python3 dev-tools/spices-release.py    # the builder itself: layout checks, gates, zip
 python3 dev-tools/sync-spice-project.py publish|prepare-pr|submit
 ./dev-tools/publish-spices.sh          # wrapper: sync + commit + push + cut a release per xlet
+./dev-tools/publish-ports.sh           # GNOME/KDE standalone repos + AppImage product repo
 ./dev-tools/submit-spice.sh <alias>    # wrapper: registry branch + PR for one spice
 ```
 Other helpers: `dev-tools/make-icons.py` (regenerate the shared icon set),
@@ -266,12 +268,15 @@ Commands:
 
 ```bash
 python3 dev-tools/ports-release.py list | check | test | build | bundle
+./dev-tools/publish-ports.sh --dry-run
 ```
 
 `bundle` also stages the Cinnamon payload and builds
 `dist/ports/curb-desktop-widgets-x86_64.AppImage`, the one-download
-installer for all three desktops (`--list`, `--dry-run`, `status`,
-`uninstall`; refuses to run as root). The Cinnamon Spices pipeline is
+manager for all three desktops (GUI by default; CLI `install`,
+`uninstall`, `status`, `add-instance`, `update`; refuses to run as
+root). Publish individual GNOME/KDE repos with `./dev-tools/publish-ports.sh`
+into `~/projects/cinnamon/ports/`. The Cinnamon Spices pipeline is
 untouched by the ports. Full reference: `docs/ports-guide.md`.
 
 ## Spices Publication
@@ -283,11 +288,13 @@ new submissions. Summary of the flow:
   standalone repo under CurbSoftware holding the Spices layout
   (`info.json`, `screenshot.png`, `README.md`, `LICENSE` at root;
   `files/<uuid>/…` with everything Cinnamon installs). Generated copies live
-  in `~/projects/cinnamon/<name>/` (one git repo per xlet, named
+  in `~/projects/cinnamon/xlets/<name>/` (one git repo per xlet, named
   like its GitHub repo); never edit them by hand, a `.monorepo-sync.json`
   manifest guards them.
 - `./dev-tools/publish-spices.sh` clones or creates each standalone repo,
   syncs the generated tree from here, commits, and pushes to `origin main`.
+- `./dev-tools/publish-ports.sh` does the same for GNOME extensions, Plasma
+  plasmoids, and the AppImage product repo under `~/projects/cinnamon/ports/`.
 - `./dev-tools/submit-spice.sh <alias>` forks and shallow-clones the registry
   on demand, runs every gate (tests, official `validate-spice`,
   `cinnamon-spices-makepot` canonicality), pushes branch

@@ -18,6 +18,10 @@ gnome-extensions install --force gnome-command-launcher@curbsoftware.zip
 gnome-extensions enable gnome-command-launcher@curbsoftware
 ```
 
+To install every CurbSoftware widget for this desktop (and Cinnamon or
+Plasma) in one download, use the bundle AppImage:
+https://github.com/CurbSoftware/curb-desktop-widgets/releases/latest
+
 ## Development
 
 See `DEVELOPMENT.md`.

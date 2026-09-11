@@ -19,6 +19,10 @@ gnome-extensions install --force gnome-workspace-grid@curbsoftware.zip
 gnome-extensions enable gnome-workspace-grid@curbsoftware
 ```
 
+To install every CurbSoftware widget for this desktop (and Cinnamon or
+Plasma) in one download, use the bundle AppImage:
+https://github.com/CurbSoftware/curb-desktop-widgets/releases/latest
+
 ## Development
 
 See `DEVELOPMENT.md`. Headless tests:
