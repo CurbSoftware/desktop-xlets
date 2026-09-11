@@ -1,0 +1,25 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "100e5fbebb9f3e59a2b46155b259f09ad906d54c1f63e1e3f3915d64c0133185",
+    "extension.js": "aa991eb531333927cd03b34300f2678417d57a8ba60435a1cfb0b6236b424e7d",
+    "lib/defaults.js": "ad71994dfe8315739fd66470a1d7ea22ae788f28116c6b20fe805ef51957a1bb",
+    "lib/store.js": "babaa316ed1534a8ec9d72ba34187a9bead98eb853c4205d07a548521be15cae",
+    "metadata.json": "9a02b1629c3040cc62c6d26c00f19b8f8f107a26e1011b8fff2a4fc88d13f9d7",
+    "prefs.js": "1820a5ffcfb92f379698662efa4a4ccd9a798bf01f94f2a0c817e066f1b1cffb"
+  },
+  "port": {
+    "alias": "command-launcher",
+    "desktop": "gnome",
+    "kind": "extension",
+    "package_id": null,
+    "repo": "gnome-command-launcher",
+    "uuid": "gnome-command-launcher@curbsoftware"
+  },
+  "schema": 1,
+  "source_directory": "gnome-command-launcher@curbsoftware",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}
