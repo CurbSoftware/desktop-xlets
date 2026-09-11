@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="showClock" type="Bool">
+      <label>Show the clock card</label>
+      <default>true</default>
+    </entry>
+    <entry name="showTimer" type="Bool">
+      <label>Show the timer card</label>
+      <default>true</default>
+    </entry>
+    <entry name="showChrono" type="Bool">
+      <label>Show the chronometer card</label>
+      <default>true</default>
+    </entry>
+    <entry name="clockTimezone" type="String">
+      <label>IANA timezone for the clock card, empty for local</label>
+      <default></default>
+    </entry>
+    <entry name="clockScheduleJson" type="String">
+      <label>Clock schedule rows as JSON (hour, color)</label>
+      <default>[{"hour": 6, "color": "#f4433c"}, {"hour": 12, "color": "#9c27b0"}, {"hour": 18, "color": "#3949ab"}]</default>
+    </entry>
+    <entry name="timerScheduleJson" type="String">
+      <label>Timer schedule rows as JSON (remaining seconds, color)</label>
+      <default>[{"remaining": 60, "color": "#43a047"}, {"remaining": 30, "color": "#fdd835"}, {"remaining": 0, "color": "#f4433c"}]</default>
+    </entry>
+    <entry name="chronoScheduleJson" type="String">
+      <label>Chronometer schedule rows as JSON (elapsed seconds, color)</label>
+      <default>[{"elapsed": 0, "color": "#00897b"}, {"elapsed": 1800, "color": "#f4511e"}]</default>
+    </entry>
+    <entry name="timerMinutes" type="Int">
+      <label>Default timer minutes</label>
+      <default>5</default>
+    </entry>
+    <entry name="timerSeconds" type="Int">
+      <label>Default timer seconds</label>
+      <default>0</default>
+    </entry>
+    <entry name="chronoMilliseconds" type="Bool">
+      <label>Show chronometer hundredths</label>
+      <default>false</default>
+    </entry>
+    <entry name="timeFormat" type="String">
+      <label>Time format</label>
+      <default>%H:%M:%S</default>
+    </entry>
+    <entry name="dateFormat" type="String">
+      <label>Date format</label>
+      <default>%A, %e %B</default>
+    </entry>
+    <entry name="timerJson" type="String">
+      <label>Persisted timer state</label>
+      <default></default>
+    </entry>
+    <entry name="chronoStateJson" type="String">
+      <label>Persisted chronometer state</label>
+      <default></default>
+    </entry>
+  </group>
+</kcfg>
