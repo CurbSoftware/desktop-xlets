@@ -1,0 +1,30 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "43492f0f2f4befe2896adfd53d33861757fc9801ce4ef37b50948a68510407ba",
+    "extension.js": "b9f7d1d8c7d4d9eb0a6fe22a15339e5b1af7fc7df2d08db1303583be8911cca7",
+    "lib/defaults.js": "8b03c1805ae0d62a1217c4d83500038839d6c80eddfcc8b5a6064622be430922",
+    "lib/gridModel.js": "c524038844d9fbf6591e066ccb005597491875adf8a48e1c260703e43c7da8c4",
+    "lib/store.js": "a01034199fc1e4ae12ca18cb0350c6343fa06279fae01a6f879ac6090540e49d",
+    "lib/workspaces.js": "8f9f09ea696ffc670dc79f319925c641facbf038582e50feabf0c7705c3cac53",
+    "metadata.json": "61be96cf163b68c5534d59061190ef6e5840c5f45b03d45609a900a3cfe07a72",
+    "prefs.js": "cf317c28ae38d47e477e5c12ddace58fb5ba64d2737948b673c9f5166ea72851",
+    "renameDialog.js": "0fd0ce67796dabb218beaac537e779ee1e950ac6e619749d89fabce952fbb184",
+    "stylesheet.css": "cb3c9d7b22316e975dddf52bea45e3078623e3faa5bbee61d59f04ed433ac12c",
+    "widget.js": "3af7acde60edfaf8fcb688a4f0ce313a1fe4ac7cf2dcc17875d4243c2c75b8be"
+  },
+  "port": {
+    "alias": "workspace-grid",
+    "desktop": "gnome",
+    "kind": "extension",
+    "package_id": null,
+    "repo": "gnome-workspace-grid",
+    "uuid": "gnome-workspace-grid@curbsoftware"
+  },
+  "schema": 1,
+  "source_directory": "gnome-workspace-grid@curbsoftware",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}

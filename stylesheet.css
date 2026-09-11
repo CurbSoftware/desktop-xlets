@@ -1,0 +1,41 @@
+.curb-workspace-grid-container {
+    padding: 6px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.curb-workspace-grid {
+    /* spacing handled via tile margins */
+}
+
+.curb-workspace-grid-tile {
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: white;
+    transition-duration: 150ms;
+}
+
+.curb-workspace-grid-tile:hover {
+    background-color: rgba(0, 0, 0, 0.32);
+}
+
+.curb-workspace-grid-tile:outlined {
+    border-width: 2px;
+    border-color: #4aa3ff;
+    background-color: rgba(74, 163, 255, 0.10);
+}
+
+.curb-workspace-grid-add-tile {
+    background-color: rgba(0, 0, 0, 0.20);
+    border: 1px dashed rgba(255, 255, 255, 0.30);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: white;
+    font-weight: 600;
+}
+
+.curb-workspace-grid-add-tile:hover {
+    background-color: rgba(0, 0, 0, 0.30);
+}
