@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="clocksJson" type="String">
+      <label>Clocks as a JSON array of objects with name and timezone</label>
+      <default>[{"id": "default", "name": "Local", "timezone": "local"}]</default>
+    </entry>
+    <entry name="timeFormat" type="String">
+      <label>strftime-like time format</label>
+      <default>%H:%M:%S</default>
+    </entry>
+    <entry name="dateFormat" type="String">
+      <label>strftime-like date format</label>
+      <default>%A, %e %B</default>
+    </entry>
+  </group>
+</kcfg>

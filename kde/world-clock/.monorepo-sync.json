@@ -1,0 +1,27 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "f4cb3266df003d298f3ead6b970800d07b9fd5ebfa1578453601893463a42584",
+    "contents/config/main.xml": "1e797933be27424c1d63788241575921a7bfcc716a4bede1686d594b17f81dbd",
+    "contents/ui/config/config.qml": "27534de7c7b4d99422f15f037e6cb52abbe1ea32f63137affb55dcaf936c6094",
+    "contents/ui/lib/format.js": "44f506e3fbfac51693b274a07040be7ad8a0c65907e172dc27baca657f18bfd8",
+    "contents/ui/lib/tz.js": "fbcbdccdf0a9014079f92042c5c3ba84564edff62823e799e317391d16569216",
+    "contents/ui/lib/tzdata.js": "ffd91f5f74b0e86887fb35632df5af64c0065d3afac56c8128dcfd962d3d691a",
+    "contents/ui/main.qml": "9f1e09e06ab6fdb8307513b17f0bf0713a8ec885b852d7a2cc495941b20b0bfe",
+    "metadata.json": "07edb988073d95dc0b4d8c17aa521030fe266a18d8824b2d82074b70ffd823a7"
+  },
+  "port": {
+    "alias": "world-clock",
+    "desktop": "kde",
+    "kind": "plasmoid",
+    "package_id": "com.curbsoftware.worldclock",
+    "repo": "kde-world-clock",
+    "uuid": null
+  },
+  "schema": 1,
+  "source_directory": "kde-world-clock",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}
