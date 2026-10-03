@@ -1,0 +1,8 @@
+{
+    "uuid": "restart-cinnamon@kolle",
+    "name": "Restart Cinnamon",
+    "description": "Click on the applet to restart Cinnamon",
+    "contributors": "bimsebasse: added symbolic icon, claudiux: OSD option",
+    "author": "icarter09",
+    "last-edited": 1751933828
+}

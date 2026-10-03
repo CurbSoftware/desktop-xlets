@@ -1,0 +1,382 @@
+import type { ErrorResponse} from "../../lib/httpLib";
+import { HttpLib } from "../../lib/httpLib";
+import { Logger } from "../../lib/services/logger";
+import type { WeatherData, ForecastData, HourlyForecastData, PrecipitationType, BuiltinIcons, CustomIcons, ImmediatePrecipitation, AlertData, AlertLevel } from "../../weather-data";
+import { _, IsNight, FahrenheitToKelvin, CelsiusToKelvin, MPHtoMPS } from "../../utils";
+import { DateTime } from "luxon";
+import { BaseProvider } from "../BaseProvider";
+import type { PirateWeatherIcon, PirateWeatherPayload, PirateWeatherQueryUnits } from "./types/common";
+import { ALERT_LEVEL_ORDER } from "../../consts";
+import type { LocationData, SunTime } from "../../types";
+import { Services, type Config } from "../../config";
+import { ErrorHandler } from "../../lib/services/error_handler";
+
+export class PirateWeather extends BaseProvider {
+
+	//--------------------------------------------------------
+	//  Properties
+	//--------------------------------------------------------
+	public readonly prettyName = _("Pirate Weather");
+	public readonly name = Services.PirateWeather;
+	public readonly maxForecastSupport = 7;
+	public readonly website = "http://pirateweather.net/en/latest/";
+	public readonly maxHourlyForecastSupport = 168;
+	public readonly needsApiKey = true;
+	public readonly supportHourlyPrecipChance = true;
+	public readonly supportHourlyPrecipVolume = true;
+
+	private remainingQuota: number | null = null;
+	public get remainingCalls(): number | null {
+		// Disable this for now, this feature is only really useful for AccuWeather
+		// TODO: when a better place is found for this value add this back
+		return null;
+		//return this.remainingQuota;
+	};
+
+	private query = "https://api.pirateweather.net/forecast/";
+
+	//--------------------------------------------------------
+	//  Functions
+	//--------------------------------------------------------
+	public async GetWeather(loc: LocationData, cancellable: imports.gi.Gio.Cancellable, config: Config): Promise<WeatherData | null> {
+		const unit = this.GetQueryUnit(config);
+
+		const response = await HttpLib.Instance.LoadJsonAsync<PirateWeatherPayload>({
+			url: `${this.query}${config.ApiKey}/${loc.lat},${loc.lon}`,
+			cancellable,
+			params: {
+				units: this.GetQueryUnit(config),
+				lang: (config._translateCondition && config.Language && this.supportedLanguages.includes(config.Language)) ? config.Language : "en",
+			},
+			HandleError: this.HandleError
+		});
+
+		if (!response.Success)
+			return null;
+
+		// this.remainingQuota = Math.max(1000 - parseInt(response.ResponseHeaders["X-Forecast-API-Calls"]), 0);
+		return this.ParseWeather(response.Data, unit);
+	};
+
+
+	private ParseWeather(json: PirateWeatherPayload, unit: PirateWeatherQueryUnits): WeatherData | null {
+		try {
+			const sunrise = DateTime.fromSeconds(json.daily.data[0].sunriseTime, { zone: json.timezone });
+			const sunset = DateTime.fromSeconds(json.daily.data[0].sunsetTime, { zone: json.timezone });
+			const result: WeatherData = {
+				date: DateTime.fromSeconds(json.currently.time, { zone: json.timezone }),
+				coord: {
+					lat: json.latitude,
+					lon: json.longitude
+				},
+				location: {
+					url: "https://merrysky.net/forecast/" + json.latitude + "," + json.longitude,
+					timeZone: json.timezone,
+				},
+				sunrise: sunrise,
+				sunset: sunset,
+				wind: {
+					speed: this.ToMPS(json.currently.windSpeed, unit),
+					degree: json.currently.windBearing
+				},
+				temperature: this.ToKelvin(json.currently.temperature, unit),
+				pressure: json.currently.pressure,
+				humidity: json.currently.humidity * 100,
+				dewPoint: this.ToKelvin(json.currently.dewPoint, unit),
+				condition: {
+					main: json.currently.summary,
+					description: json.currently.summary,
+					icons: this.ResolveIcon(json.currently.icon, { sunrise: sunrise, sunset: sunset }),
+					customIcon: this.ResolveCustomIcon(json.currently.icon)
+				},
+				extra_field: {
+					name: _("Feels Like"),
+					value: this.ToKelvin(json.currently.apparentTemperature, unit),
+					type: "temperature"
+				},
+				uvIndex: json.currently.uvIndex ?? json.hourly.data[0]?.uvIndex ?? json.daily.data[0]?.uvIndex ?? null,
+				forecasts: [],
+				hourlyForecasts: [],
+			}
+
+			// Forecast
+			for (const day of json.daily.data) {
+				const forecast: ForecastData = {
+					date: DateTime.fromSeconds(day.time, { zone: json.timezone }),
+					temp_min: this.ToKelvin(day.temperatureLow, unit),
+					temp_max: this.ToKelvin(day.temperatureHigh, unit),
+					condition: {
+						main: day.summary,
+						description: day.summary,
+						icons: this.ResolveIcon(day.icon),
+						customIcon: this.ResolveCustomIcon(day.icon)
+					},
+				};
+
+				// JS assumes time is local, so it applies the correct offset creating the Date (including Daylight Saving)
+				// but when using the date when daylight saving is active, it DOES NOT apply the DST back,
+				// So we offset the date to make it Noon
+				forecast.date = forecast.date.set({ hour: 12 });
+
+				result.forecasts.push(forecast);
+			}
+
+			for (const hour of json.hourly.data) {
+				const forecast: HourlyForecastData = {
+					date: DateTime.fromSeconds(hour.time, { zone: json.timezone }),
+					temp: this.ToKelvin(hour.temperature, unit),
+					condition: {
+						main: hour.summary,
+						description: hour.summary,
+						icons: this.ResolveIcon(hour.icon, { sunrise: sunrise, sunset: sunset }, DateTime.fromSeconds(hour.time, { zone: json.timezone })),
+						customIcon: this.ResolveCustomIcon(hour.icon)
+					},
+					precipitation: {
+						type: hour.precipType as PrecipitationType,
+						volume: hour.precipProbability,
+						chance: hour.precipProbability * 100
+					}
+				};
+
+				// never null here
+				result.hourlyForecasts!.push(forecast);
+			}
+
+			if (json.minutely != null) {
+				const immediate: ImmediatePrecipitation = {
+					start: -1,
+					end: -1
+				}
+
+				for (const [index, element] of json.minutely.data.entries()) {
+					if (element.precipProbability > 0 && immediate.start == -1) {
+						immediate.start = index;
+						continue
+					}
+					else if (element.precipProbability == 0 && immediate.start != -1) {
+						immediate.end = index;
+						break
+					}
+				}
+
+				result.immediatePrecipitation = immediate;
+			}
+
+			if (json.alerts != null) {
+				const alerts: AlertData[] = [];
+				for (const alert of json.alerts) {
+					alerts.push({
+						title: alert.title,
+						description: alert.description,
+						level: this.PirateWeatherAlertSeverityToAlertLevel(alert.severity),
+						sender_name: alert.uri,
+					});
+				};
+
+				result.alerts = alerts.sort((a, b) => ALERT_LEVEL_ORDER.indexOf(a.level) - ALERT_LEVEL_ORDER.indexOf(b.level));
+			}
+
+			return result;
+		}
+		catch (e) {
+			if (e instanceof Error)
+				Logger.Error("Pirate Weather payload parsing error: " + e.message, e)
+			ErrorHandler.Instance.PostError({ type: "soft", detail: "unusual payload", service: "pirate_weather", message: _("Failed to Process Weather Info") });
+			return null;
+		}
+	};
+
+	private PirateWeatherAlertSeverityToAlertLevel(severity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | "Unknown"): AlertLevel {
+		switch (severity) {
+			case "Extreme":
+				return "extreme";
+			case "Severe":
+				return "severe";
+			case "Moderate":
+				return "moderate";
+			case "Minor":
+				return "minor";
+			default:
+				return "unknown";
+		}
+	}
+
+	/**
+	 *
+	 * @param message Soup Message object
+	 * @returns null if custom error checking does not find anything
+	 */
+	private HandleError = (message: ErrorResponse): boolean => {
+		if (message.ErrorData.code == 403) {
+			ErrorHandler.Instance.PostError({
+				type: "hard",
+				userError: true,
+				detail: "bad key",
+				service: "pirate_weather",
+				message: _("Please Make sure you\nentered the API key correctly and your account is not locked")
+			});
+			return false;
+		}
+		else if (message.ErrorData.code == 401) {
+			ErrorHandler.Instance.PostError({
+				type: "hard",
+				userError: true,
+				detail: "no key",
+				service: "pirate_weather",
+				message: _("Please Make sure you\nentered the API key that you have from Pirate Weather")
+			});
+			return false;
+		}
+		return true;
+	}
+
+	private ResolveIcon(icon: PirateWeatherIcon, sunTimes?: SunTime, date?: DateTime): BuiltinIcons[] {
+		switch (icon) {
+			case "rain":
+				return ["weather-rain", "weather-showers-scattered", "weather-freezing-rain"]
+			case "snow":
+				return ["weather-snow"]
+			case "sleet":
+				return ["weather-freezing-rain", "weather-rain", "weather-showers-scattered"]
+			case "fog":
+				return ["weather-fog"]
+			// There is no guarantee that there is a wind icon
+			case "wind":
+				return (sunTimes && IsNight(sunTimes, date)) ? ["weather-windy", "weather-breeze", "weather-clouds", "weather-few-clouds-night"] : ["weather-windy", "weather-breeze", "weather-clouds", "weather-few-clouds"]
+			case "cloudy":/* mostly cloudy (day) */
+				return (sunTimes && IsNight(sunTimes, date)) ? ["weather-overcast", "weather-clouds", "weather-few-clouds-night"] : ["weather-overcast", "weather-clouds", "weather-few-clouds"]
+			case "partly-cloudy-night":
+				return ["weather-few-clouds-night"]
+			case "partly-cloudy-day":
+				return ["weather-few-clouds"]
+			case "clear-night":
+				return ["weather-clear-night"]
+			case "clear-day":
+				return ["weather-clear"]
+			default:
+				return ["weather-severe-alert"]
+		}
+	};
+
+	private ResolveCustomIcon(icon: PirateWeatherIcon): CustomIcons {
+		switch (icon) {
+			case "rain":
+				return "rain-symbolic";
+			case "snow":
+				return "snow-symbolic";
+			case "fog":
+				return "fog-symbolic";
+			case "cloudy":
+				return "cloudy-symbolic";
+			case "partly-cloudy-night":
+				return "night-alt-cloudy-symbolic";
+			case "partly-cloudy-day":
+				return "day-cloudy-symbolic";
+			case "clear-night":
+				return "night-clear-symbolic";
+			case "clear-day":
+				return "day-sunny-symbolic";
+			// There is no guarantee that there is a wind icon
+			case "wind":
+				return "strong-wind-symbolic";
+			default:
+				return "cloud-refresh-symbolic";
+		}
+	}
+
+	private GetQueryUnit(config: Config): PirateWeatherQueryUnits {
+		if (config.TemperatureUnit == "celsius") {
+			if (config.WindSpeedUnit == "kph" || config.WindSpeedUnit == "m/s") {
+				return 'si';
+			}
+			else {
+				return 'uk';
+			}
+		}
+		else {
+			return 'us';
+		}
+	};
+
+	private ToKelvin(temp: number, unit: PirateWeatherQueryUnits): number {
+		if (unit == 'us') {
+			return FahrenheitToKelvin(temp);
+		}
+		else {
+			return CelsiusToKelvin(temp);
+		}
+
+	};
+
+	private ToMPS(speed: number, unit: PirateWeatherQueryUnits): number {
+		if (unit == 'si') {
+			return speed;
+		}
+		else {
+			return MPHtoMPS(speed);
+		}
+	};
+
+	private supportedLanguages = [
+		"ar",
+		"az",
+		"be",
+		"bg",
+		"bn",
+		"bs",
+		"ca",
+		"cs",
+		"cy",
+		"da",
+		"de",
+		"el",
+		"en",
+		"eo",
+		"es",
+		"et",
+		"fa",
+		"fi",
+		"fr",
+		"ga",
+		"gd",
+		"he",
+		"hi",
+		"hr",
+		"hu",
+		"id",
+		"is",
+		"it",
+		"ja",
+		"ka",
+		"kn",
+		"ko",
+		"kw",
+		"lv",
+		"ml",
+		"mr",
+		"nl",
+		"no",
+		"pa",
+		"pl",
+		"pt",
+		"ro",
+		"ru",
+		"sk",
+		"sl",
+		"sr",
+		"sv",
+		"ta",
+		"te",
+		"`tet",
+		"tr",
+		"uk",
+		"ur",
+		"vi",
+		"x-pig-latin",
+		"zh",
+		"zh-tw",
+	]
+};
+
+
+

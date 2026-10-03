@@ -1,0 +1,6 @@
+#!/bin/sh
+# AppRun for the CurbSoftware desktop widgets manager.
+# The installer is Python 3 on the host; GTK 3 (python3-gi) is optional
+# for the window. Desktop shells load the widgets themselves.
+APPDIR="$(dirname "$(readlink -f "$0")")"
+exec /usr/bin/python3 "$APPDIR/usr/bin/bundle-installer.py" "$@"

@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"lib": [
+			"es2017"
+		],
+		"target": "es2017",
+		"removeComments": true,
+		"sourceMap": true,
+		"strict": true,
+        "noFallthroughCasesInSwitch": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+		"noImplicitAny": true,
+        "experimentalDecorators": true,
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+		"resolveJsonModule": true,
+		"moduleResolution": "Bundler",
+		"types": [
+			"@ci-types/cjs"
+		]
+	},
+	"include": [
+		"./**/*",
+	],
+}

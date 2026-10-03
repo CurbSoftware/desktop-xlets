@@ -1,0 +1,12 @@
+{
+  "uuid": "gnome-command-launcher@curbsoftware",
+  "name": "Command Launcher",
+  "description": "A panel button that runs a configured command",
+  "version": "1.0.0",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48"
+  ]
+}

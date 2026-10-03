@@ -1,0 +1,484 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<book xmlns="http://www.devhelp.net/book" title="Cinnamon Javascript Reference Manual" link="index.html" author="" name="cinnamon-js" version="2" language="c">
+  <chapters>
+    <sub name="" link="pt01.html">
+      <sub name="imports.ui.applet" link="cinnamon-js-ui-applet-section.html">
+        <sub name="Applet.MenuItem" link="cinnamon-js-ui-applet-MenuItem.html"/>
+        <sub name="Applet.AppletContextMenu" link="cinnamon-js-ui-applet-AppletContextMenu.html"/>
+        <sub name="Applet.AppletPopupMenu" link="cinnamon-js-ui-applet-AppletPopupMenu.html"/>
+        <sub name="Applet.Applet" link="cinnamon-js-ui-applet-Applet.html"/>
+        <sub name="Applet.IconApplet" link="cinnamon-js-ui-applet-IconApplet.html"/>
+        <sub name="Applet.TextApplet" link="cinnamon-js-ui-applet-TextApplet.html"/>
+        <sub name="Applet.TextIconApplet" link="cinnamon-js-ui-applet-TextIconApplet.html"/>
+        <sub name="Applet.PopupResizeHandler" link="cinnamon-js-ui-applet-PopupResizeHandler.html"/>
+      </sub>
+      <sub name="imports.ui.appletManager" link="cinnamon-js-ui-appletManager-section.html">
+        <sub name="AppletManager" link="cinnamon-js-ui-appletManager.html"/>
+      </sub>
+      <sub name="imports.ui.boxpointer" link="cinnamon-js-ui-boxpointer-section.html">
+        <sub name="Boxpointer" link="cinnamon-js-ui-boxpointer.html"/>
+      </sub>
+      <sub name="imports.ui.dbusMenu" link="cinnamon-js-ui-dbusMenu-section.html">
+        <sub name="DbusMenu.PropertyStore" link="cinnamon-js-ui-dbusMenu-PropertyStore.html"/>
+        <sub name="DbusMenu.DbusMenuItem" link="cinnamon-js-ui-dbusMenu-DbusMenuItem.html"/>
+        <sub name="DbusMenu.DBusClient" link="cinnamon-js-ui-dbusMenu-DBusClient.html"/>
+      </sub>
+      <sub name="imports.ui.desklet" link="cinnamon-js-ui-desklet-section.html">
+        <sub name="Desklet.Desklet" link="cinnamon-js-ui-desklet-Desklet.html"/>
+      </sub>
+      <sub name="imports.ui.deskletManager" link="cinnamon-js-ui-deskletManager-section.html">
+        <sub name="DeskletManager" link="cinnamon-js-ui-deskletManager.html"/>
+        <sub name="DeskletManager.DeskletContainer" link="cinnamon-js-ui-deskletManager-DeskletContainer.html"/>
+      </sub>
+      <sub name="imports.ui.dnd" link="cinnamon-js-ui-dnd-section.html">
+        <sub name="Dnd" link="cinnamon-js-ui-dnd.html"/>
+      </sub>
+      <sub name="imports.ui.extension" link="cinnamon-js-ui-extension-section.html">
+        <sub name="Extension" link="cinnamon-js-ui-extension.html"/>
+      </sub>
+      <sub name="imports.ui.layout" link="cinnamon-js-ui-layout-section.html">
+        <sub name="Layout.LayoutManager" link="cinnamon-js-ui-layout-LayoutManager.html"/>
+      </sub>
+      <sub name="imports.ui.lightbox" link="cinnamon-js-ui-lightbox-section.html">
+        <sub name="Lightbox" link="cinnamon-js-ui-lightbox.html"/>
+      </sub>
+      <sub name="imports.ui.magnifierDBus" link="cinnamon-js-ui-magnifierDBus-section.html">
+        <sub name="MagnifierDBus" link="cinnamon-js-ui-magnifierDBus.html"/>
+      </sub>
+      <sub name="imports.ui.main" link="cinnamon-js-ui-main-section.html">
+        <sub name="Main" link="cinnamon-js-ui-main.html"/>
+      </sub>
+      <sub name="imports.ui.messageTray" link="cinnamon-js-ui-messageTray-section.html">
+        <sub name="MessageTray.Notification" link="cinnamon-js-ui-messageTray-Notification.html"/>
+      </sub>
+      <sub name="imports.ui.modalDialog" link="cinnamon-js-ui-modalDialog-section.html">
+        <sub name="ModalDialog.ModalDialog" link="cinnamon-js-ui-modalDialog-ModalDialog.html"/>
+        <sub name="ModalDialog.ConfirmDialog" link="cinnamon-js-ui-modalDialog-ConfirmDialog.html"/>
+        <sub name="ModalDialog.NotifyDialog" link="cinnamon-js-ui-modalDialog-NotifyDialog.html"/>
+        <sub name="ModalDialog.InfoOSD" link="cinnamon-js-ui-modalDialog-InfoOSD.html"/>
+      </sub>
+      <sub name="imports.ui.panel" link="cinnamon-js-ui-panel-section.html">
+        <sub name="Panel" link="cinnamon-js-ui-panel.html"/>
+        <sub name="Panel.PanelManager" link="cinnamon-js-ui-panel-PanelManager.html"/>
+        <sub name="Panel.PanelDummy" link="cinnamon-js-ui-panel-PanelDummy.html"/>
+        <sub name="Panel.Panel" link="cinnamon-js-ui-panel-Panel.html"/>
+      </sub>
+      <sub name="imports.ui.popupMenu" link="cinnamon-js-ui-popupMenu-section.html">
+        <sub name="PopupMenu.PopupIconMenuItem" link="cinnamon-js-ui-popupMenu-PopupIconMenuItem.html"/>
+        <sub name="PopupMenu.PopupIndicatorMenuItem" link="cinnamon-js-ui-popupMenu-PopupIndicatorMenuItem.html"/>
+        <sub name="PopupMenu.PopupMenuAbstractItem" link="cinnamon-js-ui-popupMenu-PopupMenuAbstractItem.html"/>
+        <sub name="PopupMenu.PopupMenuBase" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html"/>
+        <sub name="PopupMenu.PopupMenu" link="cinnamon-js-ui-popupMenu-PopupMenu.html"/>
+        <sub name="PopupMenu.PopupSubMenu" link="cinnamon-js-ui-popupMenu-PopupSubMenu.html"/>
+        <sub name="PopupMenu.PopupMenuSection" link="cinnamon-js-ui-popupMenu-PopupMenuSection.html"/>
+        <sub name="PopupMenu.PopupMenuFactory" link="cinnamon-js-ui-popupMenu-PopupMenuFactory.html"/>
+      </sub>
+      <sub name="imports.ui.runDialog" link="cinnamon-js-ui-runDialog-section.html">
+        <sub name="RunDialog" link="cinnamon-js-ui-runDialog.html"/>
+      </sub>
+      <sub name="imports.ui.search" link="cinnamon-js-ui-search-section.html">
+        <sub name="Search" link="cinnamon-js-ui-search.html"/>
+      </sub>
+      <sub name="imports.ui.settings" link="cinnamon-js-ui-settings-section.html">
+        <sub name="Settings" link="cinnamon-js-ui-settings.html"/>
+        <sub name="Settings.XletSettingsBase" link="cinnamon-js-ui-settings-XletSettingsBase.html"/>
+        <sub name="Settings.AppletSettings" link="cinnamon-js-ui-settings-AppletSettings.html"/>
+        <sub name="Settings.DeskletSettings" link="cinnamon-js-ui-settings-DeskletSettings.html"/>
+        <sub name="Settings.ExtensionSettings" link="cinnamon-js-ui-settings-ExtensionSettings.html"/>
+      </sub>
+      <sub name="imports.ui.systray" link="cinnamon-js-ui-systray-section.html">
+        <sub name="Systray.SystrayManager" link="cinnamon-js-ui-systray-SystrayManager.html"/>
+      </sub>
+      <sub name="imports.ui.tooltips" link="cinnamon-js-ui-tooltips-section.html">
+        <sub name="Tooltips.TooltipBase" link="cinnamon-js-ui-tooltips-TooltipBase.html"/>
+        <sub name="Tooltips.Tooltip" link="cinnamon-js-ui-tooltips-Tooltip.html"/>
+        <sub name="Tooltips.PanelItemTooltip" link="cinnamon-js-ui-tooltips-PanelItemTooltip.html"/>
+      </sub>
+      <sub name="imports.ui.tweener" link="cinnamon-js-ui-tweener-section.html">
+        <sub name="Tweener" link="cinnamon-js-ui-tweener.html"/>
+        <sub name="Tweener.ClutterFrameTicker" link="cinnamon-js-ui-tweener-ClutterFrameTicker.html"/>
+      </sub>
+    </sub>
+    <sub name="" link="pt02.html">
+      <sub name="imports.misc.docInfo" link="cinnamon-js-misc-docInfo-section.html">
+        <sub name="DocInfo" link="cinnamon-js-misc-docInfo.html"/>
+      </sub>
+      <sub name="imports.misc.signalManager" link="cinnamon-js-misc-signalManager-section.html">
+        <sub name="SignalManager.SignalManager" link="cinnamon-js-misc-signalManager-SignalManager.html"/>
+      </sub>
+      <sub name="imports.misc.util" link="cinnamon-js-misc-util-section.html">
+        <sub name="Util" link="cinnamon-js-misc-util.html"/>
+      </sub>
+    </sub>
+  </chapters>
+  <functions>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-applet-AppletPopupMenu.html#cinnamon-js-ui-applet-AppletPopupMenu-_init"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-_init"/>
+    <keyword type="function" name="set_applet_tooltip ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-set_applet_tooltip"/>
+    <keyword type="function" name="set_applet_enabled ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-set_applet_enabled"/>
+    <keyword type="function" name="on_applet_clicked ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_applet_clicked"/>
+    <keyword type="function" name="on_applet_middle_clicked ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_applet_middle_clicked"/>
+    <keyword type="function" name="on_applet_instances_changed ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_applet_instances_changed"/>
+    <keyword type="function" name="on_applet_added_to_panel ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_applet_added_to_panel"/>
+    <keyword type="function" name="on_applet_removed_from_panel ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_applet_removed_from_panel"/>
+    <keyword type="function" name="on_applet_reloaded ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_applet_reloaded"/>
+    <keyword type="function" name="setOrientationInternal ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-setOrientationInternal"/>
+    <keyword type="function" name="setOrientation ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-setOrientation"/>
+    <keyword type="function" name="setAllowedLayout ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-setAllowedLayout"/>
+    <keyword type="function" name="getAllowedLayout ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-getAllowedLayout"/>
+    <keyword type="function" name="on_orientation_changed ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_orientation_changed"/>
+    <keyword type="function" name="on_panel_height_changed_internal ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_panel_height_changed_internal"/>
+    <keyword type="function" name="on_panel_height_changed ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_panel_height_changed"/>
+    <keyword type="function" name="on_panel_icon_size_changed ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-on_panel_icon_size_changed"/>
+    <keyword type="function" name="highlight ()" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet-highlight"/>
+    <keyword type="property" name="The “actor” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--actor"/>
+    <keyword type="property" name="The “instance_id” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--instance_id"/>
+    <keyword type="property" name="The “_uuid” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_uuid"/>
+    <keyword type="property" name="The “_panelLocation” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_panelLocation"/>
+    <keyword type="property" name="The “panel” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--panel"/>
+    <keyword type="property" name="The “_meta” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_meta"/>
+    <keyword type="property" name="The “_order” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_order"/>
+    <keyword type="property" name="The “_draggable” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_draggable"/>
+    <keyword type="property" name="The “_applet_tooltip” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_applet_tooltip"/>
+    <keyword type="property" name="The “_menuManager” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_menuManager"/>
+    <keyword type="property" name="The “_applet_context_menu” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_applet_context_menu"/>
+    <keyword type="property" name="The “_applet_tooltip_text” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_applet_tooltip_text"/>
+    <keyword type="property" name="The “_allowedLayout” property" link="cinnamon-js-ui-applet-Applet.html#cinnamon-js-ui-applet-Applet--_allowedLayout"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-applet-IconApplet.html#cinnamon-js-ui-applet-IconApplet-_init"/>
+    <keyword type="function" name="set_applet_icon_name ()" link="cinnamon-js-ui-applet-IconApplet.html#cinnamon-js-ui-applet-IconApplet-set_applet_icon_name"/>
+    <keyword type="function" name="set_applet_icon_symbolic_name ()" link="cinnamon-js-ui-applet-IconApplet.html#cinnamon-js-ui-applet-IconApplet-set_applet_icon_symbolic_name"/>
+    <keyword type="function" name="set_applet_icon_path ()" link="cinnamon-js-ui-applet-IconApplet.html#cinnamon-js-ui-applet-IconApplet-set_applet_icon_path"/>
+    <keyword type="function" name="set_applet_icon_symbolic_path ()" link="cinnamon-js-ui-applet-IconApplet.html#cinnamon-js-ui-applet-IconApplet-set_applet_icon_symbolic_path"/>
+    <keyword type="property" name="The “_applet_icon” property" link="cinnamon-js-ui-applet-IconApplet.html#cinnamon-js-ui-applet-IconApplet--_applet_icon"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-applet-TextApplet.html#cinnamon-js-ui-applet-TextApplet-_init"/>
+    <keyword type="function" name="set_applet_label ()" link="cinnamon-js-ui-applet-TextApplet.html#cinnamon-js-ui-applet-TextApplet-set_applet_label"/>
+    <keyword type="property" name="The “_applet_label” property" link="cinnamon-js-ui-applet-TextApplet.html#cinnamon-js-ui-applet-TextApplet--_applet_label"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-_init"/>
+    <keyword type="function" name="set_show_label_in_vertical_panels ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-set_show_label_in_vertical_panels"/>
+    <keyword type="function" name="set_applet_label ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-set_applet_label"/>
+    <keyword type="function" name="set_applet_enabled ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-set_applet_enabled"/>
+    <keyword type="function" name="hide_applet_label ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-hide_applet_label"/>
+    <keyword type="function" name="hideLabel ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-hideLabel"/>
+    <keyword type="function" name="showLabel ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-showLabel"/>
+    <keyword type="function" name="hide_applet_icon ()" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet-hide_applet_icon"/>
+    <keyword type="property" name="The “_applet_label” property" link="cinnamon-js-ui-applet-TextIconApplet.html#cinnamon-js-ui-applet-TextIconApplet--_applet_label"/>
+    <keyword type="function" name="constructor ()" link="cinnamon-js-ui-applet-PopupResizeHandler.html#cinnamon-js-ui-applet-PopupResizeHandler-constructor"/>
+    <keyword type="property" name="The “inhibit_resizing” property" link="cinnamon-js-ui-applet-PopupResizeHandler.html#cinnamon-js-ui-applet-PopupResizeHandler--inhibit_resizing"/>
+    <keyword type="property" name="The “resizingInProgress” property" link="cinnamon-js-ui-applet-PopupResizeHandler.html#cinnamon-js-ui-applet-PopupResizeHandler--resizingInProgress"/>
+    <keyword type="function" name="loadAppletsOnPanel ()" link="cinnamon-js-ui-appletManager.html#cinnamon-js-ui-appletManager-loadAppletsOnPanel"/>
+    <keyword type="function" name="updateAppletsOnPanel ()" link="cinnamon-js-ui-appletManager.html#cinnamon-js-ui-appletManager-updateAppletsOnPanel"/>
+    <keyword type="function" name="unloadAppletsOnPanel ()" link="cinnamon-js-ui-appletManager.html#cinnamon-js-ui-appletManager-unloadAppletsOnPanel"/>
+    <keyword type="function" name="BoxPointer ()" link="cinnamon-js-ui-boxpointer.html#cinnamon-js-ui-boxpointer-BoxPointer"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-_init"/>
+    <keyword type="function" name="setHeader ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-setHeader"/>
+    <keyword type="function" name="setContent ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-setContent"/>
+    <keyword type="function" name="on_desklet_removed ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-on_desklet_removed"/>
+    <keyword type="function" name="on_desklet_reloaded ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-on_desklet_reloaded"/>
+    <keyword type="function" name="destroy ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-destroy"/>
+    <keyword type="function" name="on_desklet_added_to_desktop ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-on_desklet_added_to_desktop"/>
+    <keyword type="function" name="highlight ()" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet-highlight"/>
+    <keyword type="property" name="The “metadata” property" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet--metadata"/>
+    <keyword type="property" name="The “actor” property" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet--actor"/>
+    <keyword type="property" name="The “content” property" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet--content"/>
+    <keyword type="property" name="The “instance_id” property" link="cinnamon-js-ui-desklet-Desklet.html#cinnamon-js-ui-desklet-Desklet--instance_id"/>
+    <keyword type="function" name="init ()" link="cinnamon-js-ui-deskletManager.html#cinnamon-js-ui-deskletManager-init"/>
+    <keyword type="function" name="removeDesklet ()" link="cinnamon-js-ui-deskletManager.html#cinnamon-js-ui-deskletManager-removeDesklet"/>
+    <keyword type="function" name="getDefinitons ()" link="cinnamon-js-ui-deskletManager.html#cinnamon-js-ui-deskletManager-getDefinitons"/>
+    <keyword type="function" name="addDesklet ()" link="cinnamon-js-ui-deskletManager-DeskletContainer.html#cinnamon-js-ui-deskletManager-DeskletContainer-addDesklet"/>
+    <keyword type="function" name="contains ()" link="cinnamon-js-ui-deskletManager-DeskletContainer.html#cinnamon-js-ui-deskletManager-DeskletContainer-contains"/>
+    <keyword type="function" name="makeDraggable ()" link="cinnamon-js-ui-dnd.html#cinnamon-js-ui-dnd-makeDraggable"/>
+    <keyword type="function" name="versionCheck ()" link="cinnamon-js-ui-extension.html#cinnamon-js-ui-extension-versionCheck"/>
+    <keyword type="function" name="versionLeq ()" link="cinnamon-js-ui-extension.html#cinnamon-js-ui-extension-versionLeq"/>
+    <keyword type="function" name="loadExtension ()" link="cinnamon-js-ui-extension.html#cinnamon-js-ui-extension-loadExtension"/>
+    <keyword type="function" name="unloadExtension ()" link="cinnamon-js-ui-extension.html#cinnamon-js-ui-extension-unloadExtension"/>
+    <keyword type="function" name="reloadExtension ()" link="cinnamon-js-ui-extension.html#cinnamon-js-ui-extension-reloadExtension"/>
+    <keyword type="function" name="findExtensionSubdirectory ()" link="cinnamon-js-ui-extension.html#cinnamon-js-ui-extension-findExtensionSubdirectory"/>
+    <keyword type="function" name="updateChrome ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-updateChrome"/>
+    <keyword type="function" name="addChrome ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-addChrome"/>
+    <keyword type="function" name="trackChrome ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-trackChrome"/>
+    <keyword type="function" name="untrackChrome ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-untrackChrome"/>
+    <keyword type="function" name="removeChrome ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-removeChrome"/>
+    <keyword type="function" name="findMonitorForActor ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-findMonitorForActor"/>
+    <keyword type="function" name="findMonitorIndexForActor ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-findMonitorIndexForActor"/>
+    <keyword type="function" name="isTrackingChrome ()" link="cinnamon-js-ui-layout-LayoutManager.html#cinnamon-js-ui-layout-LayoutManager-isTrackingChrome"/>
+    <keyword type="function" name="Lightbox ()" link="cinnamon-js-ui-lightbox.html#cinnamon-js-ui-lightbox-Lightbox"/>
+    <keyword type="function" name="CinnamonMagnifierZoomRegion ()" link="cinnamon-js-ui-magnifierDBus.html#cinnamon-js-ui-magnifierDBus-CinnamonMagnifierZoomRegion"/>
+    <keyword type="function" name="start ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-start"/>
+    <keyword type="function" name="setWorkspaceName ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-setWorkspaceName"/>
+    <keyword type="function" name="getWorkspaceName ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-getWorkspaceName"/>
+    <keyword type="function" name="hasDefaultWorkspaceName ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-hasDefaultWorkspaceName"/>
+    <keyword type="function" name="moveWindowToNewWorkspace ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-moveWindowToNewWorkspace"/>
+    <keyword type="function" name="getThemeStylesheet ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-getThemeStylesheet"/>
+    <keyword type="function" name="setThemeStylesheet ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-setThemeStylesheet"/>
+    <keyword type="function" name="loadTheme ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-loadTheme"/>
+    <keyword type="function" name="notify ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-notify"/>
+    <keyword type="function" name="criticalNotify ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-criticalNotify"/>
+    <keyword type="function" name="warningNotify ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-warningNotify"/>
+    <keyword type="function" name="notifyError ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-notifyError"/>
+    <keyword type="function" name="formatLogArgument ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-formatLogArgument"/>
+    <keyword type="function" name="_log ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-_log"/>
+    <keyword type="function" name="isError ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-isError"/>
+    <keyword type="function" name="_LogTraceFormatted ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-_LogTraceFormatted"/>
+    <keyword type="function" name="_logTrace ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-_logTrace"/>
+    <keyword type="function" name="_logWarning ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-_logWarning"/>
+    <keyword type="function" name="_logError ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-_logError"/>
+    <keyword type="function" name="_logInfo ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-_logInfo"/>
+    <keyword type="function" name="logStackTrace ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-logStackTrace"/>
+    <keyword type="function" name="isWindowActorDisplayedOnWorkspace ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-isWindowActorDisplayedOnWorkspace"/>
+    <keyword type="function" name="getWindowActorsForWorkspace ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-getWindowActorsForWorkspace"/>
+    <keyword type="function" name="pushModal ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-pushModal"/>
+    <keyword type="function" name="popModal ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-popModal"/>
+    <keyword type="function" name="createLookingGlass ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-createLookingGlass"/>
+    <keyword type="function" name="getRunDialog ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-getRunDialog"/>
+    <keyword type="function" name="activateWindow ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-activateWindow"/>
+    <keyword type="function" name="initializeDeferredWork ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-initializeDeferredWork"/>
+    <keyword type="function" name="queueDeferredWork ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-queueDeferredWork"/>
+    <keyword type="function" name="isInteresting ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-isInteresting"/>
+    <keyword type="function" name="getTabList ()" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main-getTabList"/>
+    <keyword type="property" name="The “placesManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--placesManager"/>
+    <keyword type="property" name="The “overview” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--overview"/>
+    <keyword type="property" name="The “expo” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--expo"/>
+    <keyword type="property" name="The “runDialog” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--runDialog"/>
+    <keyword type="property" name="The “lookingGlass” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--lookingGlass"/>
+    <keyword type="property" name="The “wm” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--wm"/>
+    <keyword type="property" name="The “messageTray” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--messageTray"/>
+    <keyword type="property" name="The “notificationDaemon” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--notificationDaemon"/>
+    <keyword type="property" name="The “windowAttentionHandler” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--windowAttentionHandler"/>
+    <keyword type="property" name="The “screenRecorder” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--screenRecorder"/>
+    <keyword type="property" name="The “cinnamonDBusService” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--cinnamonDBusService"/>
+    <keyword type="property" name="The “screenshotService” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--screenshotService"/>
+    <keyword type="property" name="The “modalCount” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--modalCount"/>
+    <keyword type="property" name="The “modalActorFocusStack” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--modalActorFocusStack"/>
+    <keyword type="property" name="The “uiGroup” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--uiGroup"/>
+    <keyword type="property" name="The “magnifier” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--magnifier"/>
+    <keyword type="property" name="The “locatePointer” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--locatePointer"/>
+    <keyword type="property" name="The “xdndHandler” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--xdndHandler"/>
+    <keyword type="property" name="The “statusIconDispatcher” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--statusIconDispatcher"/>
+    <keyword type="property" name="The “virtualKeyboard” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--virtualKeyboard"/>
+    <keyword type="property" name="The “layoutManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--layoutManager"/>
+    <keyword type="property" name="The “monitorLabeler” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--monitorLabeler"/>
+    <keyword type="property" name="The “panelManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--panelManager"/>
+    <keyword type="property" name="The “themeManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--themeManager"/>
+    <keyword type="property" name="The “soundManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--soundManager"/>
+    <keyword type="property" name="The “settingsManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--settingsManager"/>
+    <keyword type="property" name="The “backgroundManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--backgroundManager"/>
+    <keyword type="property" name="The “slideshowManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--slideshowManager"/>
+    <keyword type="property" name="The “keybindingManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--keybindingManager"/>
+    <keyword type="property" name="The “systrayManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--systrayManager"/>
+    <keyword type="property" name="The “gesturesManager” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--gesturesManager"/>
+    <keyword type="property" name="The “osdWindow” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--osdWindow"/>
+    <keyword type="property" name="The “tracker” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--tracker"/>
+    <keyword type="property" name="The “workspace_names” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--workspace_names"/>
+    <keyword type="property" name="The “deskletContainer” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--deskletContainer"/>
+    <keyword type="property" name="The “software_rendering” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--software_rendering"/>
+    <keyword type="property" name="The “animations_enabled” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--animations_enabled"/>
+    <keyword type="property" name="The “popup_rendering_actor” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--popup_rendering_actor"/>
+    <keyword type="property" name="The “xlet_startup_error” property" link="cinnamon-js-ui-main.html#cinnamon-js-ui-main--xlet_startup_error"/>
+    <keyword type="function" name="update ()" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification-update"/>
+    <keyword type="function" name="scrollTo ()" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification-scrollTo"/>
+    <keyword type="function" name="addButton ()" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification-addButton"/>
+    <keyword type="function" name="clearButtons ()" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification-clearButtons"/>
+    <keyword type="property" name="The “source” property" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification--source"/>
+    <keyword type="property" name="The “title” property" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification--title"/>
+    <keyword type="property" name="The “body” property" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification--body"/>
+    <keyword type="property" name="The “params” property" link="cinnamon-js-ui-messageTray-Notification.html#cinnamon-js-ui-messageTray-Notification--params"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog-_init"/>
+    <keyword type="function" name="setButtons ()" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog-setButtons"/>
+    <keyword type="function" name="open ()" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog-open"/>
+    <keyword type="function" name="close ()" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog-close"/>
+    <keyword type="function" name="popModal ()" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog-popModal"/>
+    <keyword type="function" name="pushModal ()" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog-pushModal"/>
+    <keyword type="function" name="_fadeOutDialog ()" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog-_fadeOutDialog"/>
+    <keyword type="property" name="The “state” property" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog--state"/>
+    <keyword type="property" name="The “contentLayout” property" link="cinnamon-js-ui-modalDialog-ModalDialog.html#cinnamon-js-ui-modalDialog-ModalDialog--contentLayout"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-modalDialog-ConfirmDialog.html#cinnamon-js-ui-modalDialog-ConfirmDialog-_init"/>
+    <keyword type="property" name="The “callback” property" link="cinnamon-js-ui-modalDialog-ConfirmDialog.html#cinnamon-js-ui-modalDialog-ConfirmDialog--callback"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-modalDialog-NotifyDialog.html#cinnamon-js-ui-modalDialog-NotifyDialog-_init"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-modalDialog-InfoOSD.html#cinnamon-js-ui-modalDialog-InfoOSD-_init"/>
+    <keyword type="function" name="show ()" link="cinnamon-js-ui-modalDialog-InfoOSD.html#cinnamon-js-ui-modalDialog-InfoOSD-show"/>
+    <keyword type="function" name="hide ()" link="cinnamon-js-ui-modalDialog-InfoOSD.html#cinnamon-js-ui-modalDialog-InfoOSD-hide"/>
+    <keyword type="function" name="destroy ()" link="cinnamon-js-ui-modalDialog-InfoOSD.html#cinnamon-js-ui-modalDialog-InfoOSD-destroy"/>
+    <keyword type="function" name="addText ()" link="cinnamon-js-ui-modalDialog-InfoOSD.html#cinnamon-js-ui-modalDialog-InfoOSD-addText"/>
+    <keyword type="function" name="addActor ()" link="cinnamon-js-ui-modalDialog-InfoOSD.html#cinnamon-js-ui-modalDialog-InfoOSD-addActor"/>
+    <keyword type="property" name="The “actor” property" link="cinnamon-js-ui-modalDialog-InfoOSD.html#cinnamon-js-ui-modalDialog-InfoOSD--actor"/>
+    <keyword type="function" name="checkPanelUpgrade ()" link="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-checkPanelUpgrade"/>
+    <keyword type="function" name="heightsUsedMonitor ()" link="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-heightsUsedMonitor"/>
+    <keyword type="function" name="getPanelLocFromName ()" link="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-getPanelLocFromName"/>
+    <keyword type="function" name="toStandardIconSize ()" link="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-toStandardIconSize"/>
+    <keyword type="function" name="PanelCorner ()" link="cinnamon-js-ui-panel.html#cinnamon-js-ui-panel-PanelCorner"/>
+    <keyword type="function" name="disablePanels ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-disablePanels"/>
+    <keyword type="function" name="enablePanels ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-enablePanels"/>
+    <keyword type="function" name="setPanelsOpacity ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-setPanelsOpacity"/>
+    <keyword type="function" name="lowerActorBelowPanels ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-lowerActorBelowPanels"/>
+    <keyword type="function" name="removePanel ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-removePanel"/>
+    <keyword type="function" name="addPanel ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-addPanel"/>
+    <keyword type="function" name="movePanel ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-movePanel"/>
+    <keyword type="function" name="_destroyDummyPanels ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-_destroyDummyPanels"/>
+    <keyword type="function" name="getPanelsInMonitor ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-getPanelsInMonitor"/>
+    <keyword type="function" name="getPanels ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-getPanels"/>
+    <keyword type="function" name="getPanel ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-getPanel"/>
+    <keyword type="function" name="updatePanelsVisibility ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-updatePanelsVisibility"/>
+    <keyword type="function" name="_loadPanel ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-_loadPanel"/>
+    <keyword type="function" name="_onPanelsEnabledChanged ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-_onPanelsEnabledChanged"/>
+    <keyword type="function" name="addPanelQuery ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-addPanelQuery"/>
+    <keyword type="function" name="movePanelQuery ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-movePanelQuery"/>
+    <keyword type="function" name="_showDummyPanels ()" link="cinnamon-js-ui-panel-PanelManager.html#cinnamon-js-ui-panel-PanelManager-_showDummyPanels"/>
+    <keyword type="function" name="destroy ()" link="cinnamon-js-ui-panel-PanelDummy.html#cinnamon-js-ui-panel-PanelDummy-destroy"/>
+    <keyword type="function" name="updatePosition ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-updatePosition"/>
+    <keyword type="function" name="addContextMenuToPanel ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-addContextMenuToPanel"/>
+    <keyword type="function" name="addPanelStyleClass ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-addPanelStyleClass"/>
+    <keyword type="function" name="destroy ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-destroy"/>
+    <keyword type="function" name="highlight ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-highlight"/>
+    <keyword type="function" name="isHideable ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-isHideable"/>
+    <keyword type="function" name="_getProperty ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_getProperty"/>
+    <keyword type="function" name="_getJSONProperty ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_getJSONProperty"/>
+    <keyword type="function" name="_updatePanelBarriers ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_updatePanelBarriers"/>
+    <keyword type="function" name="_getScaledPanelHeight ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_getScaledPanelHeight"/>
+    <keyword type="function" name="_setClipRegion ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_setClipRegion"/>
+    <keyword type="function" name="_moveResizePanel ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_moveResizePanel"/>
+    <keyword type="function" name="_calcBoxSizes ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_calcBoxSizes"/>
+    <keyword type="function" name="_panelHasOpenMenus ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_panelHasOpenMenus"/>
+    <keyword type="function" name="_updatePanelVisibility ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_updatePanelVisibility"/>
+    <keyword type="function" name="_queueShowHidePanel ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_queueShowHidePanel"/>
+    <keyword type="function" name="disable ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-disable"/>
+    <keyword type="function" name="enable ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-enable"/>
+    <keyword type="function" name="_showPanel ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_showPanel"/>
+    <keyword type="function" name="_hidePanel ()" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel-_hidePanel"/>
+    <keyword type="property" name="The “panelId” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--panelId"/>
+    <keyword type="property" name="The “monitorIndex” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--monitorIndex"/>
+    <keyword type="property" name="The “toppanelHeight” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--toppanelHeight"/>
+    <keyword type="property" name="The “bottompanelHeight” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--bottompanelHeight"/>
+    <keyword type="property" name="The “drawcorner” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--drawcorner"/>
+    <keyword type="property" name="The “monitor” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--monitor"/>
+    <keyword type="property" name="The “panelPosition” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--panelPosition"/>
+    <keyword type="property" name="The “actor” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--actor"/>
+    <keyword type="property" name="The “_leftBox” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--_leftBox"/>
+    <keyword type="property" name="The “_centerBox” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--_centerBox"/>
+    <keyword type="property" name="The “_rightBox” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--_rightBox"/>
+    <keyword type="property" name="The “_hidden” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--_hidden"/>
+    <keyword type="property" name="The “_disabled” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--_disabled"/>
+    <keyword type="property" name="The “_panelEditMode” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--_panelEditMode"/>
+    <keyword type="property" name="The “_context_menu” property" link="cinnamon-js-ui-panel-Panel.html#cinnamon-js-ui-panel-Panel--_context_menu"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-popupMenu-PopupIconMenuItem.html#cinnamon-js-ui-popupMenu-PopupIconMenuItem-_init"/>
+    <keyword type="function" name="setIconSymbolicName ()" link="cinnamon-js-ui-popupMenu-PopupIconMenuItem.html#cinnamon-js-ui-popupMenu-PopupIconMenuItem-setIconSymbolicName"/>
+    <keyword type="function" name="setIconName ()" link="cinnamon-js-ui-popupMenu-PopupIconMenuItem.html#cinnamon-js-ui-popupMenu-PopupIconMenuItem-setIconName"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-_init"/>
+    <keyword type="function" name="addAction ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-addAction"/>
+    <keyword type="function" name="addSettingsAction ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-addSettingsAction"/>
+    <keyword type="function" name="addCommandlineAction ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-addCommandlineAction"/>
+    <keyword type="function" name="isChildMenu ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-isChildMenu"/>
+    <keyword type="function" name="addChildMenu ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-addChildMenu"/>
+    <keyword type="function" name="removeChildMenu ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-removeChildMenu"/>
+    <keyword type="function" name="addMenuItem ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-addMenuItem"/>
+    <keyword type="function" name="getColumnWidths ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-getColumnWidths"/>
+    <keyword type="function" name="setColumnWidths ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-setColumnWidths"/>
+    <keyword type="function" name="removeAll ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-removeAll"/>
+    <keyword type="function" name="toggle ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-toggle"/>
+    <keyword type="function" name="toggle_with_options ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-toggle_with_options"/>
+    <keyword type="function" name="destroy ()" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-destroy"/>
+    <keyword type="property" name="The “sourceActor” property" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase--sourceActor"/>
+    <keyword type="property" name="The “box” property" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase--box"/>
+    <keyword type="property" name="The “isOpen” property" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase--isOpen"/>
+    <keyword type="property" name="The “blockSourceEvents” property" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase--blockSourceEvents"/>
+    <keyword type="property" name="The “passEvents” property" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase--passEvents"/>
+    <keyword type="property" name="The “firstMenuItem” property" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase--firstMenuItem"/>
+    <keyword type="property" name="The “numMenuItems” property" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase--numMenuItems"/>
+    <keyword type="signal" name="The “child-menu-added” signal" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-child-menu-added-signal"/>
+    <keyword type="signal" name="The “child-menu-removed” signal" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-child-menu-removed-signal"/>
+    <keyword type="signal" name="The “activate” signal" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-activate-signal"/>
+    <keyword type="signal" name="The “active-changed” signal" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-active-changed-signal"/>
+    <keyword type="signal" name="The “destroy” signal" link="cinnamon-js-ui-popupMenu-PopupMenuBase.html#cinnamon-js-ui-popupMenu-PopupMenuBase-destroy-signal"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-_init"/>
+    <keyword type="function" name="setArrowSide ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-setArrowSide"/>
+    <keyword type="function" name="setOrientation ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-setOrientation"/>
+    <keyword type="function" name="setCustomStyleClass ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-setCustomStyleClass"/>
+    <keyword type="function" name="setSourceAlignment ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-setSourceAlignment"/>
+    <keyword type="function" name="getPanel ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-getPanel"/>
+    <keyword type="function" name="open ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-open"/>
+    <keyword type="function" name="close ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-close"/>
+    <keyword type="function" name="shiftToPosition ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-shiftToPosition"/>
+    <keyword type="function" name="setMaxHeight ()" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu-setMaxHeight"/>
+    <keyword type="property" name="The “actor” property" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu--actor"/>
+    <keyword type="property" name="The “animating” property" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu--animating"/>
+    <keyword type="property" name="The “slidePosition” property" link="cinnamon-js-ui-popupMenu-PopupMenu.html#cinnamon-js-ui-popupMenu-PopupMenu--slidePosition"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-popupMenu-PopupSubMenu.html#cinnamon-js-ui-popupMenu-PopupSubMenu-_init"/>
+    <keyword type="function" name="open ()" link="cinnamon-js-ui-popupMenu-PopupSubMenu.html#cinnamon-js-ui-popupMenu-PopupSubMenu-open"/>
+    <keyword type="function" name="close ()" link="cinnamon-js-ui-popupMenu-PopupSubMenu.html#cinnamon-js-ui-popupMenu-PopupSubMenu-close"/>
+    <keyword type="property" name="The “actor” property" link="cinnamon-js-ui-popupMenu-PopupSubMenu.html#cinnamon-js-ui-popupMenu-PopupSubMenu--actor"/>
+    <keyword type="function" name="completeCommand ()" link="cinnamon-js-ui-runDialog.html#cinnamon-js-ui-runDialog-completeCommand"/>
+    <keyword type="function" name="SearchProvider ()" link="cinnamon-js-ui-search.html#cinnamon-js-ui-search-SearchProvider"/>
+    <keyword type="enum" name="enum BindingDirection" link="cinnamon-js-ui-settings.html#cinnamon-js-ui-settings-BindingDirection"/>
+    <keyword type="function" name="bindWithObject ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-bindWithObject"/>
+    <keyword type="function" name="bind ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-bind"/>
+    <keyword type="function" name="bindProperty ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-bindProperty"/>
+    <keyword type="function" name="unbindWithObject ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-unbindWithObject"/>
+    <keyword type="function" name="unbind ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-unbind"/>
+    <keyword type="function" name="unbindProperty ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-unbindProperty"/>
+    <keyword type="function" name="unbindAll ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-unbindAll"/>
+    <keyword type="function" name="getValue ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-getValue"/>
+    <keyword type="function" name="setValue ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-setValue"/>
+    <keyword type="function" name="getDefaultValue ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-getDefaultValue"/>
+    <keyword type="function" name="getOptions ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-getOptions"/>
+    <keyword type="function" name="setOptions ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-setOptions"/>
+    <keyword type="function" name="finalize ()" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-finalize"/>
+    <keyword type="signal" name="The “changed” signal" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-changed-signal"/>
+    <keyword type="signal" name="The “settings-changed” signal" link="cinnamon-js-ui-settings-XletSettingsBase.html#cinnamon-js-ui-settings-XletSettingsBase-settings-changed-signal"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-settings-AppletSettings.html#cinnamon-js-ui-settings-AppletSettings-_init"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-settings-DeskletSettings.html#cinnamon-js-ui-settings-DeskletSettings-_init"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-settings-ExtensionSettings.html#cinnamon-js-ui-settings-ExtensionSettings-_init"/>
+    <keyword type="function" name="registerTrayIconReplacement ()" link="cinnamon-js-ui-systray-SystrayManager.html#cinnamon-js-ui-systray-SystrayManager-registerTrayIconReplacement"/>
+    <keyword type="function" name="unregisterTrayIconReplacement ()" link="cinnamon-js-ui-systray-SystrayManager.html#cinnamon-js-ui-systray-SystrayManager-unregisterTrayIconReplacement"/>
+    <keyword type="function" name="getRoles ()" link="cinnamon-js-ui-systray-SystrayManager.html#cinnamon-js-ui-systray-SystrayManager-getRoles"/>
+    <keyword type="function" name="destroy ()" link="cinnamon-js-ui-tooltips-TooltipBase.html#cinnamon-js-ui-tooltips-TooltipBase-destroy"/>
+    <keyword type="property" name="The “item” property" link="cinnamon-js-ui-tooltips-TooltipBase.html#cinnamon-js-ui-tooltips-TooltipBase--item"/>
+    <keyword type="property" name="The “visible” property" link="cinnamon-js-ui-tooltips-TooltipBase.html#cinnamon-js-ui-tooltips-TooltipBase--visible"/>
+    <keyword type="property" name="The “preventShow” property" link="cinnamon-js-ui-tooltips-TooltipBase.html#cinnamon-js-ui-tooltips-TooltipBase--preventShow"/>
+    <keyword type="property" name="The “mousePosition” property" link="cinnamon-js-ui-tooltips-TooltipBase.html#cinnamon-js-ui-tooltips-TooltipBase--mousePosition"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-tooltips-Tooltip.html#cinnamon-js-ui-tooltips-Tooltip-_init"/>
+    <keyword type="function" name="set_text ()" link="cinnamon-js-ui-tooltips-Tooltip.html#cinnamon-js-ui-tooltips-Tooltip-set_text"/>
+    <keyword type="function" name="set_markup ()" link="cinnamon-js-ui-tooltips-Tooltip.html#cinnamon-js-ui-tooltips-Tooltip-set_markup"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-ui-tooltips-PanelItemTooltip.html#cinnamon-js-ui-tooltips-PanelItemTooltip-_init"/>
+    <keyword type="property" name="The “_panelItem” property" link="cinnamon-js-ui-tooltips-PanelItemTooltip.html#cinnamon-js-ui-tooltips-PanelItemTooltip--_panelItem"/>
+    <keyword type="property" name="The “orientation” property" link="cinnamon-js-ui-tooltips-PanelItemTooltip.html#cinnamon-js-ui-tooltips-PanelItemTooltip--orientation"/>
+    <keyword type="function" name="init ()" link="cinnamon-js-ui-tweener.html#cinnamon-js-ui-tweener-init"/>
+    <keyword type="function" name="addTween ()" link="cinnamon-js-ui-tweener.html#cinnamon-js-ui-tweener-addTween"/>
+    <keyword type="function" name="getTweenCount ()" link="cinnamon-js-ui-tweener.html#cinnamon-js-ui-tweener-getTweenCount"/>
+    <keyword type="function" name="isTweening ()" link="cinnamon-js-ui-tweener.html#cinnamon-js-ui-tweener-isTweening"/>
+    <keyword type="function" name="removeTween ()" link="cinnamon-js-ui-tweener.html#cinnamon-js-ui-tweener-removeTween"/>
+    <keyword type="function" name="pauseTweens ()" link="cinnamon-js-ui-tweener.html#cinnamon-js-ui-tweener-pauseTweens"/>
+    <keyword type="function" name="resumeTweens ()" link="cinnamon-js-ui-tweener.html#cinnamon-js-ui-tweener-resumeTweens"/>
+    <keyword type="function" name="DOCINFO ()" link="cinnamon-js-misc-docInfo.html#cinnamon-js-misc-docInfo-DOCINFO"/>
+    <keyword type="function" name="_init ()" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager-_init"/>
+    <keyword type="function" name="connect ()" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager-connect"/>
+    <keyword type="function" name="isConnected ()" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager-isConnected"/>
+    <keyword type="function" name="getSignals ()" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager-getSignals"/>
+    <keyword type="function" name="disconnect ()" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager-disconnect"/>
+    <keyword type="function" name="disconnectAllSignals ()" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager-disconnectAllSignals"/>
+    <keyword type="property" name="The “_object” property" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager--_object"/>
+    <keyword type="property" name="The “_storage” property" link="cinnamon-js-misc-signalManager-SignalManager.html#cinnamon-js-misc-signalManager-SignalManager--_storage"/>
+    <keyword type="function" name="escapeRegExp ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-escapeRegExp"/>
+    <keyword type="function" name="findUrls ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-findUrls"/>
+    <keyword type="function" name="spawn ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-spawn"/>
+    <keyword type="function" name="spawn_async ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-spawn_async"/>
+    <keyword type="function" name="spawnCommandLine ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-spawnCommandLine"/>
+    <keyword type="function" name="trySpawn ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-trySpawn"/>
+    <keyword type="function" name="trySpawnCommandLine ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-trySpawnCommandLine"/>
+    <keyword type="function" name="spawnCommandLineAsync ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-spawnCommandLineAsync"/>
+    <keyword type="function" name="spawnCommandLineAsyncIO ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-spawnCommandLineAsyncIO"/>
+    <keyword type="function" name="killall ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-killall"/>
+    <keyword type="function" name="queryCollection ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-queryCollection"/>
+    <keyword type="function" name="tryFn ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-tryFn"/>
+    <keyword type="function" name="setTimeout ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-setTimeout"/>
+    <keyword type="function" name="clearTimeout ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-clearTimeout"/>
+    <keyword type="function" name="setInterval ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-setInterval"/>
+    <keyword type="function" name="clearInterval ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-clearInterval"/>
+    <keyword type="function" name="throttle ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-throttle"/>
+    <keyword type="function" name="unref ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-unref"/>
+    <keyword type="function" name="getGObjectPropertyValues ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-getGObjectPropertyValues"/>
+    <keyword type="function" name="getDesktopActionIcon ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-getDesktopActionIcon"/>
+    <keyword type="function" name="splitByGlyph ()" link="cinnamon-js-misc-util.html#cinnamon-js-misc-util-splitByGlyph"/>
+    <keyword type="constant" name="IN" link="cinnamon-js-ui-settings.html#IN:CAPS"/>
+    <keyword type="constant" name="OUT" link="cinnamon-js-ui-settings.html#OUT:CAPS"/>
+    <keyword type="constant" name="BIDIRECTIONAL" link="cinnamon-js-ui-settings.html#BIDIRECTIONAL:CAPS"/>
+  </functions>
+</book>

@@ -1,0 +1,516 @@
+.sensors-monospace {
+    font-family: monospace;
+}
+
+.sensors-label {
+    background: transparent;
+    margin: 1px;
+    padding: 2px;
+    border: 2px;
+    border-radius: 10px;
+    border-color: rgba(127,127,127,0.5);
+    text-align: center;
+}
+
+.sensors-high {
+    background: DarkOrange;
+    margin: 1px;
+    padding: 2px;
+    border: 2px;
+    border-radius: 10px;
+    border-color: rgba(255,141,0,0.5);
+    text-align: center;
+}
+
+.sensors-critical {
+    background: FireBrick;
+    margin: 1px;
+    padding: 2px;
+    border: 2px;
+    border-radius: 10px;
+    border-color: rgba(194,34,34,0.5);
+    text-align: center;
+}
+
+.sensors-label-noborder {
+    background: transparent;
+    margin: 1px;
+    padding: 2px;
+    border: 0;
+    text-align: center;
+}
+
+.sensors-high-noborder {
+    background: DarkOrange;
+    margin: 1px;
+    padding: 2px;
+    border: 0;
+    text-align: center;
+}
+
+.sensors-critical-noborder {
+    background: FireBrick;
+    margin: 1px;
+    padding: 2px;
+    border: 0;
+    text-align: center;
+}
+
+.sensors-size60 {
+    font-size: 60%;
+}
+
+.sensors-size61 {
+    font-size: 61%;
+}
+
+.sensors-size62 {
+    font-size: 62%;
+}
+
+.sensors-size63 {
+    font-size: 63%;
+}
+
+.sensors-size64 {
+    font-size: 64%;
+}
+
+.sensors-size65 {
+    font-size: 65%;
+}
+
+.sensors-size66 {
+    font-size: 66%;
+}
+
+.sensors-size67 {
+    font-size: 67%;
+}
+
+.sensors-size68 {
+    font-size: 68%;
+}
+
+.sensors-size69 {
+    font-size: 69%;
+}
+
+.sensors-size70 {
+    font-size: 70%;
+}
+
+.sensors-size71 {
+    font-size: 71%;
+}
+
+.sensors-size72 {
+    font-size: 72%;
+}
+
+.sensors-size73 {
+    font-size: 73%;
+}
+
+.sensors-size74 {
+    font-size: 74%;
+}
+
+.sensors-size75 {
+    font-size: 75%;
+}
+
+.sensors-size76 {
+    font-size: 76%;
+}
+
+.sensors-size77 {
+    font-size: 77%;
+}
+
+.sensors-size78 {
+    font-size: 78%;
+}
+
+.sensors-size79 {
+    font-size: 79%;
+}
+
+.sensors-size80 {
+    font-size: 80%;
+}
+
+.sensors-size81 {
+    font-size: 81%;
+}
+
+.sensors-size82 {
+    font-size: 82%;
+}
+
+.sensors-size83 {
+    font-size: 83%;
+}
+
+.sensors-size84 {
+    font-size: 84%;
+}
+
+.sensors-size85 {
+    font-size: 85%;
+}
+
+.sensors-size86 {
+    font-size: 86%;
+}
+
+.sensors-size87 {
+    font-size: 87%;
+}
+
+.sensors-size88 {
+    font-size: 88%;
+}
+
+.sensors-size89 {
+    font-size: 89%;
+}
+
+.sensors-size90 {
+    font-size: 90%;
+}
+
+.sensors-size91 {
+    font-size: 91%;
+}
+
+.sensors-size92 {
+    font-size: 92%;
+}
+
+.sensors-size93 {
+    font-size: 93%;
+}
+
+.sensors-size94 {
+    font-size: 94%;
+}
+
+.sensors-size95 {
+    font-size: 95%;
+}
+
+.sensors-size96 {
+    font-size: 96%;
+}
+
+.sensors-size97 {
+    font-size: 97%;
+}
+
+.sensors-size98 {
+    font-size: 98%;
+}
+
+.sensors-size99 {
+    font-size: 99%;
+}
+
+.sensors-size100 {
+    font-size: 100%;
+}
+
+.sensors-size101 {
+    font-size: 101%;
+}
+
+.sensors-size102 {
+    font-size: 102%;
+}
+
+.sensors-size103 {
+    font-size: 103%;
+}
+
+.sensors-size104 {
+    font-size: 104%;
+}
+
+.sensors-size105 {
+    font-size: 105%;
+}
+
+.sensors-size106 {
+    font-size: 106%;
+}
+
+.sensors-size107 {
+    font-size: 107%;
+}
+
+.sensors-size108 {
+    font-size: 108%;
+}
+
+.sensors-size109 {
+    font-size: 109%;
+}
+
+.sensors-size110 {
+    font-size: 110%;
+}
+
+.sensors-size111 {
+    font-size: 111%;
+}
+
+.sensors-size112 {
+    font-size: 112%;
+}
+
+.sensors-size113 {
+    font-size: 113%;
+}
+
+.sensors-size114 {
+    font-size: 114%;
+}
+
+.sensors-size115 {
+    font-size: 115%;
+}
+
+.sensors-size116 {
+    font-size: 116%;
+}
+
+.sensors-size117 {
+    font-size: 117%;
+}
+
+.sensors-size118 {
+    font-size: 118%;
+}
+
+.sensors-size119 {
+    font-size: 119%;
+}
+
+.sensors-size120 {
+    font-size: 120%;
+}
+.sensors-size121 {
+    font-size: 121%;
+}
+
+.sensors-size122 {
+    font-size: 122%;
+}
+
+.sensors-size123 {
+    font-size: 123%;
+}
+
+.sensors-size124 {
+    font-size: 124%;
+}
+
+.sensors-size125 {
+    font-size: 125%;
+}
+
+.sensors-size126 {
+    font-size: 126%;
+}
+
+.sensors-size127 {
+    font-size: 127%;
+}
+
+.sensors-size128 {
+    font-size: 128%;
+}
+
+.sensors-size129 {
+    font-size: 129%;
+}
+
+.sensors-size130 {
+    font-size: 130%;
+}
+.sensors-size131 {
+    font-size: 131%;
+}
+
+.sensors-size132 {
+    font-size: 132%;
+}
+
+.sensors-size133 {
+    font-size: 133%;
+}
+
+.sensors-size134 {
+    font-size: 134%;
+}
+
+.sensors-size135 {
+    font-size: 135%;
+}
+
+.sensors-size136 {
+    font-size: 136%;
+}
+
+.sensors-size137 {
+    font-size: 137%;
+}
+
+.sensors-size138 {
+    font-size: 138%;
+}
+
+.sensors-size139 {
+    font-size: 139%;
+}
+
+.sensors-size140 {
+    font-size: 140%;
+}
+.sensors-size141 {
+    font-size: 141%;
+}
+
+.sensors-size142 {
+    font-size: 142%;
+}
+
+.sensors-size143 {
+    font-size: 143%;
+}
+
+.sensors-size144 {
+    font-size: 144%;
+}
+
+.sensors-size145 {
+    font-size: 145%;
+}
+
+.sensors-size146 {
+    font-size: 146%;
+}
+
+.sensors-size147 {
+    font-size: 147%;
+}
+
+.sensors-size148 {
+    font-size: 148%;
+}
+
+.sensors-size149 {
+    font-size: 149%;
+}
+.sensors-size150 {
+    font-size: 150%;
+}
+.sensors-size151 {
+    font-size: 151%;
+}
+
+.sensors-size152 {
+    font-size: 152%;
+}
+
+.sensors-size153 {
+    font-size: 153%;
+}
+
+.sensors-size154 {
+    font-size: 154%;
+}
+
+.sensors-size155 {
+    font-size: 155%;
+}
+
+.sensors-size156 {
+    font-size: 156%;
+}
+
+.sensors-size157 {
+    font-size: 157%;
+}
+
+.sensors-size158 {
+    font-size: 158%;
+}
+
+.sensors-size159 {
+    font-size: 159%;
+}
+
+.sensors-size160 {
+    font-size: 160%;
+}
+
+.tcolorwhite {
+    color: white;
+}
+
+.tcolorblack {
+    color: black;
+}
+
+.tcolorgrey {
+    color: grey;
+}
+
+.tcolorlightgrey {
+    color: "#D3D3D3";
+}
+
+.tcolordefault {
+    color: "#CFD8DC";
+}
+
+.vertalign-baseline {
+    vertical-align: baseline;
+}
+
+.vertalign-sub {
+    vertical-align: sub;
+}
+
+.vertalign-super {
+    vertical-align: super;
+}
+
+.vertalign-text-top {
+    vertical-align: text-top;
+}
+
+.vertalign-text-bottom {
+    vertical-align: text-bottom;
+}
+
+.vertalign-middle {
+    vertical-align: middle;
+}
+
+.vertalign-top {
+    vertical-align: top;
+}
+
+.vertalign-bottom {
+    vertical-align: bottom;
+}
+
+.vertalign-unset {
+    vertical-align: unset;
+}
+
+.vertalign-inherit {
+    vertical-align: inherit;
+}

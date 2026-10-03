@@ -1,0 +1,32 @@
+{
+    "show-toast-notifications": {
+        "type": "switch",
+        "default": false,
+        "description" : "Show toast notifications"
+    },
+    "show-osd-notifications": {
+        "type": "switch",
+        "default": false,
+        "description" : "Show OSD notifications"
+    },
+    "show-silent-notifications": {
+        "type" : "switch",
+        "default" : false,
+        "description" : "Silence system notification sound"
+    },
+    "show-caps-lock-indicator": {
+        "type": "switch",
+        "default": false,
+        "description" : "Show caps lock indicator"
+    },
+    "show-num-lock-indicator": {
+        "type": "switch",
+        "default": false,
+        "description" : "Show num lock indicator"
+    },
+    "show-scr-lock-indicator": {
+        "type": "switch",
+        "default": false,
+        "description" : "Show scr lock indicator"
+    }
+}

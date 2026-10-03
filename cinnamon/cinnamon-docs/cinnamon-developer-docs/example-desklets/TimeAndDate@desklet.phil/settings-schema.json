@@ -1,0 +1,27 @@
+{
+  "timezone": {
+    "type": "string",
+    "description": "Timezone identifier (e.g., America/New_York, Europe/London). Use 'local' for system time",
+    "default": "local"
+  },
+  "timeFormat": {
+    "type": "string",
+    "description": "Time format (strftime format string)",
+    "default": "%H:%M"
+  },
+  "dateFormat": {
+    "type": "string",
+    "description": "Date format (strftime format string)",
+    "default": "%A, %e %B"
+  },
+  "timeSize": {
+    "type": "string",
+    "description": "Font size for time display (e.g., '40pt')",
+    "default": "40pt"
+  },
+  "dateSize": {
+    "type": "string",
+    "description": "Font size for date display (e.g., '15pt')",
+    "default": "15pt"
+  }
+}

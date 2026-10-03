@@ -1,0 +1,14 @@
+{
+    "description": "A fork desklet that displays the time, date, and timezone",
+    "prevent-decorations": false,
+    "uuid": "TimeAndDate@desklet.zim",
+    "name": "Time Zimbabwe",
+    "timeFormat": "%H:%M",
+    "timeSize": "40pt",
+    "dateFormat": "%A,%e %B",
+    "dateSize": "15pt",
+    "timezone": "Africa/Harare",
+    "timezoneSize": "12pt",
+    "author": "none",
+    "last-edited": 1758254790
+}

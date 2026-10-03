@@ -1,0 +1,5 @@
+{
+    "description": "Shows whether caps lock/num lock/scr lock is on, and displays a notification when these change.",
+    "uuid": "betterlock",
+    "name": "Lock keys indicator with notifications"
+}

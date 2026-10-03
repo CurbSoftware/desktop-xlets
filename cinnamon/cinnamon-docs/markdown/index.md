@@ -1,0 +1,246 @@
+<div class="book">
+
+<div class="titlepage">
+
+<div>
+
+<div>
+
+| Cinnamon Javascript Reference Manual |
+|--------------------------------------|
+
+</div>
+
+<div>
+
+This document is for Cinnamon 6.4.8 .
+
+</div>
+
+</div>
+
+------------------------------------------------------------------------
+
+</div>
+
+<div class="toc">
+
+<span class="part">[imports.ui.](pt01.md) </span>
+
+<span class="chapter">[imports.ui.applet](cinnamon-js-ui-applet-section.md)</span>
+
+<span class="refentrytitle">[Applet.MenuItem](cinnamon-js-ui-applet-MenuItem.md)</span><span class="refpurpose">
+— Deprecated. Use `PopupMenu.PopupIconMenuItem` instead.</span>
+
+<span class="refentrytitle">[Applet.AppletContextMenu](cinnamon-js-ui-applet-AppletContextMenu.md)</span><span class="refpurpose">
+— Applet right-click menu</span>
+
+<span class="refentrytitle">[Applet.AppletPopupMenu](cinnamon-js-ui-applet-AppletPopupMenu.md)</span><span class="refpurpose">
+— Applet left-click menu</span>
+
+<span class="refentrytitle">[Applet.Applet](cinnamon-js-ui-applet-Applet.md)</span><span class="refpurpose">
+— Base applet class</span>
+
+<span class="refentrytitle">[Applet.IconApplet](cinnamon-js-ui-applet-IconApplet.md)</span><span class="refpurpose">
+— Applet with icon</span>
+
+<span class="refentrytitle">[Applet.TextApplet](cinnamon-js-ui-applet-TextApplet.md)</span><span class="refpurpose">
+— Applet with label</span>
+
+<span class="refentrytitle">[Applet.TextIconApplet](cinnamon-js-ui-applet-TextIconApplet.md)</span><span class="refpurpose">
+— Applet with icon and label</span>
+
+<span class="refentrytitle">[Applet.PopupResizeHandler](cinnamon-js-ui-applet-PopupResizeHandler.md)</span><span class="refpurpose">
+— Class that allows an applet to be resized using the mouse.</span>
+
+<span class="chapter">[imports.ui.appletManager](cinnamon-js-ui-appletManager-section.md)</span>
+
+<span class="refentrytitle">[AppletManager](cinnamon-js-ui-appletManager.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.boxpointer](cinnamon-js-ui-boxpointer-section.md)</span>
+
+<span class="refentrytitle">[Boxpointer](cinnamon-js-ui-boxpointer.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.dbusMenu](cinnamon-js-ui-dbusMenu-section.md)</span>
+
+<span class="refentrytitle">[DbusMenu.PropertyStore](cinnamon-js-ui-dbusMenu-PropertyStore.md)</span><span class="refpurpose">
+— A Class to saves menu property values and handles type checking and
+defaults.</span>
+
+<span class="refentrytitle">[DbusMenu.DbusMenuItem](cinnamon-js-ui-dbusMenu-DbusMenuItem.md)</span><span class="refpurpose">
+— Represents a single Dbus menu item.</span>
+
+<span class="refentrytitle">[DbusMenu.DBusClient](cinnamon-js-ui-dbusMenu-DBusClient.md)</span><span class="refpurpose">
+— The client does the heavy lifting of actually reading layouts and
+distributing events.</span>
+
+<span class="chapter">[imports.ui.desklet](cinnamon-js-ui-desklet-section.md)</span>
+
+<span class="refentrytitle">[Desklet.Desklet](cinnamon-js-ui-desklet-Desklet.md)</span><span class="refpurpose">
+— Base desklet class to be inherited</span>
+
+<span class="chapter">[imports.ui.deskletManager](cinnamon-js-ui-deskletManager-section.md)</span>
+
+<span class="refentrytitle">[DeskletManager](cinnamon-js-ui-deskletManager.md)</span><span class="refpurpose"></span>
+
+<span class="refentrytitle">[DeskletManager.DeskletContainer](cinnamon-js-ui-deskletManager-DeskletContainer.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.dnd](cinnamon-js-ui-dnd-section.md)</span>
+
+<span class="refentrytitle">[Dnd](cinnamon-js-ui-dnd.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.extension](cinnamon-js-ui-extension-section.md)</span>
+
+<span class="refentrytitle">[Extension](cinnamon-js-ui-extension.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.layout](cinnamon-js-ui-layout-section.md)</span>
+
+<span class="refentrytitle">[Layout.LayoutManager](cinnamon-js-ui-layout-LayoutManager.md)</span><span class="refpurpose">
+— Manager of Cinnamon Chrome</span>
+
+<span class="chapter">[imports.ui.lightbox](cinnamon-js-ui-lightbox-section.md)</span>
+
+<span class="refentrytitle">[Lightbox](cinnamon-js-ui-lightbox.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.magnifierDBus](cinnamon-js-ui-magnifierDBus-section.md)</span>
+
+<span class="refentrytitle">[MagnifierDBus](cinnamon-js-ui-magnifierDBus.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.main](cinnamon-js-ui-main-section.md)</span>
+
+<span class="refentrytitle">[Main](cinnamon-js-ui-main.md)</span><span class="refpurpose">
+— This is the heart of Cinnamon, the mother of everything.</span>
+
+<span class="chapter">[imports.ui.messageTray](cinnamon-js-ui-messageTray-section.md)</span>
+
+<span class="refentrytitle">[MessageTray.Notification](cinnamon-js-ui-messageTray-Notification.md)</span><span class="refpurpose">
+— A shell notification.</span>
+
+<span class="chapter">[imports.ui.modalDialog](cinnamon-js-ui-modalDialog-section.md)</span>
+
+<span class="refentrytitle">[ModalDialog.ModalDialog](cinnamon-js-ui-modalDialog-ModalDialog.md)</span><span class="refpurpose">
+— A generic object that displays a modal dialog</span>
+
+<span class="refentrytitle">[ModalDialog.ConfirmDialog](cinnamon-js-ui-modalDialog-ConfirmDialog.md)</span><span class="refpurpose">
+— A simple dialog with a "Yes" and "No" button.</span>
+
+<span class="refentrytitle">[ModalDialog.NotifyDialog](cinnamon-js-ui-modalDialog-NotifyDialog.md)</span><span class="refpurpose">
+— A simple dialog that presents a message with an "OK" button.</span>
+
+<span class="refentrytitle">[ModalDialog.InfoOSD](cinnamon-js-ui-modalDialog-InfoOSD.md)</span><span class="refpurpose">
+— An OSD that displays information to users</span>
+
+<span class="chapter">[imports.ui.panel](cinnamon-js-ui-panel-section.md)</span>
+
+<span class="refentrytitle">[Panel](cinnamon-js-ui-panel.md)</span><span class="refpurpose">
+— The file responsible for managing panels</span>
+
+<span class="refentrytitle">[Panel.PanelManager](cinnamon-js-ui-panel-PanelManager.md)</span><span class="refpurpose">
+— Manager of Cinnamon panels</span>
+
+<span class="refentrytitle">[Panel.PanelDummy](cinnamon-js-ui-panel-PanelDummy.md)</span><span class="refpurpose">
+— Dummy panels for users to select new position of panel</span>
+
+<span class="refentrytitle">[Panel.Panel](cinnamon-js-ui-panel-Panel.md)</span><span class="refpurpose">
+— A panel object on the monitor</span>
+
+<span class="chapter">[imports.ui.popupMenu](cinnamon-js-ui-popupMenu-section.md)</span>
+
+<span class="refentrytitle">[PopupMenu.PopupIconMenuItem](cinnamon-js-ui-popupMenu-PopupIconMenuItem.md)</span><span class="refpurpose">
+— A menu item with an icon and a text.</span>
+
+<span class="refentrytitle">[PopupMenu.PopupIndicatorMenuItem](cinnamon-js-ui-popupMenu-PopupIndicatorMenuItem.md)</span><span class="refpurpose">
+— A menu item with text, ornaments and accel.</span>
+
+<span class="refentrytitle">[PopupMenu.PopupMenuAbstractItem](cinnamon-js-ui-popupMenu-PopupMenuAbstractItem.md)</span><span class="refpurpose">
+— A class to represent any abstract menu item.</span>
+
+<span class="refentrytitle">[PopupMenu.PopupMenuBase](cinnamon-js-ui-popupMenu-PopupMenuBase.md)</span><span class="refpurpose">
+— The base class of all popup menus</span>
+
+<span class="refentrytitle">[PopupMenu.PopupMenu](cinnamon-js-ui-popupMenu-PopupMenu.md)</span><span class="refpurpose">
+— An actual popup menu</span>
+
+<span class="refentrytitle">[PopupMenu.PopupSubMenu](cinnamon-js-ui-popupMenu-PopupSubMenu.md)</span><span class="refpurpose">
+— A submenu that can show and hide</span>
+
+<span class="refentrytitle">[PopupMenu.PopupMenuSection](cinnamon-js-ui-popupMenu-PopupMenuSection.md)</span><span class="refpurpose">
+— A section of a `PopupMenu` that is transparent to user</span>
+
+<span class="refentrytitle">[PopupMenu.PopupMenuFactory](cinnamon-js-ui-popupMenu-PopupMenuFactory.md)</span><span class="refpurpose">
+— A class to build a cinnamon menu using some abstract menu
+items.</span>
+
+<span class="chapter">[imports.ui.runDialog](cinnamon-js-ui-runDialog-section.md)</span>
+
+<span class="refentrytitle">[RunDialog](cinnamon-js-ui-runDialog.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.search](cinnamon-js-ui-search-section.md)</span>
+
+<span class="refentrytitle">[Search](cinnamon-js-ui-search.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.settings](cinnamon-js-ui-settings-section.md)</span>
+
+<span class="refentrytitle">[Settings](cinnamon-js-ui-settings.md)</span><span class="refpurpose">
+— File providing settings objects for xlets.</span>
+
+<span class="refentrytitle">[Settings.XletSettingsBase](cinnamon-js-ui-settings-XletSettingsBase.md)</span><span class="refpurpose">
+— Object for handling xlet settings updates</span>
+
+<span class="refentrytitle">[Settings.AppletSettings](cinnamon-js-ui-settings-AppletSettings.md)</span><span class="refpurpose">
+— Settings object for applets.</span>
+
+<span class="refentrytitle">[Settings.DeskletSettings](cinnamon-js-ui-settings-DeskletSettings.md)</span><span class="refpurpose">
+— Settings object for desklets.</span>
+
+<span class="refentrytitle">[Settings.ExtensionSettings](cinnamon-js-ui-settings-ExtensionSettings.md)</span><span class="refpurpose">
+— Settings object for extensions.</span>
+
+<span class="chapter">[imports.ui.systray](cinnamon-js-ui-systray-section.md)</span>
+
+<span class="refentrytitle">[Systray.SystrayManager](cinnamon-js-ui-systray-SystrayManager.md)</span><span class="refpurpose">
+— Utility class for registering tray icon replacements</span>
+
+<span class="chapter">[imports.ui.tooltips](cinnamon-js-ui-tooltips-section.md)</span>
+
+<span class="refentrytitle">[Tooltips.TooltipBase](cinnamon-js-ui-tooltips-TooltipBase.md)</span><span class="refpurpose"></span>
+
+<span class="refentrytitle">[Tooltips.Tooltip](cinnamon-js-ui-tooltips-Tooltip.md)</span><span class="refpurpose"></span>
+
+<span class="refentrytitle">[Tooltips.PanelItemTooltip](cinnamon-js-ui-tooltips-PanelItemTooltip.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.ui.tweener](cinnamon-js-ui-tweener-section.md)</span>
+
+<span class="refentrytitle">[Tweener](cinnamon-js-ui-tweener.md)</span><span class="refpurpose">
+— File providing tweening functions</span>
+
+<span class="refentrytitle">[Tweener.ClutterFrameTicker](cinnamon-js-ui-tweener-ClutterFrameTicker.md)</span><span class="refpurpose">
+— Object used internally for clutter animations</span>
+
+<span class="part">[imports.misc.](pt02.md) </span>
+
+<span class="chapter">[imports.misc.docInfo](cinnamon-js-misc-docInfo-section.md)</span>
+
+<span class="refentrytitle">[DocInfo](cinnamon-js-misc-docInfo.md)</span><span class="refpurpose"></span>
+
+<span class="chapter">[imports.misc.signalManager](cinnamon-js-misc-signalManager-section.md)</span>
+
+<span class="refentrytitle">[SignalManager.SignalManager](cinnamon-js-misc-signalManager-SignalManager.md)</span><span class="refpurpose">
+— A convenience object for managing signals</span>
+
+<span class="chapter">[imports.misc.util](cinnamon-js-misc-util-section.md)</span>
+
+<span class="refentrytitle">[Util](cinnamon-js-misc-util.md)</span><span class="refpurpose">
+— File providing certain utility functions</span>
+
+</div>
+
+</div>
+
+<div class="footer">
+
+------------------------------------------------------------------------
+
+Generated by GTK-Doc V1.34.0
+
+</div>

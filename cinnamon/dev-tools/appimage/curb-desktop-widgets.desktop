@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CurbSoftware Desktop Widgets
+Comment=Manage CurbSoftware widgets for Cinnamon, GNOME and KDE Plasma
+Exec=curb-desktop-widgets
+Icon=curb-desktop-widgets
+Terminal=false
+Categories=Utility;DesktopSettings;

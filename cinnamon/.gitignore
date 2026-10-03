@@ -1,0 +1,40 @@
+# Compiled files
+*.mo
+*.pyc
+__pycache__/
+*/gschemas.compiled
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# IDE and editors
+/.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# AI assistant configurations
+.claude/
+.roo/
+
+# Archives
+*.7z
+*.zip
+*.tar.gz
+/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Project-specific
+internet-indicator@sangorys/files/internet-indicator@sangorys/icons/no-internet2.jpg
+internet-indicator@sangorys/files/internet-indicator@sangorys/icons/wifi-icon-off.png
+
+# Build tool cache (appimagetool download)
+/dev-tools/cache/

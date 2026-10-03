@@ -1,0 +1,16 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "com.curbsoftware.workspacenames",
+    "Name": "Workspace Names",
+    "Description": "One button per virtual desktop; click to switch",
+    "Version": "1.0.0",
+    "Category": "Windows and Tasks",
+    "License": "GPL-2.0+",
+    "Authors": [
+      {
+        "Name": "CurbSoftware"
+      }
+    ]
+  }
+}
