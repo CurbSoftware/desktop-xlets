@@ -1,0 +1,24 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "20999aa04405b2f2aa2de73d45dd5cf57eee5bbe7a5991fff934392b31c60b68",
+    "contents/config/main.xml": "de555f927c384a3aa98b8d444c6c0678dbebd564cefcf71ed5e5954b8fadef80",
+    "contents/ui/lib/layouts.js": "e9e97f0516715cbbce0221020dc32be3111231d1e4cc0c5e71b90a19721d42e4",
+    "contents/ui/main.qml": "5be5c8b9463a914b677872a117028fa65fc94e8ad5b809cf944b662e25ad0a0e",
+    "metadata.json": "fc1045c59d5904e7775495a2dd49393ab345c1c7e94a77debac0e8ccb80d6f96"
+  },
+  "port": {
+    "alias": "panel-profiles",
+    "desktop": "kde",
+    "kind": "plasmoid",
+    "package_id": "com.curbsoftware.panelprofiles",
+    "repo": "kde-panel-profiles",
+    "uuid": null
+  },
+  "schema": 1,
+  "source_directory": "kde-panel-profiles",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}
