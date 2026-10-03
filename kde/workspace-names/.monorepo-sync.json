@@ -1,0 +1,24 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "692890f8808dfcbba73abf37ea262b8725bb38bb9807663f03ecc3a716a9bc07",
+    "contents/config/main.xml": "5182f0698c95ba6fddc45e6ce3f3065f3301e18975dd8b22c76649d71a516aca",
+    "contents/ui/config/config.qml": "3dc73d29c8ec78674e9874acdb66b0589733314b73470ffe545f944a4f304492",
+    "contents/ui/main.qml": "0068fb85b86e3f98d73272ca9c51a35ab05d4851a1e9c31631f84647ef3a841a",
+    "metadata.json": "703deaeb24c23508b850ae3039312c5d4e63452a5e0e45c7b4c37d1fa3ae05cb"
+  },
+  "port": {
+    "alias": "workspace-names",
+    "desktop": "kde",
+    "kind": "plasmoid",
+    "package_id": "com.curbsoftware.workspacenames",
+    "repo": "kde-workspace-names",
+    "uuid": null
+  },
+  "schema": 1,
+  "source_directory": "kde-workspace-names",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}
