@@ -1,0 +1,25 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "b05079f7892a1c6df0a7c857be3915ff8adb87facf3a93f585d870b77114783a",
+    "contents/config/main.xml": "a93d626f2f2afa5a4815d2bd226aa5225ac26ee5e3363a0f3e683cfc06ea87fc",
+    "contents/ui/config/config.qml": "00c84e374fe7be61e2c517ce48f39bc1ea4b430ec44bfe22a304891a72d55f32",
+    "contents/ui/lib/launcher.js": "bf94d20a67b78ccffb979146ce51cfdb9e64023c31a7ab4df7d5b84bebc12a80",
+    "contents/ui/main.qml": "b1532df8390e8055de9d0de7f1e4477c39112f8415494037210c79a7bc22b37f",
+    "metadata.json": "c27568436c5a336576d0011d590e5c41c2f45084b19186425147f5c86a72081c"
+  },
+  "port": {
+    "alias": "command-launcher",
+    "desktop": "kde",
+    "kind": "plasmoid",
+    "package_id": "com.curbsoftware.commandlauncher",
+    "repo": "kde-command-launcher",
+    "uuid": null
+  },
+  "schema": 1,
+  "source_directory": "kde-command-launcher",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}
