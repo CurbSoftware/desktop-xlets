@@ -1,0 +1,28 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "1a6aa5b884682bb118eb2dfe839f6f2136a6dc6ed9fec24ca5ab31a5d760e61a",
+    "extension.js": "5fa0010091ea11fa8fe33369c274bc79fd9709b976465cf6d0df403273c9a8d2",
+    "lib/defaults.js": "821cf705be9e111f7539610b4e52c4529d7c1896c6583092e61ee9824d61af80",
+    "lib/store.js": "da2c81894ef26e21c5adbedaf3c265ca7752e3c3bad4dad13d7f1db625312390",
+    "lib/workspaces.js": "8f9f09ea696ffc670dc79f319925c641facbf038582e50feabf0c7705c3cac53",
+    "metadata.json": "62d6cd4ec23accf90af3407e16f01daf06f3759470dcc45bf4f3f2424dbcd265",
+    "prefs.js": "363dea684c2dc72a140f4617bc996543765821552f35d29359d89fa17250fa2b",
+    "renameDialog.js": "0fd0ce67796dabb218beaac537e779ee1e950ac6e619749d89fabce952fbb184",
+    "stylesheet.css": "f710f2a77ea9a37280415fa8bc6e448463d7f06a7c99e37a6efded82a45ae37f"
+  },
+  "port": {
+    "alias": "workspace-names",
+    "desktop": "gnome",
+    "kind": "extension",
+    "package_id": null,
+    "repo": "gnome-workspace-names",
+    "uuid": "gnome-workspace-names@curbsoftware"
+  },
+  "schema": 1,
+  "source_directory": "gnome-workspace-names@curbsoftware",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}
