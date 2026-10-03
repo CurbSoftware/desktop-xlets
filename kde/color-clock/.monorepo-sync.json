@@ -1,0 +1,28 @@
+{
+  "generator": "dev-tools/sync-port-project.py",
+  "managed_files": {
+    "LICENSE": "68538b8fb86bf1fce73a988c4c663dd599b47e96893d4f3ea14df1991533560d",
+    "README.md": "323bef60ab2ede02a4b92cae30b2c1fd6db20bd255b3e5f3789f6b49db1c00b1",
+    "contents/config/main.xml": "2ca3dc6c20b34aa7358a079c88cf12ab34fb04aa2ea5aaf9918093db5db3043c",
+    "contents/ui/config/config.qml": "6902e73a5ab49614599a6ac85947d881e2adc0542f3d5ee3c5b8e43c65aecb2f",
+    "contents/ui/lib/colorEngine.js": "1e9a340003ec52d23f5a36a346532deb6604d4de7de02eaa0e9a67409a632592",
+    "contents/ui/lib/format.js": "44f506e3fbfac51693b274a07040be7ad8a0c65907e172dc27baca657f18bfd8",
+    "contents/ui/lib/tz.js": "fbcbdccdf0a9014079f92042c5c3ba84564edff62823e799e317391d16569216",
+    "contents/ui/lib/tzdata.js": "ffd91f5f74b0e86887fb35632df5af64c0065d3afac56c8128dcfd962d3d691a",
+    "contents/ui/main.qml": "8a3b6b297eb351c840b3251f848e2fad19680cde97d71002f0720e8c21414980",
+    "metadata.json": "4920052e9f5b1c811bb0aaab5e5d8df1e92e0d07624ae5d7bfeeb5fa0e9c6f69"
+  },
+  "port": {
+    "alias": "color-clock",
+    "desktop": "kde",
+    "kind": "plasmoid",
+    "package_id": "com.curbsoftware.colorclock",
+    "repo": "kde-color-clock",
+    "uuid": null
+  },
+  "schema": 1,
+  "source_directory": "kde-color-clock",
+  "source_repository": "CurbSoftware/cinnamon-monorepo",
+  "source_revision": "dfb9fb7a7fff7cbcf0c48d3892fecd994a9c9059",
+  "source_worktree_dirty": false
+}
