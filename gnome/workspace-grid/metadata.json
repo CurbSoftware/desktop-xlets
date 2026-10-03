@@ -1,0 +1,12 @@
+{
+  "uuid": "gnome-workspace-grid@curbsoftware",
+  "name": "Workspace Grid",
+  "description": "A clickable grid of named workspaces on the desktop",
+  "version": "1.0.0",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48"
+  ]
+}
