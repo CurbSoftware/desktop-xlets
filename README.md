@@ -1,6 +1,6 @@
 # Desktop xlets
 
-Applets, desklets, and desktop widgets for Cinnamon, GNOME, KDE, and VS Code.
+Applets, desklets, and desktop widgets for Cinnamon, GNOME, and KDE.
 
 Each folder keeps the history of the repository it came from, including that folder's own README and license. This repository does not apply one license to every project.
 
@@ -18,7 +18,6 @@ Each folder keeps the history of the repository it came from, including that fol
 | `gnome/workspace-grid/` | [gnome-workspace-grid](https://github.com/CurbSoftware/gnome-workspace-grid) | GPL-2.0 (`LICENSE`) |
 | `gnome/color-clock/` | [gnome-color-clock](https://github.com/CurbSoftware/gnome-color-clock) | GPL-2.0 (`LICENSE`) |
 | `gnome/world-clock/` | [gnome-world-clock](https://github.com/CurbSoftware/gnome-world-clock) | GPL-2.0 (`LICENSE`) |
-| `vscode-buttons/` | [vscode-buttons](https://github.com/CurbSoftware/vscode-buttons) | MIT (`LICENSE`) |
 | `curb-desktop-widgets/` | [curb-desktop-widgets](https://github.com/CurbSoftware/curb-desktop-widgets) | GPL-2.0 (`LICENSE`) |
 | `cinnamon/` | [cinnamon-monorepo](https://github.com/CurbSoftware/cinnamon-monorepo) | No single root license. See below. |
 
@@ -45,4 +44,4 @@ Licenses inside `cinnamon/` stay with the project that shipped them:
 
 `cinnamon/cinnamon-docs/` is reference material and keeps the licenses already in that tree. `cinnamon/` also still contains the GNOME and KDE working copies that lived in the development monorepo. The top-level `gnome/` and `kde/` folders are the published standalone repositories.
 
-Release tags were copied under the former repository name (`kde-panel-profiles/v1.0.0`, `vscode-buttons/v2.3.0`, and so on) so identical tag names from different projects do not overwrite each other.
+Release tags were copied under the former repository name (`kde-panel-profiles/v1.0.0`, and the same pattern for the other plasmoids) so identical tag names from different projects do not overwrite each other. vscode-buttons is its own repository again, and its tags were removed from this repo.
