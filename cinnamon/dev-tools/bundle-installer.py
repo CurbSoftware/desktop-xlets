@@ -47,10 +47,32 @@ PANEL_ALIASES = {"workspace-names", "command-launcher", "panel-profiles"}
 GITHUB_RELEASES = (
     "https://api.github.com/repos/CurbSoftware/curb-desktop-widgets/releases/latest"
 )
-ASSET_NAME = "CurbXlets-%s-x86_64.AppImage" % (
-    (Path(__file__).resolve().parent / "appimage" / "VERSION")
-    .read_text(encoding="utf-8").strip()
-)
+def _shipped_asset_name() -> str:
+    """Name of this bundle's AppImage.
+
+    In the source tree the version lives next to the script. Inside the
+    AppImage the script sits in usr/bin, so the version comes from the
+    packed payload manifest instead.
+    """
+    here = Path(__file__).resolve()
+    version_file = here.parent / "appimage" / "VERSION"
+    if version_file.is_file():
+        version = version_file.read_text(encoding="utf-8").strip()
+        return "CurbXlets-%s-x86_64.AppImage" % version
+    for base in (here.parent, *here.parents):
+        manifest = base / "payload" / "manifest.json"
+        if not manifest.is_file():
+            continue
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            break
+        version = str((data.get("bundle") or {}).get("version") or "1.1.0")
+        return "CurbXlets-%s-x86_64.AppImage" % version
+    return "CurbXlets-1.1.0-x86_64.AppImage"
+
+
+ASSET_NAME = _shipped_asset_name()
 USER_AGENT = "curb-desktop-widgets"
 
 
