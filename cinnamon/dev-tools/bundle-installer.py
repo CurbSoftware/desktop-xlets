@@ -965,38 +965,41 @@ def launch_gui(manifest: dict, desktop: str, root: Path) -> int:
             actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             install = Gtk.Button(label="Install")
             install.set_sensitive(not installed)
-            install.connect("clicked", lambda *_e, item=entry: self.do_install(item))
+            install.connect("clicked", lambda *_e, item=entry: self.install_entry(item))
             uninstall = Gtk.Button(label="Uninstall")
             uninstall.set_sensitive(installed)
-            uninstall.connect("clicked", lambda *_e, item=entry: self.do_uninstall(item))
+            uninstall.connect("clicked", lambda *_e, item=entry: self.uninstall_entry(item))
             add_desktop = Gtk.Button(label="Add to desktop")
             add_panel = Gtk.Button(label="Add to panel")
             add_desktop.set_sensitive(installed and (self.desktop == "kde" or surface == "desktop"))
             add_panel.set_sensitive(installed and (self.desktop == "kde" or surface == "panel"))
-            add_desktop.connect("clicked", lambda *_e, item=entry: self.do_add(item, "desktop"))
-            add_panel.connect("clicked", lambda *_e, item=entry: self.do_add(item, "panel"))
+            add_desktop.connect("clicked", lambda *_e, item=entry: self.place_entry(item, "desktop"))
+            add_panel.connect("clicked", lambda *_e, item=entry: self.place_entry(item, "panel"))
             remove = Gtk.Button(label="Remove instance")
             remove.set_sensitive(installed)
-            remove.connect("clicked", lambda *_e, item=entry: self.do_remove(item))
+            remove.connect("clicked", lambda *_e, item=entry: self.remove_entry(item))
             for widget in (install, add_desktop, add_panel, remove, uninstall):
                 actions.pack_start(widget, False, False, 0)
             box.pack_start(actions, False, False, 0)
             row.add(box)
             return row
 
-        def do_install(self, entry: dict) -> None:
+        def install_entry(self, entry: dict) -> None:
             INSTALLERS[self.desktop](entry, self.root, False)
             self.refresh()
 
-        def do_uninstall(self, entry: dict) -> None:
+        def uninstall_entry(self, entry: dict) -> None:
             UNINSTALLERS[self.desktop](entry, False)
             self.refresh()
 
-        def do_add(self, entry: dict, surface: str) -> None:
+        def place_entry(self, entry: dict, surface: str) -> None:
+            # Not named do_add: PyGObject treats do_* as GTK virtual methods,
+            # and do_add replaces Gtk.Container.add, so the window never
+            # receives its child and opens blank.
             ADD_INSTANCE[self.desktop](entry, surface, False)
             self.refresh()
 
-        def do_remove(self, entry: dict) -> None:
+        def remove_entry(self, entry: dict) -> None:
             REMOVE_INSTANCE[self.desktop](entry, False)
             self.refresh()
 

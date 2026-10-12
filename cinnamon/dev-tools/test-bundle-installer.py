@@ -187,5 +187,12 @@ class ManifestBuilder(unittest.TestCase):
         self.assertTrue(any(item["alias"] == "world-clock" for item in payload["desktops"]["kde"]))
 
 
+class GtkMethodNames(unittest.TestCase):
+    def test_window_methods_are_not_gtk_virtuals(self):
+        text = (ROOT / "dev-tools" / "bundle-installer.py").read_text(encoding="utf-8")
+        for name in ("do_add", "do_remove", "do_size_allocate", "do_draw"):
+            self.assertNotIn("def %s(" % name, text)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
