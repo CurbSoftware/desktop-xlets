@@ -548,6 +548,11 @@ def bundle_version() -> str:
         return "0.0.0"
 
 
+def bundle_filename(arch: str = "x86_64") -> str:
+    """AppImage filename the bundle build writes."""
+    return "CurbXlets-%s-%s.AppImage" % (bundle_version(), arch)
+
+
 def read_metadata(source: Path) -> dict:
     try:
         return json.loads((source / "metadata.json").read_text(encoding="utf-8"))
@@ -661,7 +666,7 @@ def build_bundle(output_dir: Path, appimagetool_arg: Path | None, arch: str) -> 
     say("  BUILT " + display_path(manifest))
 
     tool = ensure_appimagetool(appimagetool_arg)
-    output = output_dir / ("CurbXlets-%s-%s.AppImage" % (bundle_version(), arch))
+    output = output_dir / bundle_filename(arch)
     if tool is None:
         say("  WARN appimagetool unavailable; the AppDir is complete at:")
         say("       " + display_path(appdir))

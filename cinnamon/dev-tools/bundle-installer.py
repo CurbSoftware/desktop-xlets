@@ -47,14 +47,14 @@ PANEL_ALIASES = {"workspace-names", "command-launcher", "panel-profiles"}
 GITHUB_RELEASES = (
     "https://api.github.com/repos/CurbSoftware/curb-desktop-widgets/releases/latest"
 )
-def _shipped_asset_name() -> str:
+def _shipped_asset_name(origin: Path | None = None) -> str:
     """Name of this bundle's AppImage.
 
     In the source tree the version lives next to the script. Inside the
     AppImage the script sits in usr/bin, so the version comes from the
-    packed payload manifest instead.
+    packed payload manifest instead. Pass origin to check either layout.
     """
-    here = Path(__file__).resolve()
+    here = (origin or Path(__file__)).resolve()
     version_file = here.parent / "appimage" / "VERSION"
     if version_file.is_file():
         version = version_file.read_text(encoding="utf-8").strip()
@@ -1141,7 +1141,10 @@ def want_gui(args) -> bool:
 
 
 def main() -> int:
-    args = parser().parse_args()
+    # Optional positionals (action, widget) otherwise get dropped when a
+    # flag sits between them, so `add-instance --desktop cinnamon clock`
+    # was rejected as an unrecognized argument.
+    args = parser().parse_intermixed_args()
 
     if os.geteuid() == 0 and not args.allow_root and not args.list and args.action not in ("status", "update-check"):
         err("running as root; everything this installer touches is per-user. "
