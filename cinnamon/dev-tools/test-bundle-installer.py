@@ -78,7 +78,7 @@ class GithubRelease(unittest.TestCase):
             "assets": [
                 {"name": "notes.txt", "browser_download_url": "https://example/notes"},
                 {
-                    "name": "curb-desktop-widgets-x86_64.AppImage",
+                    "name": BI.ASSET_NAME,
                     "browser_download_url": "https://example/app",
                 },
             ],

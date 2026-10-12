@@ -18,7 +18,9 @@ DEFAULT_PARENT = ROOT.parent / "ports"
 DEFAULT_REMOTE_TEMPLATE = "git@github.com:CurbSoftware/{repo}.git"
 BUNDLE_REPO = "curb-desktop-widgets"
 BUNDLE_SOURCE = "dev-tools/appimage"
-APPIMAGE_NAME = "curb-desktop-widgets-x86_64.AppImage"
+APPIMAGE_NAME = "CurbXlets-%s-x86_64.AppImage" % (
+    (ROOT / "dev-tools" / "appimage" / "VERSION").read_text(encoding="utf-8").strip()
+)
 EXTRA_ROOT_FILES = ("README.md", "LICENSE")
 
 

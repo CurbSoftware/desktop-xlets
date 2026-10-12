@@ -661,7 +661,7 @@ def build_bundle(output_dir: Path, appimagetool_arg: Path | None, arch: str) -> 
     say("  BUILT " + display_path(manifest))
 
     tool = ensure_appimagetool(appimagetool_arg)
-    output = output_dir / ("%s-%s.AppImage" % (BUNDLE_NAME, arch))
+    output = output_dir / ("CurbXlets-%s-%s.AppImage" % (bundle_version(), arch))
     if tool is None:
         say("  WARN appimagetool unavailable; the AppDir is complete at:")
         say("       " + display_path(appdir))

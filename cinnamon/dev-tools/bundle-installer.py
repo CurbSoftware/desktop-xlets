@@ -47,7 +47,10 @@ PANEL_ALIASES = {"workspace-names", "command-launcher", "panel-profiles"}
 GITHUB_RELEASES = (
     "https://api.github.com/repos/CurbSoftware/curb-desktop-widgets/releases/latest"
 )
-ASSET_NAME = "curb-desktop-widgets-x86_64.AppImage"
+ASSET_NAME = "CurbXlets-%s-x86_64.AppImage" % (
+    (Path(__file__).resolve().parent / "appimage" / "VERSION")
+    .read_text(encoding="utf-8").strip()
+)
 USER_AGENT = "curb-desktop-widgets"
 
 
